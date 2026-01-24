@@ -10,8 +10,4 @@ layout {
 			args "--filter" "./web" "check:watch"
 		}
 	}
-
-	pane split_direction="vertical" {
-	
-	}
 }
