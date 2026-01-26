@@ -9,3 +9,5 @@ static/pwa
 
 # Env
 *.local
+
+src/lib/deployments.ts

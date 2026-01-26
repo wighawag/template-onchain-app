@@ -19,7 +19,7 @@ layout {
 			args "--filter" "./contracts" "compile:watch"
 		}
 		pane name="watch and deploy" command="pnpm"  {
-			args "--filter" "./contracts" "deploy:watch" "localhost" "--ts" "../../web/src/lib/deployments.ts"
+			args "--filter" "./contracts" "deploy:watch" "localhost" "--ts" "../web/src/lib/deployments.ts"
 		}
 		pane name="watch and build typescript" command="pnpm"  {
 			args "--filter" "./contracts" "typescript:watch"
