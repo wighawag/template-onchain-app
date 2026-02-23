@@ -25,13 +25,13 @@
 		"vite-plugin-devtools-json": "^1.0.0"
 	},
 	"scripts": {
-		"prepare": "pnpm generate-pwa-icons-and-tags && svelte-kit sync || echo ''",
-		"generate-pwa-icons-and-tags": "pwag static/icon.png src/web-config.json",
-		"dev": "vite dev",
-		"build": "vite build",
+		"prepare": "pnpm generate-pwa-icons && svelte-kit sync",
+		"generate-pwa-icons": "pwag static/icon.png src/web-config.json",
+		"dev": "ldenv vite dev",
+		"build": "ldenv vite build",
 		"preview": "vite preview",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"check": "svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"serve": "ipfs-emulator --only -d build -p 8080"
