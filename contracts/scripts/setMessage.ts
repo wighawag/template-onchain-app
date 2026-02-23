@@ -11,19 +11,21 @@ async function main(args: string[]) {
 		args: [env.namedAccounts.deployer],
 	});
 
-	console.log(before_messages);
+	console.log(`before: ${before_messages}`);
 
-	await env.execute(GreetingsRegistry, {
+	const tx = await env.execute(GreetingsRegistry, {
 		account: env.namedAccounts.deployer,
 		functionName: 'setMessage',
 		args: [args[0] || ''],
 		gas: 100000n,
 	});
 
+	console.log(`tx: ${tx.transactionHash}`);
+
 	const after_messages = await env.read(GreetingsRegistry, {
 		functionName: 'messages',
 		args: [env.namedAccounts.deployer],
 	});
-	console.log(after_messages);
+	console.log(`after: ${after_messages}`);
 }
 main(process.argv.slice(2));

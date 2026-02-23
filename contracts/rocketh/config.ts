@@ -1,7 +1,11 @@
 // ----------------------------------------------------------------------------
 // Typed Config
 // ----------------------------------------------------------------------------
-import type {UserConfig} from 'rocketh/types';
+import type {
+	EnhancedEnvironment,
+	UnknownDeployments,
+	UserConfig,
+} from 'rocketh/types';
 
 // this one provide a protocol supporting private key as account
 import {privateKey} from '@rocketh/signer';
@@ -48,5 +52,11 @@ export {extensions};
 type Extensions = typeof extensions;
 type Accounts = typeof config.accounts;
 type Data = typeof config.data;
+type Environment = EnhancedEnvironment<
+	Accounts,
+	Data,
+	UnknownDeployments,
+	Extensions
+>;
 
-export type {Extensions, Accounts, Data};
+export type {Extensions, Accounts, Data, Environment};

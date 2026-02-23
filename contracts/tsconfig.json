@@ -1,8 +1,6 @@
 {
 	"compilerOptions": {
-		"lib": [
-			"es2023"
-		],
+		"lib": ["es2023"],
 		"module": "node16",
 		"target": "es2022",
 		"moduleResolution": "node16",
@@ -13,10 +11,8 @@
 		"declaration": true,
 		"declarationMap": true,
 		"outDir": "dist",
-		"rootDir": "."
+		"rootDir": ".",
+		"types": ["node"]
 	},
-	"include": [
-		"deploy",
-		"generated"
-	]
+	"include": ["deploy", "generated", "hardhat.config.ts"]
 }
