@@ -42,7 +42,7 @@
     "web:check:watch": "ldenv pnpm --filter ./web check:watch",
     "---------------------- DEPLOY ----------------------": "",
     "test": "pnpm contracts:test",
-    "build": "ldenv --git -d localhost pnpm common:build ~~ pnpm contracts:build @@MODE ~~ pnpm web:build ~~ @@",
+    "build": "ldenv --git -d localhost pnpm contracts:build @@MODE ~~ pnpm web:build ~~ @@",
     "serve": "pnpm run --filter ./web serve",
     "---------------------- WEB USING EXISTING DEPLOYMENT ----------------------": "",
     "zellij-attach": "zellij-launcher a $npm_package_name-attach-$MODE || zellij -n dev/zellij-attach.kdl -s $npm_package_name-attach-$MODE",
