@@ -102,11 +102,13 @@ This launches:
 If you prefer running services individually:
 
 1. Start the local Ethereum node:
+
    ```bash
    pnpm contracts:local_node
    ```
 
 2. In another terminal, compile and deploy:
+
    ```bash
    pnpm contracts:compile
    pnpm contracts:deploy localhost --skip-prompts
@@ -141,12 +143,14 @@ pnpm contracts:test
 ```
 
 This runs both:
+
 - **Solidity tests** (forge-style, using `forge-std`)
 - **TypeScript tests** (using Node.js test runner with `earl` assertions)
 
 #### Deploy to Networks
 
 1. Configure your environment variables in `.env.local`:
+
    ```bash
    MNEMONIC_<network>="your mnemonic phrase"
    ETHERSCAN_API_KEY=<api-key>  # For verification
@@ -208,6 +212,7 @@ This template provides multiple Zellij layouts for different development scenari
 ### `pnpm start` - Full Local Development
 
 Runs everything locally:
+
 - Local Ethereum node
 - Contract compilation, deployment, and TypeScript build (all watching for changes)
 - Web development server
@@ -216,20 +221,16 @@ Runs everything locally:
 ### `pnpm attach <network>` - Attach to Existing Deployment
 
 Use when you have contracts already deployed and want to develop the frontend:
+
 - Exports existing deployment info
 - Runs web development server
 
-### `pnpm remote-chain <network>` - Remote Chain with Local Services
+### `pnpm remote-chain <network>` - Remote Chain
 
-Develop against a remote network (testnet/mainnet) while running local services:
+Develop against a remote network (testnet/mainnet):
+
 - Watches and deploys to the remote network
 - Runs web development server locally
-
-### `pnpm remote <network>` - Full Remote Development
-
-Everything runs against a remote network:
-- Watches and deploys to the remote network
-- Web connected to remote services
 
 ## Configuration
 
@@ -241,7 +242,7 @@ Configure accounts in [`contracts/rocketh/config.ts`](contracts/rocketh/config.t
 export const config = {
   accounts: {
     deployer: { default: 0 }, // First account from mnemonic
-    admin: { default: 1 },    // Second account
+    admin: { default: 1 }, // Second account
   },
   // ...
 } as const satisfies UserConfig;
@@ -290,7 +291,9 @@ export default deployScript(
       },
       {
         owner: admin,
-        linkedData: { /* metadata stored with deployment */ },
+        linkedData: {
+          /* metadata stored with deployment */
+        },
       },
     );
 
@@ -307,7 +310,7 @@ export default deployScript(
 Contract deployments are automatically exported to `web/src/lib/deployments.ts`. Import them in your Svelte components:
 
 ```typescript
-import { deployments } from '$lib/deployments';
+import { deployments } from "$lib/deployments";
 
 // Access contract address
 const address = deployments.GreetingsRegistry.address;
@@ -318,12 +321,12 @@ const abi = deployments.GreetingsRegistry.abi;
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `ETH_NODE_URI_<network>` | RPC endpoint for the network |
-| `MNEMONIC_<network>` | Mnemonic for account derivation |
-| `MNEMONIC` | Fallback mnemonic if network-specific not set |
-| `ETHERSCAN_API_KEY` | API key for contract verification |
+| Variable                 | Description                                   |
+| ------------------------ | --------------------------------------------- |
+| `ETH_NODE_URI_<network>` | RPC endpoint for the network                  |
+| `MNEMONIC_<network>`     | Mnemonic for account derivation               |
+| `MNEMONIC`               | Fallback mnemonic if network-specific not set |
+| `ETHERSCAN_API_KEY`      | API key for contract verification             |
 
 Set `SECRET` as the value to use Hardhat's secret store:
 
@@ -382,7 +385,3 @@ pnpm contracts:lint
 pnpm format        # Format all code
 pnpm format:check  # Check formatting
 ```
-
-## License
-
-MIT
