@@ -1,14 +1,24 @@
 <script lang="ts">
 	import type {ServiceWorkerStore} from '.';
+	import type {NotificationClasses} from '$lib/core/notifications/types';
 	import {fly} from 'svelte/transition';
+	import {cn} from '$lib/core/utils/tailwind/index.js';
 
 	interface Props {
 		serviceWorker: ServiceWorkerStore;
 		src: string;
 		alt: string;
+		class?: string;
+		classes?: Partial<NotificationClasses>;
 	}
 
-	const {serviceWorker, src, alt}: Props = $props();
+	const {
+		serviceWorker,
+		src,
+		alt,
+		class: className = '',
+		classes = {},
+	}: Props = $props();
 
 	function skip() {
 		serviceWorker.skip();
@@ -38,7 +48,11 @@
 		  To: "opacity-0"
 	  -->
 			<div
-				class="pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black/5"
+				class={cn(
+					'pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black/5',
+					className,
+					classes.root,
+				)}
 				transition:fly={{delay: 250, duration: 300, x: +100}}
 			>
 				<div class="p-4">
@@ -48,7 +62,7 @@
 								<img {src} {alt} />
 							{:else}
 								<svg
-									class="size-6 text-gray-400"
+									class={cn('size-6 text-gray-400', classes.icon)}
 									fill="none"
 									viewBox="0 0 24 24"
 									stroke-width="1.5"
@@ -65,21 +79,27 @@
 							{/if}
 						</div>
 						<div class="ml-3 w-0 flex-1 pt-0.5">
-							<p class="text-sm font-medium text-gray-900">
+							<p class={cn('text-sm font-medium text-gray-900', classes.title)}>
 								A new version is available.
 							</p>
-							<p class="mt-1 text-sm text-gray-500">
+							<p class={cn('mt-1 text-sm text-gray-500', classes.body)}>
 								Reload to get the update.
 							</p>
-							<div class="mt-3 flex space-x-7">
+							<div class={cn('mt-3 flex space-x-7', classes.actions)}>
 								<button
 									type="button"
-									class="rounded-md bg-white text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
+									class={cn(
+										'rounded-md bg-white text-sm font-medium text-indigo-600 hover:text-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none',
+										classes.primaryButton,
+									)}
 									onclick={accept}>Reload</button
 								>
 								<button
 									type="button"
-									class="rounded-md bg-white text-sm font-medium text-gray-700 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
+									class={cn(
+										'rounded-md bg-white text-sm font-medium text-gray-700 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none',
+										classes.button,
+									)}
 									onclick={skip}>Dismiss</button
 								>
 							</div>
@@ -87,7 +107,10 @@
 						<div class="ml-4 flex shrink-0">
 							<button
 								type="button"
-								class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
+								class={cn(
+									'inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none',
+									classes.closeButton,
+								)}
 								onclick={skip}
 							>
 								<span class="sr-only">Close</span>

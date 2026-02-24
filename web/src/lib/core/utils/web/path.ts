@@ -39,7 +39,12 @@ export function createRouteHandler<T extends readonly string[]>(
 		return a.startsWith(b) || a.startsWith(route(b));
 	}
 
-	return {route, isSameRoute, isParentRoute, params: params as Record<T[number], string | undefined>};
+	return {
+		route,
+		isSameRoute,
+		isParentRoute,
+		params: params as Record<T[number], string | undefined>,
+	};
 }
 
 export function url(p: string, hash?: string) {

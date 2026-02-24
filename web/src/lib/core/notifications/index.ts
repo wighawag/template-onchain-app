@@ -1,6 +1,8 @@
 import {pushState} from '$app/navigation';
 import {page} from '$app/state';
 import {get, writable} from 'svelte/store';
+
+export type {NotificationClasses} from './types.js';
 type JSONNotification = {
 	title: string;
 	options: NotificationOptions;

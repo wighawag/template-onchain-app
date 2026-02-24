@@ -1,12 +1,16 @@
 <script lang="ts">
 	import type {NotificationsService} from '.';
+	import type {NotificationClasses} from './types';
 	import {fly} from 'svelte/transition';
+	import {cn} from '$lib/core/utils/tailwind/index.js';
 
 	interface Props {
 		notifications: NotificationsService;
+		class?: string;
+		classes?: Partial<NotificationClasses>;
 	}
 
-	const {notifications}: Props = $props();
+	const {notifications, class: className = '', classes = {}}: Props = $props();
 </script>
 
 <!-- Global notification live region, render this permanently at the end of the document -->
@@ -27,7 +31,11 @@
 		  To: "opacity-0"
 	  -->
 			<div
-				class="pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black/5"
+				class={cn(
+					'pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black/5',
+					className,
+					classes.root,
+				)}
 				transition:fly={{delay: 250, duration: 300, x: +100}}
 			>
 				<div class="p-4">
@@ -37,7 +45,7 @@
 								<img src={notification.data.options.icon} alt="icon" />
 							{:else}
 								<svg
-									class="size-6 text-gray-400"
+									class={cn('size-6 text-gray-400', classes.icon)}
 									fill="none"
 									viewBox="0 0 24 24"
 									stroke-width="1.5"
@@ -54,22 +62,28 @@
 							{/if}
 						</div>
 						<div class="ml-3 w-0 flex-1 pt-0.5">
-							<p class="text-sm font-medium text-gray-900">
+							<p class={cn('text-sm font-medium text-gray-900', classes.title)}>
 								{notification.data.title}
 							</p>
-							<p class="mt-1 text-sm text-gray-500">
+							<p class={cn('mt-1 text-sm text-gray-500', classes.body)}>
 								{notification.data.options.body}.
 							</p>
-							<div class="mt-3 flex space-x-7">
+							<div class={cn('mt-3 flex space-x-7', classes.actions)}>
 								<button
 									type="button"
-									class="rounded-md bg-white text-sm font-medium text-gray-700 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
+									class={cn(
+										'rounded-md bg-white text-sm font-medium text-gray-700 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none',
+										classes.button,
+									)}
 									onclick={() => notifications.onClick(notification.id)}
 									>ok</button
 								>
 								<button
 									type="button"
-									class="rounded-md bg-white text-sm font-medium text-gray-700 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
+									class={cn(
+										'rounded-md bg-white text-sm font-medium text-gray-700 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none',
+										classes.button,
+									)}
 									onclick={() => notifications.remove(notification.id)}
 									>dismiss</button
 								>
@@ -78,7 +92,10 @@
 						<div class="ml-4 flex shrink-0">
 							<button
 								type="button"
-								class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none"
+								class={cn(
+									'inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none',
+									classes.closeButton,
+								)}
 								onclick={() => notifications.remove(notification.id)}
 							>
 								<span class="sr-only">Close</span>
