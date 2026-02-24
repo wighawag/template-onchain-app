@@ -1,4 +1,5 @@
 <script lang="ts">
+	import {serviceWorker, notifications} from '$lib';
 	import Notifications from '$lib/core/notifications/Notifications.svelte';
 	import VersionAndInstallNotfications from '$lib/core/service-worker/VersionAndInstallNotfications.svelte';
 	import '../app.css';
@@ -7,6 +8,6 @@
 
 {@render children()}
 
-<Notifications />
+<Notifications {notifications} />
 
-<VersionAndInstallNotfications src="" alt="" />
+<VersionAndInstallNotfications {serviceWorker} src="" alt="" />

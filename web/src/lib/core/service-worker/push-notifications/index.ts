@@ -312,3 +312,6 @@ export function createPushNotificationService(params: {
 		testPush,
 	};
 }
+export type PushNotificationService = ReturnType<
+	typeof createPushNotificationService
+>;

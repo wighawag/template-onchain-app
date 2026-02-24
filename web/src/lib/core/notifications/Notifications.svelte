@@ -1,6 +1,12 @@
 <script lang="ts">
+	import type {NotificationsService} from '.';
 	import {fly} from 'svelte/transition';
-	import {notifications} from './';
+
+	interface Props {
+		notifications: NotificationsService;
+	}
+
+	const {notifications}: Props = $props();
 </script>
 
 <!-- Global notification live region, render this permanently at the end of the document -->

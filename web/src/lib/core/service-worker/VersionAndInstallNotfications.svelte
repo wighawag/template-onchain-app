@@ -1,10 +1,14 @@
 <script lang="ts">
+	import type {ServiceWorkerStore} from '.';
 	import {fly} from 'svelte/transition';
-	import {serviceWorker} from '$lib/core/config';
 
-	// TODO
-	export let src: string;
-	export let alt: string;
+	interface Props {
+		serviceWorker: ServiceWorkerStore;
+		src: string;
+		alt: string;
+	}
+
+	const {serviceWorker, src, alt}: Props = $props();
 
 	function skip() {
 		serviceWorker.skip();

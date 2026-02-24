@@ -43,4 +43,6 @@ export function createNotificationsService() {
 	return {subscribe: store.subscribe, add, remove, onClick};
 }
 
-export const notifications = createNotificationsService();
+export type NotificationsService = ReturnType<
+	typeof createNotificationsService
+>;

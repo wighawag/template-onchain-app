@@ -3,8 +3,9 @@ import {get, writable} from 'svelte/store';
 import type {Logger} from 'named-logs';
 import {logs} from 'named-logs';
 import {handleAutomaticUpdate, listenForWaitingServiceWorker} from './utils';
-import {notifications} from '$lib/core/notifications';
+
 import {resolve} from '$app/paths';
+import type {NotificationsService} from '../notifications';
 
 const logger = logs('service-worker') as Logger & {
 	level: number;
@@ -56,7 +57,7 @@ export type ServiceWorkerState =
 			registering: false;
 	  };
 
-export function createServiceWorker() {
+export function createServiceWorker(notifications?: NotificationsService) {
 	const store = writable<ServiceWorkerState>(undefined);
 
 	function pingServideWorker(
@@ -169,16 +170,18 @@ export function createServiceWorker() {
 			});
 			// ------------------------------------------------------------------------------------------------
 
-			//listen to messages
-			navigator.serviceWorker.onmessage = (event) => {
-				if (event.data && event.data.type === 'notification') {
-					console.log(event);
-					notifications.add({
-						type: 'push-notification',
-						data: event.data.notification,
-					});
-				}
-			};
+			if (notifications) {
+				//listen to messages
+				navigator.serviceWorker.onmessage = (event) => {
+					if (event.data && event.data.type === 'notification') {
+						console.log(event);
+						notifications.add({
+							type: 'push-notification',
+							data: event.data.notification,
+						});
+					}
+				};
+			}
 
 			const swLocation = resolve<any>(`/service-worker.js`);
 			//{scope: `${base}/`}
@@ -259,3 +262,5 @@ export function createServiceWorker() {
 		skip,
 	};
 }
+
+export type ServiceWorkerStore = ReturnType<typeof createServiceWorker>;

@@ -1,8 +1,8 @@
 <script lang="ts">
-	import Head from '$lib/Head.svelte';
+	import DefaultHead from './metadata/DefaultHead.svelte';
 </script>
 
-<Head home={true} title={'Template'} />
+<DefaultHead title={'Template'} />
 
 <h1>Welcome to SvelteKit</h1>
 <p>
