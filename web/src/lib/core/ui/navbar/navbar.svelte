@@ -1,12 +1,10 @@
 <script lang="ts">
+	import {getUserContext} from '$lib';
 	import Button from '$lib/shadcn/ui/button/button.svelte';
 
 	let {name}: {name?: string} = $props();
 
-	async function handleConnect() {
-		// Placeholder for wallet connection logic
-		console.log('Connect button clicked');
-	}
+	const {connection} = getUserContext();
 </script>
 
 <nav
@@ -17,8 +15,22 @@
 	</div>
 
 	<div class="flex items-center">
-		<Button onclick={handleConnect} variant="default" size="default">
-			Connect
-		</Button>
+		{#if $connection.step == 'SignedIn'}
+			<Button
+				onclick={() => connection.disconnect()}
+				variant="default"
+				size="default"
+			>
+				Discconnect
+			</Button>
+		{:else}
+			<Button
+				onclick={() => connection.connect()}
+				variant="default"
+				size="default"
+			>
+				Connect
+			</Button>
+		{/if}
 	</div>
 </nav>

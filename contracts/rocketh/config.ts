@@ -6,6 +6,7 @@ import type {
 	UnknownDeployments,
 	UserConfig,
 } from 'rocketh/types';
+import {parseEther} from 'viem';
 
 // this one provide a protocol supporting private key as account
 import {privateKey} from '@rocketh/signer';

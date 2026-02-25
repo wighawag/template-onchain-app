@@ -5,6 +5,8 @@ import {
 } from './core/utils/web/url';
 import {createServiceWorker} from '$lib/core/service-worker';
 import {createNotificationsService} from './core/notifications';
+import {createContext} from 'svelte';
+import type {Dependencies} from './types';
 
 export const hashParams = getHashParamsFromLocation();
 
@@ -27,3 +29,9 @@ export const serviceWorker = createServiceWorker(notifications);
 // 		},
 // 	},
 // });
+
+const [getUserContextFunction, setUserContext] =
+	createContext<() => Dependencies>();
+
+const getUserContext = () => getUserContextFunction()();
+export {getUserContext, setUserContext};

@@ -8,8 +8,6 @@
 	let {children} = $props();
 </script>
 
-<Navbar name="Template" />
-
 {@render children()}
 
 <NotificationOverlay>
