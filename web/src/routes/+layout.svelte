@@ -3,9 +3,12 @@
 	import NotificationOverlay from '$lib/core/notifications/NotificationOverlay.svelte';
 	import Notifications from '$lib/core/notifications/Notifications.svelte';
 	import VersionAndInstallNotfications from '$lib/core/service-worker/VersionAndInstallNotfications.svelte';
+	import {Navbar} from '$lib/core/ui/navbar';
 	import '../app.css';
 	let {children} = $props();
 </script>
+
+<Navbar name="Template" />
 
 {@render children()}
 

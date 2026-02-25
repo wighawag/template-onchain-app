@@ -18,7 +18,7 @@
 	<Empty.Content>
 		<Button variant="outline" size="sm">
 			<LogInIcon />
-			Sign-In
+			Connect
 		</Button>
 	</Empty.Content>
 </Empty.Root>
