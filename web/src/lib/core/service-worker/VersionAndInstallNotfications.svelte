@@ -6,7 +6,6 @@
 	interface Props {
 		serviceWorker: ServiceWorkerStore;
 		src: string;
-		alt: string;
 		class?: string;
 		classes?: Partial<NotificationClasses>;
 	}
@@ -14,7 +13,6 @@
 	const {
 		serviceWorker,
 		src,
-		alt,
 		class: className = '',
 		classes = {},
 	}: Props = $props();
@@ -37,18 +35,17 @@
 	);
 </script>
 
-<div class={className}>
-	{#if updateAvailable}
-		<NotificationCard
-			title="A new version is available."
-			body="Reload to get the update."
-			icon={src}
-			actions={[
-				{label: 'Reload', onClick: accept, primary: true},
-				{label: 'Dismiss', onClick: skip},
-			]}
-			onClose={skip}
-			{classes}
-		/>
-	{/if}
-</div>
+{#if updateAvailable}
+	<NotificationCard
+		title="A new version is available."
+		body="Reload to get the update."
+		icon={src}
+		actions={[
+			{label: 'Reload', onClick: accept, primary: true},
+			{label: 'Dismiss', onClick: skip},
+		]}
+		onClose={skip}
+		class={className}
+		{classes}
+	/>
+{/if}

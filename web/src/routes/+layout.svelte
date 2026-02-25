@@ -11,5 +11,8 @@
 
 <NotificationOverlay>
 	<Notifications {notifications} />
-	<VersionAndInstallNotfications {serviceWorker} src="" alt="" />
+</NotificationOverlay>
+
+<NotificationOverlay>
+	<VersionAndInstallNotfications {serviceWorker} src="" />
 </NotificationOverlay>

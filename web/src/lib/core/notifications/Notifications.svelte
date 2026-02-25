@@ -9,20 +9,19 @@
 		classes?: Partial<NotificationClasses>;
 	}
 
-	const {notifications, class: className = '', classes = {}}: Props = $props();
+	const {notifications, class: className, classes = {}}: Props = $props();
 </script>
 
-<div class={className}>
-	{#each $notifications as n (n.id)}
-		<NotificationCard
-			title={n.data.title}
-			body={n.data.options?.body}
-			icon={n.data.options?.icon}
-			actions={[
-				{label: 'ok', onClick: () => notifications.onClick(n.id)},
-				{label: 'dismiss', onClick: () => notifications.remove(n.id)},
-			]}
-			{classes}
-		/>
-	{/each}
-</div>
+{#each $notifications as n (n.id)}
+	<NotificationCard
+		title={n.data.title}
+		body={n.data.options?.body}
+		icon={n.data.options?.icon}
+		actions={[
+			{label: 'ok', onClick: () => notifications.onClick(n.id)},
+			{label: 'dismiss', onClick: () => notifications.remove(n.id)},
+		]}
+		class={className}
+		{classes}
+	/>
+{/each}
