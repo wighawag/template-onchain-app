@@ -56,10 +56,6 @@ This template extends the [template-ethereum-contracts](https://github.com/wigha
 │   ├── static/                   # Static assets
 │   └── svelte.config.js          # SvelteKit configuration
 ├── dev/                          # Zellij layout configurations
-│   ├── zellij.kdl                # Full local development
-│   ├── zellij-attach.kdl         # Attach to existing deployment
-│   ├── zellij-remote.kdl         # Remote network development
-│   └── zellij-remote-chain.kdl   # Remote chain with local services
 ├── package.json                  # Root monorepo configuration
 └── pnpm-workspace.yaml           # PNPM workspace definition
 ```
