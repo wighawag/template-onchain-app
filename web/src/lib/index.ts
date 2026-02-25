@@ -16,3 +16,13 @@ export const {isParentRoute, isSameRoute, route, params} = createRouteHandler(
 
 export const notifications = createNotificationsService();
 export const serviceWorker = createServiceWorker(notifications);
+
+notifications.add({
+	title: 'hello world',
+	action: {
+		label: 'do it',
+		command: () => {
+			console.log('hello world');
+		},
+	},
+});

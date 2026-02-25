@@ -5,7 +5,9 @@ import {logs} from 'named-logs';
 import {handleAutomaticUpdate, listenForWaitingServiceWorker} from './utils';
 
 import {resolve} from '$app/paths';
-import type {NotificationsService} from '../notifications';
+import type {NotificationsService, NotificationToAdd} from '../notifications';
+import {pushState} from '$app/navigation';
+import {page} from '$app/state';
 
 const logger = logs('service-worker') as Logger & {
 	level: number;
@@ -56,6 +58,30 @@ export type ServiceWorkerState =
 			notSupported: false;
 			registering: false;
 	  };
+
+type JSONNotification = {
+	title: string;
+	options?: NotificationOptions;
+};
+
+function fromPushNotification(
+	pushNotification: JSONNotification,
+): NotificationToAdd {
+	const navigate = pushNotification.options?.data?.navigate;
+	return {
+		title: pushNotification.title,
+		body: pushNotification.options?.body,
+		icon: pushNotification.options?.icon,
+		action: navigate
+			? {
+					label: 'ok',
+					command: () => {
+						pushState(navigate, page.state);
+					},
+				}
+			: undefined,
+	};
+}
 
 export function createServiceWorker(notifications?: NotificationsService) {
 	const store = writable<ServiceWorkerState>(undefined);
@@ -174,11 +200,7 @@ export function createServiceWorker(notifications?: NotificationsService) {
 				//listen to messages
 				navigator.serviceWorker.onmessage = (event) => {
 					if (event.data && event.data.type === 'notification') {
-						console.log(event);
-						notifications.add({
-							type: 'push-notification',
-							data: event.data.notification,
-						});
+						notifications.add(fromPushNotification(event.data));
 					}
 				};
 			}

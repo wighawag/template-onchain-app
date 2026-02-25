@@ -14,13 +14,15 @@
 
 {#each $notifications as n (n.id)}
 	<NotificationCard
-		title={n.data.title}
-		body={n.data.options?.body}
-		icon={n.data.options?.icon}
-		actions={[
-			{label: 'ok', onClick: () => notifications.onClick(n.id)},
-			{label: 'dismiss', onClick: () => notifications.remove(n.id)},
-		]}
+		title={n.title}
+		body={n.body}
+		icon={n.icon}
+		actions={n.action
+			? [
+					{label: n.action.label, onClick: () => notifications.onAction(n.id)},
+					{label: 'dismiss', onClick: () => notifications.remove(n.id)},
+				]
+			: [{label: 'dismiss', onClick: () => notifications.remove(n.id)}]}
 		class={className}
 		{classes}
 	/>

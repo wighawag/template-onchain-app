@@ -3,17 +3,13 @@ import {page} from '$app/state';
 import {get, writable} from 'svelte/store';
 
 export type {NotificationClasses} from './types.js';
-type JSONNotification = {
+
+export type NotificationToAdd = {
 	title: string;
-	options: NotificationOptions;
+	body?: string;
+	icon?: string;
+	action?: {label: string; command: () => unknown};
 };
-
-export type PushNotification = {
-	type: 'push-notification';
-	data: JSONNotification;
-};
-export type NotificationToAdd = PushNotification;
-
 export type Notification = NotificationToAdd & {id: number};
 
 export function createNotificationsService() {
@@ -33,16 +29,15 @@ export function createNotificationsService() {
 		);
 	}
 
-	function onClick(id: number) {
+	function onAction(id: number) {
 		const notification = get(store).find((v) => v.id == id);
-		remove(id);
-		if (notification?.type === 'push-notification') {
-			if (notification.data.options.data?.navigate) {
-				pushState(notification.data.options.data.navigate, page.state);
-			}
+
+		if (notification) {
+			remove(id);
+			notification.action?.command();
 		}
 	}
-	return {subscribe: store.subscribe, add, remove, onClick};
+	return {subscribe: store.subscribe, add, remove, onAction};
 }
 
 export type NotificationsService = ReturnType<

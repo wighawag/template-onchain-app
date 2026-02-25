@@ -39,7 +39,7 @@
 	);
 </script>
 
-{#if updateAvailable}
+{#if updateAvailable || true}
 	<div
 		class={cn(
 			'fixed top-0 left-0 z-50 w-full border-b p-2 shadow-sm',
