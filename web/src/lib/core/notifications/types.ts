@@ -17,6 +17,4 @@ export interface NotificationClasses {
 	button?: string;
 	/** Primary action button (e.g., "Reload") */
 	primaryButton?: string;
-	/** Close button (X icon) */
-	closeButton?: string;
 }

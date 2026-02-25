@@ -5,6 +5,12 @@
 	import {cn} from '$lib/core/utils/tailwind/index.js';
 	import type {NotificationClasses} from './types';
 
+	export type NotificationData = {
+		title: string;
+		body?: string;
+		icon?: string;
+	};
+
 	export interface NotificationAction {
 		label: string;
 		onClick: () => void;
@@ -12,21 +18,15 @@
 	}
 
 	interface Props {
-		title: string;
-		body?: string;
-		icon?: string;
-		actions?: NotificationAction[];
-		onClose?: () => void;
+		actions: NotificationAction[];
+		notification: NotificationData;
 		class?: string;
 		classes?: Partial<NotificationClasses>;
 	}
 
 	const {
-		title,
-		body,
-		icon,
-		actions = [],
-		onClose,
+		notification,
+		actions,
 		class: className = '',
 		classes = {},
 	}: Props = $props();
@@ -48,10 +48,10 @@ Enters with fly transition from right
 >
 	<Card.Root class="py-3">
 		<div class="flex items-start gap-3 px-4">
-			<div class="flex flex-col gap-1 flex-1">
+			<div class="flex flex-1 flex-col gap-1">
 				<div class="flex items-start gap-3">
-					{#if icon}
-						<img src={icon} alt="icon" class="size-6 shrink-0" />
+					{#if notification.icon}
+						<img src={notification.icon} alt="icon" class="size-6 shrink-0" />
 					{:else}
 						<svg
 							class="size-6 shrink-0"
@@ -69,14 +69,17 @@ Enters with fly transition from right
 						</svg>
 					{/if}
 					<div class="flex flex-col gap-1">
-						<Card.Title class={classes.title}>{title}</Card.Title>
-						{#if body}
-							<Card.Description class={classes.body}>{body}</Card.Description>
+						<Card.Title class={classes.title}>{notification.title}</Card.Title>
+						{#if notification.body}
+							<Card.Description class={classes.body}
+								>{notification.body}</Card.Description
+							>
 						{/if}
 					</div>
 				</div>
+
 				{#if actions.length > 0}
-					<div class={cn('flex gap-2 justify-end', classes.actions)}>
+					<div class={cn('flex justify-end gap-2', classes.actions)}>
 						{#each actions as action}
 							<Button
 								variant={action.primary ? 'default' : 'ghost'}
@@ -92,21 +95,6 @@ Enters with fly transition from right
 					</div>
 				{/if}
 			</div>
-			{#if onClose}
-				<Button
-					variant="ghost"
-					size="icon-sm"
-					class={cn(classes.closeButton)}
-					onclick={onClose}
-				>
-					<span class="sr-only">Close</span>
-					<svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-						<path
-							d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
-						/>
-					</svg>
-				</Button>
-			{/if}
 		</div>
 	</Card.Root>
 </div>

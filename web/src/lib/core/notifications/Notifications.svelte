@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type {NotificationsService} from '.';
-	import type {NotificationClasses} from './types';
 	import NotificationCard from './NotificationCard.svelte';
+	import type {NotificationClasses} from './types';
 
 	interface Props {
 		notifications: NotificationsService;
@@ -14,9 +14,7 @@
 
 {#each $notifications as n (n.id)}
 	<NotificationCard
-		title={n.title}
-		body={n.body}
-		icon={n.icon}
+		notification={n}
 		actions={n.action
 			? [
 					{
