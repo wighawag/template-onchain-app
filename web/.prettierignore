@@ -16,3 +16,4 @@ src/app.html
 ############################################
 
 pnpm-lock.yaml
+src/lib/shadcn/
