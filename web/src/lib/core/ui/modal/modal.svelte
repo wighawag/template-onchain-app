@@ -51,6 +51,7 @@
 		{onEscapeKeydown}
 		{onOpenAutoFocus}
 		{onCloseAutoFocus}
+		showCloseButton={!!onCancel}
 	>
 		{@render children?.()}
 	</Dialog.Content>
