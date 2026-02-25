@@ -1,7 +1,9 @@
 <script lang="ts">
-	import type {NotificationClasses} from './types';
+	import * as Card from '$lib/shadcn/ui/card/index.js';
+	import {Button} from '$lib/shadcn/ui/button/index.js';
 	import {fly} from 'svelte/transition';
 	import {cn} from '$lib/core/utils/tailwind/index.js';
+	import type {NotificationClasses} from './types';
 
 	export interface NotificationAction {
 		label: string;
@@ -33,96 +35,78 @@
 <!--
 Notification panel, dynamically insert this into the live region when it needs to be displayed
 
-Entering: "transform ease-out duration-300 transition"
-  From: "translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
-  To: "translate-y-0 opacity-100 sm:translate-x-0"
-Leaving: "transition ease-in duration-100"
-  From: "opacity-100"
-  To: "opacity-0"
+Enters with fly transition from right
 -->
 <div
 	class={cn(
-		'pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black/5',
+		// Positioning and layout only - no colors/styling
+		'pointer-events-auto w-full max-w-sm',
 		className,
 		classes.root,
 	)}
 	transition:fly={{delay: 250, duration: 300, x: +100}}
 >
-	<div class="p-4">
-		<div class="flex items-start">
-			<div class="shrink-0">
-				{#if icon}
-					<img src={icon} alt="icon" />
-				{:else}
-					<svg
-						class={cn('size-6 text-gray-400', classes.icon)}
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="1.5"
-						stroke="currentColor"
-						aria-hidden="true"
-						data-slot="icon"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z"
-						/>
-					</svg>
-				{/if}
-			</div>
-			<div class="ml-3 w-0 flex-1 pt-0.5">
-				<p class={cn('text-sm font-medium text-gray-900', classes.title)}>
-					{title}
-				</p>
-				{#if body}
-					<p class={cn('mt-1 text-sm text-gray-500', classes.body)}>{body}</p>
-				{/if}
+	<Card.Root class="py-3">
+		<div class="flex items-start gap-3 px-4">
+			<div class="flex flex-col gap-1 flex-1">
+				<div class="flex items-start gap-3">
+					{#if icon}
+						<img src={icon} alt="icon" class="size-6 shrink-0" />
+					{:else}
+						<svg
+							class="size-6 shrink-0"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							aria-hidden="true"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z"
+							/>
+						</svg>
+					{/if}
+					<div class="flex flex-col gap-1">
+						<Card.Title class={classes.title}>{title}</Card.Title>
+						{#if body}
+							<Card.Description class={classes.body}>{body}</Card.Description>
+						{/if}
+					</div>
+				</div>
 				{#if actions.length > 0}
-					<div class={cn('mt-3 flex space-x-7', classes.actions)}>
+					<div class={cn('flex gap-2 justify-end', classes.actions)}>
 						{#each actions as action}
-							<button
-								type="button"
+							<Button
+								variant={action.primary ? 'default' : 'ghost'}
+								size="sm"
 								class={cn(
-									'rounded-md bg-white text-sm font-medium hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none',
-									action.primary
-										? cn(
-												'text-indigo-600 hover:text-indigo-500',
-												classes.primaryButton,
-											)
-										: cn('text-gray-700', classes.button),
+									action.primary ? classes.primaryButton : classes.button,
 								)}
-								onclick={() => action.onClick()}>{action.label}</button
+								onclick={() => action.onClick()}
 							>
+								{action.label}
+							</Button>
 						{/each}
 					</div>
 				{/if}
 			</div>
 			{#if onClose}
-				<div class="ml-4 flex shrink-0">
-					<button
-						type="button"
-						class={cn(
-							'inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none',
-							classes.closeButton,
-						)}
-						onclick={onClose}
-					>
-						<span class="sr-only">Close</span>
-						<svg
-							class="size-5"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-							aria-hidden="true"
-							data-slot="icon"
-						>
-							<path
-								d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
-							/>
-						</svg>
-					</button>
-				</div>
+				<Button
+					variant="ghost"
+					size="icon-sm"
+					class={cn(classes.closeButton)}
+					onclick={onClose}
+				>
+					<span class="sr-only">Close</span>
+					<svg class="size-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+						<path
+							d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"
+						/>
+					</svg>
+				</Button>
 			{/if}
 		</div>
-	</div>
+	</Card.Root>
 </div>

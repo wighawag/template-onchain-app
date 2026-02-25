@@ -19,10 +19,20 @@
 		icon={n.icon}
 		actions={n.action
 			? [
-					{label: n.action.label, onClick: () => notifications.onAction(n.id)},
+					{
+						label: n.action.label,
+						onClick: () => notifications.onAction(n.id),
+						primary: true,
+					},
 					{label: 'dismiss', onClick: () => notifications.remove(n.id)},
 				]
-			: [{label: 'dismiss', onClick: () => notifications.remove(n.id)}]}
+			: [
+					{
+						label: 'dismiss',
+						onClick: () => notifications.remove(n.id),
+						primary: true,
+					},
+				]}
 		class={className}
 		{classes}
 	/>
