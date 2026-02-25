@@ -17,7 +17,7 @@
 	documentation
 </p>
 
-<Button onclick={() => (dialogOpen = true)}>opem</Button>
+<Button onclick={() => (dialogOpen = true)}>open</Button>
 
 <Dialog.Root bind:open={dialogOpen}>
 	<form>
