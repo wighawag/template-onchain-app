@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type {ServiceWorkerStore} from '.';
 	import type {NotificationClasses} from '$lib/core/notifications/types';
-	import NotificationContainer, {type NotificationItem} from '$lib/core/notifications/NotificationContainer.svelte';
+	import NotificationCard from '$lib/core/notifications/NotificationCard.svelte';
 
 	interface Props {
 		serviceWorker: ServiceWorkerStore;
@@ -30,29 +30,25 @@
 
 	const updateAvailable = $derived(
 		$serviceWorker &&
-		!$serviceWorker.notSupported &&
-		!$serviceWorker.registering &&
-		$serviceWorker.updateAvailable &&
-		$serviceWorker.registration,
-	);
-
-	const notifications: NotificationItem[] = $derived(
-		updateAvailable
-			? [
-					{
-						id: 'sw-update',
-						title: 'A new version is available.',
-						body: 'Reload to get the update.',
-						icon: src,
-						actions: [
-							{label: 'Reload', onClick: accept, primary: true},
-							{label: 'Dismiss', onClick: skip},
-						],
-						onClose: skip,
-					},
-				]
-			: [],
+			!$serviceWorker.notSupported &&
+			!$serviceWorker.registering &&
+			$serviceWorker.updateAvailable &&
+			$serviceWorker.registration,
 	);
 </script>
 
-<NotificationContainer notifications={notifications} class={className} {classes} />
+<div class={className}>
+	{#if updateAvailable}
+		<NotificationCard
+			title="A new version is available."
+			body="Reload to get the update."
+			icon={src}
+			actions={[
+				{label: 'Reload', onClick: accept, primary: true},
+				{label: 'Dismiss', onClick: skip},
+			]}
+			onClose={skip}
+			{classes}
+		/>
+	{/if}
+</div>
