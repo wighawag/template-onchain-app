@@ -72,7 +72,9 @@ Leaving: "transition ease-in duration-100"
 				{/if}
 			</div>
 			<div class="ml-3 w-0 flex-1 pt-0.5">
-				<p class={cn('text-sm font-medium text-gray-900', classes.title)}>{title}</p>
+				<p class={cn('text-sm font-medium text-gray-900', classes.title)}>
+					{title}
+				</p>
 				{#if body}
 					<p class={cn('mt-1 text-sm text-gray-500', classes.body)}>{body}</p>
 				{/if}
@@ -84,11 +86,13 @@ Leaving: "transition ease-in duration-100"
 								class={cn(
 									'rounded-md bg-white text-sm font-medium hover:text-gray-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none',
 									action.primary
-										? cn('text-indigo-600 hover:text-indigo-500', classes.primaryButton)
+										? cn(
+												'text-indigo-600 hover:text-indigo-500',
+												classes.primaryButton,
+											)
 										: cn('text-gray-700', classes.button),
 								)}
-								onclick={() => action.onClick()}
-								>{action.label}</button
+								onclick={() => action.onClick()}>{action.label}</button
 							>
 						{/each}
 					</div>
