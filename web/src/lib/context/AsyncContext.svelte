@@ -5,16 +5,21 @@
 	interface Props {
 		getContext: () => Promise<Dependencies>;
 		children?: Snippet;
+		loading?: Snippet;
+		// minLoading?: number; // TODO implement a minimum loading for splashscreen
 	}
 
-	let {getContext, children}: Props = $props();
+	let {getContext, children, loading}: Props = $props();
 
 	let promise = (() => getContext())();
 </script>
 
 {#await promise}
-	<!-- TODO Splash Screen min 300ms ?-->
-	Please wait...
+	{#if loading}
+		{@render loading()}
+	{:else}
+		Please wait...
+	{/if}
 {:then context}
 	<Context {context}>{@render children?.()}</Context>
 {/await}
