@@ -95,6 +95,69 @@
 							</p>
 						</Card.Content>
 					</Card.Root>
+					<Card.Root class="border-2">
+						<Card.Header>
+							<Card.Title class="flex items-center gap-2 text-lg">
+								<div class="rounded-lg bg-primary/10 p-2">
+									<DollarSignIcon class="h-5 w-5 text-primary" />
+								</div>
+								Signer Balance
+							</Card.Title>
+							<Card.Description class="text-sm">
+								The balance of your signer account
+							</Card.Description>
+						</Card.Header>
+						<Card.Content>
+							<p class="text-3xl font-bold">
+								{formatEther($balance.signer)}
+								<span class="ml-2 text-xl font-normal text-muted-foreground">
+									{$deployments.chain.nativeCurrency.symbol}
+								</span>
+							</p>
+						</Card.Content>
+					</Card.Root>
+					<Card.Root class="border-2">
+						<Card.Header>
+							<Card.Title class="flex items-center gap-2 text-lg">
+								<div class="rounded-lg bg-primary/10 p-2">
+									<DollarSignIcon class="h-5 w-5 text-primary" />
+								</div>
+								Signer Balance
+							</Card.Title>
+							<Card.Description class="text-sm">
+								The balance of your signer account
+							</Card.Description>
+						</Card.Header>
+						<Card.Content>
+							<p class="text-3xl font-bold">
+								{formatEther($balance.signer)}
+								<span class="ml-2 text-xl font-normal text-muted-foreground">
+									{$deployments.chain.nativeCurrency.symbol}
+								</span>
+							</p>
+						</Card.Content>
+					</Card.Root>
+					<Card.Root class="border-2">
+						<Card.Header>
+							<Card.Title class="flex items-center gap-2 text-lg">
+								<div class="rounded-lg bg-primary/10 p-2">
+									<DollarSignIcon class="h-5 w-5 text-primary" />
+								</div>
+								Signer Balance
+							</Card.Title>
+							<Card.Description class="text-sm">
+								The balance of your signer account
+							</Card.Description>
+						</Card.Header>
+						<Card.Content>
+							<p class="text-3xl font-bold">
+								{formatEther($balance.signer)}
+								<span class="ml-2 text-xl font-normal text-muted-foreground">
+									{$deployments.chain.nativeCurrency.symbol}
+								</span>
+							</p>
+						</Card.Content>
+					</Card.Root>
 				</div>
 			</div>
 		{/if}

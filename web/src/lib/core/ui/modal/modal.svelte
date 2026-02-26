@@ -44,6 +44,7 @@
 	}}
 	{...restProps}
 >
+	<Dialog.Portal to="#--layer-modals" />
 	<Dialog.Content
 		interactOutsideBehavior={onCancel ? 'close' : 'ignore'}
 		{onInteractOutside}

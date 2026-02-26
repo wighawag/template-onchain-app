@@ -4,6 +4,10 @@
 	import {type HTMLAttributes} from 'svelte/elements';
 	import {createPublicClient, http} from 'viem';
 	import {mainnet} from 'viem/chains';
+	import {logs} from 'named-logs';
+	import {PUBLIC_ENS_NODE_URL} from '$env/static/public';
+
+	const logger = logs('address');
 
 	interface Props extends HTMLAttributes<HTMLSpanElement> {
 		value: `0x${string}`;
@@ -12,9 +16,11 @@
 	}
 	let {value, start = 4, end = 4, ...restProps}: Props = $props();
 
+	// TODO handle this with a central registry that can cache request
+	// then use getContext that attempt to get this registry
 	const publicClient = createPublicClient({
 		chain: mainnet,
-		transport: http(),
+		transport: http(PUBLIC_ENS_NODE_URL || undefined),
 	});
 
 	let ensName: string | null = $state(null);
@@ -34,11 +40,17 @@
 		loading = true;
 		ensName = null;
 		try {
+			logger.debug(`fetching ens for ${value}`);
 			ensName = await publicClient.getEnsName({address: value});
+			logger.debug(`name is ${ensName}`);
 		} catch (e) {
+			logger.debug(`failed to fetch ens fro ${value}`, e);
+			// TODO support error
 			ensName = null;
+		} finally {
+			logger.debug(`we are done fetching`);
+			loading = false;
 		}
-		loading = false;
 	}
 
 	function formatAddress(addr: string) {

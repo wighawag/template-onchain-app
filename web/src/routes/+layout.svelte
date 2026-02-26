@@ -20,3 +20,6 @@
 		root: 'bg-background bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,var(--color-muted)_10px,var(--color-muted)_20px)]',
 	}}
 />
+
+<div id="--layer-drawer"></div>
+<div id="--layer-modals"></div>
