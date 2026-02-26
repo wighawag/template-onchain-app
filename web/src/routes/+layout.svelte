@@ -1,14 +1,25 @@
 <script lang="ts">
+	import '../app.css';
+
 	import {serviceWorker, notifications} from '$lib';
 	import NotificationOverlay from '$lib/core/notifications/NotificationOverlay.svelte';
 	import Notifications from '$lib/core/notifications/Notifications.svelte';
 	import VersionAndInstallNotfications from '$lib/core/service-worker/VersionAndInstallNotfications.svelte';
-	import {Navbar} from '$lib/core/ui/navbar';
-	import '../app.css';
+
+	import {browser} from '$app/environment';
+	import {createDependencies} from '$lib/dependencies.js';
+	import ContextLoader from '$lib/context/ContextLoader.svelte';
+	import Navbar from '$lib/core/ui/navbar/navbar.svelte';
+
 	let {children} = $props();
 </script>
 
-{@render children()}
+{#if browser}
+	<ContextLoader getContext={createDependencies}>
+		<Navbar name="Template" />
+		{@render children()}
+	</ContextLoader>
+{/if}
 
 <NotificationOverlay>
 	<Notifications {notifications} />

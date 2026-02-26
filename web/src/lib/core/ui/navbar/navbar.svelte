@@ -5,6 +5,7 @@
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Drawer from '$lib/shadcn/ui/drawer/index.js';
 	import Address from '../ethereum/Address.svelte';
+	import {url} from '$lib/core/utils/web/path';
 
 	let {name}: {name?: string} = $props();
 
@@ -15,20 +16,14 @@
 	function toggleMenu() {
 		showMenu = !showMenu;
 	}
-
-	function closeMenu(event: Event) {
-		// Only close if the click is on the panel background itself
-		if (event.target === event.currentTarget) {
-			showMenu = false;
-		}
-	}
 </script>
 
 <nav
 	class="sticky top-0 left-0 z-50 flex h-12 w-full items-center justify-between bg-background shadow-md"
 >
 	<div class="m-1 flex h-full items-center space-x-2">
-		<span class="text-lg font-bold">{name}</span>
+		<span class="text-lg font-bold">{name}</span> <a href={url('/')}>home</a>
+		<a href={url('/examples')}>examples</a>
 	</div>
 
 	<div class="relative flex h-full items-center space-x-4">

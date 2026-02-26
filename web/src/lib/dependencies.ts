@@ -38,6 +38,9 @@ export async function createDependencies(): Promise<Dependencies> {
 	// ----------------------------------------------------------------------------
 
 	const balance = createBalanceStore({publicClient, signer});
+	// to keep balance in memory
+	// TODO use an methodology to handle this when wanted
+	balance.subscribe((v) => {});
 	window.balance = balance;
 
 	// ----------------------------------------------------------------------------
