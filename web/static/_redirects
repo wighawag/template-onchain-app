@@ -1,0 +1,6 @@
+# SPA fallback for dynamic routes
+/explorer/address/* /200.html 200
+/explorer/tx/* /200.html 200
+
+# Custom 404 page (optional)
+# /* /404.html 404

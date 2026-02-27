@@ -37,6 +37,7 @@ const config = {
 		adapter: adapter({
 			assets: 'build',
 			pages: 'build',
+			fallback: '200.html', // SPA fallback for dynamic routes - works on IPFS
 		}),
 		serviceWorker: {
 			// we handle it ourselves here : src/service-worker-handler.ts
