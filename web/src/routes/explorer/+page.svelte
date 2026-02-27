@@ -1,6 +1,6 @@
 <script lang="ts">
 	import {goto} from '$app/navigation';
-	import DefaultHead from '../metadata/DefaultHead.svelte';
+	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
 	import * as Card from '$lib/shadcn/ui/card';
 	import * as Separator from '$lib/shadcn/ui/separator';
 	import {Input} from '$lib/shadcn/ui/input';

@@ -1,8 +1,7 @@
 <script lang="ts">
-	import DefaultHead from './metadata/DefaultHead.svelte';
+	import DefaultHead from '../lib/metadata/DefaultHead.svelte';
 	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
 	import WalletOnlyConnectionFlow from '$lib/core/connection/WalletOnlyConnectionFlow.svelte';
-	import {Navbar} from '$lib/core/ui/navbar';
 	import {Button} from '$lib/shadcn/ui/button';
 	import * as Empty from '$lib/shadcn/ui/empty';
 	import * as Card from '$lib/shadcn/ui/card';

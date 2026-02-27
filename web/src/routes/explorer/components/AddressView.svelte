@@ -1,5 +1,5 @@
 <script lang="ts">
-	import DefaultHead from '../../metadata/DefaultHead.svelte';
+	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
 	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
 	import {getUserContext} from '$lib';
 	import * as Card from '$lib/shadcn/ui/card';

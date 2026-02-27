@@ -1,5 +1,5 @@
 <script lang="ts">
-	import DefaultHead from '../metadata/DefaultHead.svelte';
+	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
 	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
 	import {getUserContext, route} from '$lib';
 	import {
