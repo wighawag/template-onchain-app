@@ -19,7 +19,7 @@
 </script>
 
 <nav
-	class="sticky top-0 left-0 z-50 flex h-12 w-full items-center justify-between bg-background shadow-md"
+	class="sticky top-2 left-0 z-50 flex h-12 w-full items-center justify-between bg-background shadow-md"
 >
 	<div class="m-1 flex h-full items-center space-x-2">
 		<span class="text-lg font-bold">{name}</span> <a href={url('/')}>home</a>
