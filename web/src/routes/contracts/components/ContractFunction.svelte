@@ -11,7 +11,7 @@
 	} from '../lib/utils';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Alert from '$lib/shadcn/ui/alert';
-	import {CircleAlert, CircleCheck, InfoIcon} from '@lucide/svelte';
+	import {CircleAlertIcon, CircleCheckIcon, InfoIcon} from '@lucide/svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import type {
 		ConnectionStore,
@@ -159,7 +159,7 @@
 
 		{#if error}
 			<Alert.Root variant="destructive" class="max-w-full overflow-hidden">
-				<CircleAlert class="h-4 w-4 shrink-0" />
+				<CircleAlertIcon class="h-4 w-4 shrink-0" />
 				<Alert.Description
 					class="overflow-wrap-break-word max-h-32 min-w-0 overflow-y-auto text-sm wrap-break-word"
 					>{error}</Alert.Description
@@ -172,7 +172,7 @@
 				<div
 					class="flex items-center gap-2 text-sm font-medium text-green-600 dark:text-green-400"
 				>
-					<CircleCheck class="h-4 w-4" />
+					<CircleCheckIcon class="h-4 w-4" />
 					<span>Result</span>
 				</div>
 				<pre

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {Check, Copy, LoaderCircle} from '@lucide/svelte';
+	import {CheckIcon, CopyIcon, LoaderCircleIcon} from '@lucide/svelte';
 	import {onMount} from 'svelte';
 	import {type HTMLAttributes} from 'svelte/elements';
 	import {createPublicClient, http} from 'viem';
@@ -90,16 +90,16 @@
 				class="absolute top-1/2 right-0 size-5 -translate-y-1/2 pointer-coarse:hidden"
 			></span>
 			{#if copied}
-				<Check class="h-3 w-3 text-green-500" />
+				<CheckIcon class="h-3 w-3 text-green-500" />
 			{:else}
-				<Copy class="h-3 w-3" />
+				<CopyIcon class="h-3 w-3" />
 			{/if}
 		</button>
 		<!-- {/if} -->
 	</span>
 	<span class="flex flex-1 items-center justify-end gap-1">
 		{#if loading}
-			<LoaderCircle class="w-4 animate-spin" />
+			<LoaderCircleIcon class="w-4 animate-spin" />
 		{/if}
 	</span>
 </span>

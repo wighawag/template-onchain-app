@@ -3,7 +3,7 @@
 	import Label from '$lib/shadcn/ui/label/label.svelte';
 	import Input from '$lib/shadcn/ui/input/input.svelte';
 	import * as Alert from '$lib/shadcn/ui/alert';
-	import {CircleAlert} from '@lucide/svelte';
+	import {CircleAlertIcon} from '@lucide/svelte';
 	import {
 		getInputFieldType,
 		getInputPlaceholder,
@@ -71,7 +71,7 @@
 					variant="destructive"
 					class="max-w-full overflow-hidden py-2"
 				>
-					<CircleAlert class="h-4 w-4 shrink-0" />
+					<CircleAlertIcon class="h-4 w-4 shrink-0" />
 					<Alert.Description
 						class="overflow-wrap-break-word max-h-32 min-w-0 overflow-y-auto text-xs wrap-break-word"
 					>
