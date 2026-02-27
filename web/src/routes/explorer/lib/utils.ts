@@ -144,3 +144,78 @@ export function getLogAddresses(logs: Log[]): Address[] {
 	}
 	return Array.from(addresses);
 }
+
+/**
+ * Format transaction type for display
+ */
+export function formatTransactionType(type: string): string {
+	const typeMap: Record<string, string> = {
+		'0x0': 'Legacy',
+		'0x1': 'EIP-2930',
+		'0x2': 'EIP-1559',
+	};
+	return typeMap[type] || type;
+}
+
+/**
+ * Truncate transaction hash for display
+ */
+export function truncateTxHash(hash: string, length: number = 10): string {
+	if (hash.length <= length) {
+		return hash;
+	}
+	return `${hash.slice(0, length)}...${hash.slice(-4)}`;
+}
+
+/**
+ * Get transaction type icon component name
+ */
+export function getTransactionTypeIcon(type: string): string {
+	if (type === '0x2' || type === 'EIP-1559') {
+		return 'ZapIcon';
+	}
+	return 'FileTextIcon';
+}
+
+/**
+ * Format timestamp to readable date/time
+ */
+export function formatTimestamp(timestamp: number): string {
+	if (!timestamp) {
+		return 'Unknown';
+	}
+
+	const date = new Date(timestamp * 1000);
+	const now = new Date();
+	const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+	// If less than a minute ago
+	if (diffInSeconds < 60) {
+		return 'Just now';
+	}
+
+	// If less than an hour ago
+	if (diffInSeconds < 3600) {
+		const minutes = Math.floor(diffInSeconds / 60);
+		return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+	}
+
+	// If less than a day ago
+	if (diffInSeconds < 86400) {
+		const hours = Math.floor(diffInSeconds / 3600);
+		return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+	}
+
+	// If less than a week ago
+	if (diffInSeconds < 604800) {
+		const days = Math.floor(diffInSeconds / 86400);
+		return `${days} day${days > 1 ? 's' : ''} ago`;
+	}
+
+	// Otherwise, return the full date
+	return date.toLocaleDateString('en-US', {
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric',
+	});
+}

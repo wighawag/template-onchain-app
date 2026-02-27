@@ -6,6 +6,7 @@
 	import {Input} from '$lib/shadcn/ui/input';
 	import {Button} from '$lib/shadcn/ui/button';
 	import {SearchIcon} from '@lucide/svelte';
+	import TransactionList from './components/TransactionList.svelte';
 
 	let inputValue = $state('');
 
@@ -53,22 +54,25 @@
 
 		<Separator.Root />
 
-			<Card.Root class="max-w-2xl mx-auto">
-				<Card.Content class="pt-6">
-					<div class="flex gap-2">
-						<Input
-							bind:value={inputValue}
-							onkeydown={handleKeydown}
-							placeholder="Enter transaction hash or address (0x...)"
-							class="flex-1"
-						/>
-						<Button onclick={handleSearch}>
-							<SearchIcon class="mr-2 h-4 w-4" />
-							Search
-						</Button>
-					</div>
-				</Card.Content>
-			</Card.Root>
+		<Card.Root class="max-w-2xl mx-auto">
+			<Card.Content class="pt-6">
+				<div class="flex gap-2">
+					<Input
+						bind:value={inputValue}
+						onkeydown={handleKeydown}
+						placeholder="Enter transaction hash or address (0x...)"
+						class="flex-1"
+					/>
+					<Button onclick={handleSearch}>
+						<SearchIcon class="mr-2 h-4 w-4" />
+						Search
+					</Button>
+				</div>
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Recent Transactions -->
+		<TransactionList />
 
 		<div class="max-w-2xl mx-auto space-y-4">
 			<h2 class="text-lg font-semibold">Quick Links</h2>

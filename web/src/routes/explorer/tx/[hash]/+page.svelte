@@ -20,6 +20,11 @@
 		formatTxStatus,
 		findContractByAddress,
 	} from '../../lib/utils';
+	import {
+		decodeTransaction,
+		formatDecodedTransaction,
+		type DecodedTransactionData,
+	} from '$lib/services/transactionDecoder';
 
 	let dependencies = getUserContext();
 	let {publicClient, connection} = $derived(dependencies);
@@ -38,6 +43,11 @@
 		blockNumber: bigint;
 		txHash: string;
 	}>>([]);
+	let decodedTxData = $state<DecodedTransactionData>({
+		isDecoded: false,
+		status: 'pending',
+	});
+	let formattedTxData = $derived(formatDecodedTransaction(decodedTxData));
 
 	async function fetchTransaction() {
 		if (!publicClient) {
@@ -57,6 +67,10 @@
 			// Fetch receipt
 			const txReceipt = await publicClient.getTransactionReceipt({hash: txHash});
 			receipt = txReceipt;
+
+			// Decode transaction data
+			const decoded = await decodeTransaction(transaction, txReceipt, publicClient);
+			decodedTxData = decoded;
 
 			// Decode events
 			if (txReceipt.logs.length > 0) {
@@ -110,24 +124,48 @@
 	{:else}
 		<div class="space-y-6">
 			<!-- Header -->
-			<div class="flex items-center justify-between">
-				<div>
-					<div class="flex items-center gap-2">
-						<h1 class="text-2xl font-bold">Transaction Details</h1>
-						{#if receipt.status === 'success'}
-							<div class="flex items-center gap-1 text-sm text-green-600">
-								<CheckCircleIcon class="h-4 w-4" />
-								<span>Success</span>
-							</div>
-						{:else}
-							<div class="flex items-center gap-1 text-sm text-red-600">
-								<XCircleIcon class="h-4 w-4" />
-								<span>Failed</span>
+			<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+				<div class="flex-1">
+					<!-- Transaction Method/Function -->
+					{#if decodedTxData.isDecoded && formattedTxData.methodLabel}
+						<div class="text-2xl font-bold">{formattedTxData.methodLabel}</div>
+						{#if formattedTxData.methodDetails}
+							<div class="text-sm text-muted-foreground truncate" title={formattedTxData.methodDetails}>
+								{formattedTxData.methodDetails}
 							</div>
 						{/if}
-					</div>
+					{:else if tx.to}
+						<div class="text-2xl font-bold">Contract Call</div>
+					{:else}
+						<div class="text-2xl font-bold">Contract Creation</div>
+					{/if}
+
+					<!-- Transaction Hash -->
 					<div class="flex items-center gap-2 mt-1">
 						<Address value={txHash} />
+					</div>
+
+					<!-- Transaction Status -->
+					<div class="flex items-center gap-2 mt-2">
+						{#if decodedTxData.status === 'success'}
+							<div class="flex items-center gap-1 text-sm text-green-600">
+								<CheckCircleIcon class="h-4 w-4" />
+								<span class="font-semibold">Success</span>
+							</div>
+						{:else if decodedTxData.status === 'failed'}
+							<div class="flex items-center gap-1 text-sm text-red-600">
+								<XCircleIcon class="h-4 w-4" />
+								<span class="font-semibold">Failed</span>
+								{#if decodedTxData.error}
+									<span class="text-sm text-muted-foreground">- {decodedTxData.error}</span>
+								{/if}
+							</div>
+						{:else}
+							<div class="flex items-center gap-1 text-sm text-yellow-600">
+								<XCircleIcon class="h-4 w-4 animate-spin" />
+								<span class="font-semibold">Pending</span>
+							</div>
+						{/if}
 					</div>
 				</div>
 				<Button onclick={() => window.history.back()} variant="outline" size="sm">
@@ -137,6 +175,20 @@
 			</div>
 
 			<Separator.Root />
+
+			<!-- Function Arguments (if decoded) -->
+			{#if decodedTxData.isDecoded && decodedTxData.args}
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Function Arguments</Card.Title>
+					</Card.Header>
+					<Card.Content>
+						<pre class="overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs"><code
+							>{JSON.stringify(decodedTxData.args, null, 2)}</code
+						></pre>
+					</Card.Content>
+				</Card.Root>
+			{/if}
 
 			<!-- Transaction Details -->
 			<Card.Root>
