@@ -187,7 +187,9 @@
 				<InfoIcon class="h-4 w-4" />
 				<Alert.Description class="flex flex-col gap-1 text-sm">
 					<span class="font-medium">Transaction submitted</span>
-					<Address value={transactionHash} />
+					<a href={`/explorer/tx/${transactionHash}`} class="text-primary hover:underline">
+						<Address value={transactionHash} />
+					</a>
 				</Alert.Description>
 			</Alert.Root>
 		{/if}

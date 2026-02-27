@@ -97,7 +97,7 @@
 							<div class="rounded-lg bg-muted/50 p-4">
 								<h2 class="text-xl font-semibold">{contract.name}</h2>
 								<p class="text-sm text-muted-foreground">
-									Address: {contract.address}
+									Address: <a href={`/explorer/address/${contract.address}`} class="text-primary hover:underline">{contract.address}</a>
 								</p>
 							</div>
 

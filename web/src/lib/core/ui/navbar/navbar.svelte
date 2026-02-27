@@ -25,6 +25,7 @@
 	<div class="m-1 flex h-full items-center space-x-2">
 		<span class="text-lg font-bold">{name}</span> <a href={url('/')}>home</a>
 		<a href={url('/contracts')}>contracts</a>
+		<a href={url('/explorer')}>explorer</a>
 		<a href={url('/examples')}>examples</a>
 	</div>
 
