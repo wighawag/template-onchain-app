@@ -3,7 +3,7 @@
 	import Label from '$lib/shadcn/ui/label/label.svelte';
 	import Input from '$lib/shadcn/ui/input/input.svelte';
 	import * as Alert from '$lib/shadcn/ui/alert';
-	import {AlertCircleIcon} from '@lucide/svelte';
+	import {CircleAlert} from '@lucide/svelte';
 	import {
 		getInputFieldType,
 		getInputPlaceholder,
@@ -25,10 +25,7 @@
 		for (const [index, input] of inputs.entries()) {
 			const key = getInputKey(input, index);
 			if (values[key] !== undefined) {
-				const validation = validateInputValue(
-					input.type,
-					String(values[key]),
-				);
+				const validation = validateInputValue(input.type, String(values[key]));
 				if (!validation.valid && validation.error) {
 					errors[key] = validation.error;
 				} else {
@@ -74,7 +71,7 @@
 					variant="destructive"
 					class="max-w-full overflow-hidden py-2"
 				>
-					<AlertCircleIcon class="h-4 w-4 shrink-0" />
+					<CircleAlert class="h-4 w-4 shrink-0" />
 					<Alert.Description
 						class="overflow-wrap-break-word max-h-32 min-w-0 overflow-y-auto text-xs wrap-break-word"
 					>

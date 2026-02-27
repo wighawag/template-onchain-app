@@ -2,7 +2,12 @@
 	import DefaultHead from '../metadata/DefaultHead.svelte';
 	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
 	import {getUserContext} from '$lib';
-	import {Root as Tabs, Content as TabsContent, List as TabsList, Trigger as TabsTrigger} from '$lib/shadcn/ui/tabs';
+	import {
+		Root as Tabs,
+		Content as TabsContent,
+		List as TabsList,
+		Trigger as TabsTrigger,
+	} from '$lib/shadcn/ui/tabs';
 	import * as Empty from '$lib/shadcn/ui/empty';
 	import * as Separator from '$lib/shadcn/ui/separator';
 	import {FileCodeIcon} from '@lucide/svelte';
@@ -11,24 +16,25 @@
 
 	let dependencies = getUserContext();
 
-	let {publicClient, walletClient, connection, account, deployments} = $derived(
-		dependencies
-	);
+	let {publicClient, walletClient, connection, account, deployments} =
+		$derived(dependencies);
 
 	// Get all contract names
 	let contractNames = $derived(Object.keys($deployments.contracts));
-
-	// Get the account value
-	let accountValue = $derived($account);
 
 	// Get all functions for each contract
 	let contractFunctions = $derived(
 		contractNames.map((name) => ({
 			name,
-			address: $deployments.contracts[name as keyof typeof $deployments.contracts].address,
-			abi: $deployments.contracts[name as keyof typeof $deployments.contracts].abi,
-			functions: getContractFunctions($deployments.contracts[name as keyof typeof $deployments.contracts].abi)
-		}))
+			address:
+				$deployments.contracts[name as keyof typeof $deployments.contracts]
+					.address,
+			abi: $deployments.contracts[name as keyof typeof $deployments.contracts]
+				.abi,
+			functions: getContractFunctions(
+				$deployments.contracts[name as keyof typeof $deployments.contracts].abi,
+			),
+		})),
 	);
 
 	// Split functions into view and write
@@ -36,18 +42,18 @@
 		contractFunctions.map((contract) => ({
 			...contract,
 			viewFunctions: contract.functions.filter((f) =>
-				isViewFunction(f.stateMutability)
+				isViewFunction(f.stateMutability),
 			),
 			writeFunctions: contract.functions.filter(
-				(f) => !isViewFunction(f.stateMutability)
-			)
-		}))
+				(f) => !isViewFunction(f.stateMutability),
+			),
+		})),
 	);
 </script>
 
 <DefaultHead title={'Contracts'} />
 
-<ConnectionFlow connection={connection} />
+<ConnectionFlow {connection} />
 
 <div class="container mx-auto max-w-5xl px-4 py-8">
 	{#if contractNames.length === 0}
@@ -95,8 +101,7 @@
 								</p>
 							</div>
 
-							{#if contract.viewFunctions.length === 0 &&
-							contract.writeFunctions.length === 0}
+							{#if contract.viewFunctions.length === 0 && contract.writeFunctions.length === 0}
 								<Empty.Root>
 									<Empty.Header>
 										<Empty.Title>No Functions Found</Empty.Title>
@@ -122,9 +127,9 @@
 															functionName={func.name}
 															abiItem={func}
 															contractAddress={contract.address}
-															publicClient={publicClient}
-															walletClient={walletClient}
-															account={accountValue ? {address: accountValue} : null}
+															{connection}
+															{publicClient}
+															{walletClient}
 														/>
 													{/each}
 												</div>
@@ -151,9 +156,9 @@
 															functionName={func.name}
 															abiItem={func}
 															contractAddress={contract.address}
-															publicClient={publicClient}
-															walletClient={walletClient}
-															account={accountValue ? {address: accountValue} : null}
+															{connection}
+															{publicClient}
+															{walletClient}
 														/>
 													{/each}
 												</div>

@@ -13,23 +13,27 @@
 	import * as Alert from '$lib/shadcn/ui/alert';
 	import {CircleAlert, CircleCheck, InfoIcon} from '@lucide/svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
+	import type {
+		ConnectionStore,
+		UnderlyingEthereumProvider,
+	} from '@etherplay/connect';
 
 	interface Props {
 		functionName: string;
 		abiItem: AbiFunction;
 		contractAddress: string;
+		connection: ConnectionStore<UnderlyingEthereumProvider>;
 		publicClient: PublicClient;
-		walletClient: WalletClient | null;
-		account?: {address: `0x${string}`} | null;
+		walletClient: WalletClient;
 	}
 
 	let {
 		functionName,
 		abiItem,
 		contractAddress,
+		connection,
 		publicClient,
 		walletClient,
-		account,
 	}: Props = $props();
 
 	let inputValues = $state<Record<string, string>>({});
@@ -72,11 +76,6 @@
 	}
 
 	async function handleExecute() {
-		if (!walletClient || !account) {
-			error = 'Please connect your wallet first';
-			return;
-		}
-
 		// Check for validation errors
 		const hasErrors = Object.keys(inputErrors).some(
 			(key) => inputErrors[key] !== undefined,
@@ -94,12 +93,14 @@
 		try {
 			const args = convertInputValues(abiItem.inputs, inputValues);
 
+			const currentConnection = await connection.ensureConnected();
+
 			const hash = await walletClient.writeContract({
 				address: contractAddress as `0x${string}`,
 				abi: [abiItem],
 				functionName: abiItem.name,
 				args: args as any,
-				account: account.address,
+				account: currentConnection.account.address,
 				chain: null as any,
 			});
 
@@ -208,17 +209,17 @@
 				{/if}
 			</Button>
 		{:else}
+			<!-- disabled={loading || !walletClient || !account}-->
 			<Button
 				onclick={handleExecute}
-				disabled={loading || !walletClient || !account}
 				class="flex-1"
 				variant={transactionHash ? 'outline' : 'default'}
 			>
 				{#if loading}
 					<Spinner />
 					Executing...
-				{:else if !walletClient || !account}
-					Connect Wallet
+				{:else if $connection.step != 'SignedIn' && $connection.step != 'WalletConnected'}
+					Connect + Execute
 				{:else}
 					Execute
 				{/if}
