@@ -6,7 +6,7 @@ import {
 import {createServiceWorker} from '$lib/core/service-worker';
 import {createNotificationsService} from './core/notifications';
 import {createContext} from 'svelte';
-import type {Dependencies} from './types';
+import type {Context} from './context/types';
 
 export const hashParams = getHashParamsFromLocation();
 
@@ -19,19 +19,7 @@ export const {isParentRoute, isSameRoute, route, params} = createRouteHandler(
 export const notifications = createNotificationsService();
 export const serviceWorker = createServiceWorker(notifications);
 
-// notifications.add({
-// 	title: 'hello world',
-// 	body: 'sdsa dsad sad sakd jsakd sd sadjsakdjsak dsakdj sakjd ksdj',
-// 	action: {
-// 		label: 'do it',
-// 		command: () => {
-// 			console.log('hello world');
-// 		},
-// 	},
-// });
-
-const [getUserContextFunction, setUserContext] =
-	createContext<() => Dependencies>();
+const [getUserContextFunction, setUserContext] = createContext<() => Context>();
 
 const getUserContext = () => getUserContextFunction()();
 export {getUserContext, setUserContext};

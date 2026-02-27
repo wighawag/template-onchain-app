@@ -3,11 +3,11 @@ import type {
 	UnderlyingEthereumProvider,
 } from '@etherplay/connect';
 import type {PublicClient, WalletClient} from 'viem';
-import type {BalanceStore} from './core/connection/balance';
-import type {GasFeeStore} from './core/connection/gasFee';
-import type {AccountStore, DeploymentsStore} from './core/connection/types';
+import type {BalanceStore} from '$lib/core/connection/balance';
+import type {GasFeeStore} from '$lib/core/connection/gasFee';
+import type {AccountStore, DeploymentsStore} from '$lib/core/connection/types';
 
-export type Dependencies = {
+export type Context = {
 	gasFee: GasFeeStore;
 	balance: BalanceStore;
 	paymentConnection: ConnectionStore<UnderlyingEthereumProvider>;

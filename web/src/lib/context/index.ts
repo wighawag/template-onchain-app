@@ -1,10 +1,10 @@
-import type {Dependencies} from './types.js';
+import type {Context} from './types.js';
 
-import {establishRemoteConnection} from './core/connection';
-import {createBalanceStore} from './core/connection/balance';
-import {createGasFeeStore} from './core/connection/gasFee';
+import {establishRemoteConnection} from '$lib/core/connection';
+import {createBalanceStore} from '$lib/core/connection/balance';
+import {createGasFeeStore} from '$lib/core/connection/gasFee';
 
-export async function createDependencies(): Promise<Dependencies> {
+export async function createContext(): Promise<Context> {
 	const window = globalThis as any;
 
 	// ----------------------------------------------------------------------------

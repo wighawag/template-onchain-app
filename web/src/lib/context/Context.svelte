@@ -1,10 +1,10 @@
 <script lang="ts">
 	import {setUserContext} from '$lib';
-	import type {Dependencies} from '$lib/types';
+	import type {Context} from './types';
 	import type {Snippet} from 'svelte';
 
 	interface Props {
-		context: Dependencies;
+		context: Context;
 		children?: Snippet;
 	}
 

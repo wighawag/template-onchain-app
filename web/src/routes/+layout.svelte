@@ -6,14 +6,14 @@
 	import Notifications from '$lib/core/notifications/Notifications.svelte';
 	import VersionAndInstallNotfications from '$lib/core/service-worker/VersionAndInstallNotfications.svelte';
 
-	import {createDependencies} from '$lib/dependencies.js';
+	import {createContext} from '$lib/context/index.js';
 	import AsyncContext from '$lib/context/AsyncContext.svelte';
 	import Navbar from '$lib/core/ui/navbar/navbar.svelte';
 
 	let {children} = $props();
 </script>
 
-<AsyncContext getContext={createDependencies}>
+<AsyncContext getContext={createContext}>
 	{#snippet loading()}
 		<!-- TODO SplashScreen -->
 	{/snippet}
