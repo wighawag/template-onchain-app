@@ -1,13 +1,7 @@
 <script lang="ts">
 	import {CheckIcon, CopyIcon, LoaderCircleIcon} from '@lucide/svelte';
-	import {onMount} from 'svelte';
+	import {getContext, onMount} from 'svelte';
 	import {type HTMLAttributes} from 'svelte/elements';
-	import {createPublicClient, http} from 'viem';
-	import {mainnet} from 'viem/chains';
-	import {logs} from 'named-logs';
-	import {PUBLIC_ENS_NODE_URL} from '$env/static/public';
-
-	const logger = logs('address');
 
 	interface Props extends HTMLAttributes<HTMLSpanElement> {
 		value: `0x${string}`;
@@ -16,39 +10,30 @@
 	}
 	let {value, start = 4, end = 4, ...restProps}: Props = $props();
 
-	// TODO handle this with a central registry that can cache request
-	// then use getContext that attempt to get this registry
-	const publicClient = createPublicClient({
-		chain: mainnet,
-		transport: http(PUBLIC_ENS_NODE_URL || undefined),
-	});
+	// Get ENS context if available - component works without it
+	const ensContext = getContext<
+		{fetchENS: (address: `0x${string}`) => Promise<string | null>} | undefined
+	>('ens');
 
 	let ensName: string | null = $state(null);
 	let loading = $state(false);
 	let copied = $state(false);
 
 	onMount(() => {
-		if (value) {
-			fetchENS();
+		if (value && ensContext) {
+			loadENS();
 		}
 	});
 
-	async function fetchENS() {
-		if (!value) {
+	async function loadENS() {
+		if (!value || !ensContext) {
 			return;
 		}
 		loading = true;
 		ensName = null;
 		try {
-			logger.debug(`fetching ens for ${value}`);
-			ensName = await publicClient.getEnsName({address: value});
-			logger.debug(`name is ${ensName}`);
-		} catch (e) {
-			logger.debug(`failed to fetch ens fro ${value}`, e);
-			// TODO support error
-			ensName = null;
+			ensName = await ensContext.fetchENS(value);
 		} finally {
-			logger.debug(`we are done fetching`);
 			loading = false;
 		}
 	}

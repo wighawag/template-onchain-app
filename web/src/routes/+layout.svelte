@@ -9,8 +9,13 @@
 	import {createContext} from '$lib/context/index.js';
 	import AsyncContext from '$lib/context/AsyncContext.svelte';
 	import Navbar from '$lib/core/ui/navbar/navbar.svelte';
+	import {createENSService} from '$lib/core/ens';
+	import {setContext} from 'svelte';
 
 	let {children} = $props();
+
+	const ensService = createENSService();
+	setContext('ens', ensService);
 </script>
 
 <AsyncContext getContext={createContext}>
