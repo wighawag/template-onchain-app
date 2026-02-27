@@ -20,9 +20,7 @@ export interface DecodedEvent {
 /**
  * Find contract in deployments by address
  */
-export function findContractByAddress(
-	address: Address,
-): ContractInfo | null {
+export function findContractByAddress(address: Address): ContractInfo | null {
 	const contracts = deploymentsFromFiles.contracts;
 	for (const [name, contract] of Object.entries(contracts)) {
 		if (contract.address.toLowerCase() === address.toLowerCase()) {
@@ -39,10 +37,7 @@ export function findContractByAddress(
 /**
  * Decode a single log using ABI
  */
-function decodeLogWithAbi(
-	log: Log,
-	abi: Abi,
-): DecodedEvent | null {
+function decodeLogWithAbi(log: Log, abi: Abi): DecodedEvent | null {
 	try {
 		// Try to decode the log
 		const decoded = decodeEventLog({
@@ -68,9 +63,7 @@ function decodeLogWithAbi(
 /**
  * Decode logs using deployments.ts data
  */
-export function decodeLogs(
-	logs: Log[],
-): DecodedEvent[] {
+export function decodeLogs(logs: Log[]): DecodedEvent[] {
 	const decodedEvents: DecodedEvent[] = [];
 
 	for (const log of logs) {

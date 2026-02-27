@@ -52,7 +52,10 @@ function findContractByAddress(address: `0x${string}`): ContractInfo | null {
 /**
  * Decode transaction function call data using ABI
  */
-function decodeFunctionCall(tx: Transaction, abi: Abi): {
+function decodeFunctionCall(
+	tx: Transaction,
+	abi: Abi,
+): {
 	functionName?: string;
 	args?: Record<string, unknown> | unknown[];
 } | null {
@@ -169,7 +172,12 @@ export function formatDecodedTransaction(
 	return {
 		methodLabel,
 		methodDetails,
-		statusText: data.status === 'success' ? 'Success' : data.status === 'failed' ? 'Failed' : 'Pending',
+		statusText:
+			data.status === 'success'
+				? 'Success'
+				: data.status === 'failed'
+					? 'Failed'
+					: 'Pending',
 	};
 }
 
@@ -178,7 +186,9 @@ export function formatDecodedTransaction(
  * @param args - The decoded arguments
  * @returns Formatted string representation
  */
-export function formatDecodedArgs(args: Record<string, unknown> | unknown[]): string {
+export function formatDecodedArgs(
+	args: Record<string, unknown> | unknown[],
+): string {
 	if (!args) {
 		return '';
 	}

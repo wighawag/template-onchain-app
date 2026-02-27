@@ -21,10 +21,7 @@ export function getInputLabel(input: AbiParameter, index: number): string {
  */
 export function getContractFunctions(abi: Abi): AbiFunction[] {
 	return abi.filter((item): item is AbiFunction => {
-		return (
-			item.type === 'function' &&
-			item.name !== undefined
-		);
+		return item.type === 'function' && item.name !== undefined;
 	});
 }
 
@@ -39,24 +36,31 @@ export function isViewFunction(stateMutability: AbiStateMutability): boolean {
  * Format function signature for display
  */
 export function formatFunctionSignature(abiItem: AbiFunction): string {
-	const params = abiItem.inputs.map((input) => `${input.internalType || input.type} ${input.name}`).join(', ');
-	const outputs = abiItem.outputs.map((output) => `${output.internalType || output.type}`).join(', ');
-	
+	const params = abiItem.inputs
+		.map((input) => `${input.internalType || input.type} ${input.name}`)
+		.join(', ');
+	const outputs = abiItem.outputs
+		.map((output) => `${output.internalType || output.type}`)
+		.join(', ');
+
 	return `${outputs ? `${outputs} ` : ''}${abiItem.name}(${params})`;
 }
 
 /**
  * Convert input values from UI to contract format
  */
-export function convertInputValues(inputs: readonly AbiParameter[], values: Record<string, any>): any[] {
+export function convertInputValues(
+	inputs: readonly AbiParameter[],
+	values: Record<string, any>,
+): any[] {
 	return inputs.map((input, index) => {
 		const key = getInputKey(input, index);
 		const value = values[key];
-		
+
 		if (value === undefined || value === '') {
 			return undefined;
 		}
-		
+
 		switch (input.type) {
 			case 'address':
 				return value as `0x${string}`;
@@ -89,11 +93,15 @@ export function convertInputValues(inputs: readonly AbiParameter[], values: Reco
 			default:
 				// Handle arrays (e.g., uint256[])
 				if (input.type.match(/^\w+\[\]$/)) {
-					return String(value).split(',').map(v => v.trim());
+					return String(value)
+						.split(',')
+						.map((v) => v.trim());
 				}
 				// Handle fixed arrays (e.g., uint256[3])
 				if (input.type.match(/^\w+\[\d+\]$/)) {
-					return String(value).split(',').map(v => v.trim());
+					return String(value)
+						.split(',')
+						.map((v) => v.trim());
 				}
 				// Handle tuples - return as is for now
 				if (input.type === 'tuple' || input.type === 'tuple[]') {
@@ -142,7 +150,9 @@ export function isValidNumber(value: string): boolean {
 /**
  * Get input field type based on Solidity type
  */
-export function getInputFieldType(abiType: string): 'text' | 'number' | 'select' {
+export function getInputFieldType(
+	abiType: string,
+): 'text' | 'number' | 'select' {
 	if (abiType === 'bool') {
 		return 'select';
 	}
@@ -180,11 +190,14 @@ export function getInputPlaceholder(abiType: string): string {
 /**
  * Validate input value based on Solidity type
  */
-export function validateInputValue(abiType: string, value: string): {valid: boolean; error?: string} {
+export function validateInputValue(
+	abiType: string,
+	value: string,
+): {valid: boolean; error?: string} {
 	if (!value) {
 		return {valid: true}; // Empty is OK for optional params
 	}
-	
+
 	switch (abiType) {
 		case 'address':
 			if (!isValidAddress(value)) {
@@ -204,11 +217,14 @@ export function validateInputValue(abiType: string, value: string): {valid: bool
 			}
 			if (abiType.startsWith('bytes')) {
 				if (!isValidHex(value)) {
-					return {valid: false, error: 'Invalid hex format (must start with 0x...)'};
+					return {
+						valid: false,
+						error: 'Invalid hex format (must start with 0x...)',
+					};
 				}
 			}
 			break;
 	}
-	
+
 	return {valid: true};
 }

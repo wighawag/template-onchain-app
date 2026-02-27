@@ -17,6 +17,7 @@
 		ConnectionStore,
 		UnderlyingEthereumProvider,
 	} from '@etherplay/connect';
+	import {route} from '$lib';
 
 	interface Props {
 		functionName: string;
@@ -187,7 +188,10 @@
 				<InfoIcon class="h-4 w-4" />
 				<Alert.Description class="flex flex-col gap-1 text-sm">
 					<span class="font-medium">Transaction submitted</span>
-					<a href={`/explorer/tx/${transactionHash}`} class="text-primary hover:underline">
+					<a
+						href={route(`/explorer/tx/${transactionHash}`)}
+						class="text-primary hover:underline"
+					>
 						<Address value={transactionHash} />
 					</a>
 				</Alert.Description>

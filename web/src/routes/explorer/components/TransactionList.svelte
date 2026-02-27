@@ -49,10 +49,12 @@
 
 	// Get full transaction details with publicClient
 	// We need to fetch the actual transaction objects to use in TransactionItem
-	let detailedTransactions = $state<Array<{
-		tx: any;
-		blockTimestamp: number;
-	}>>([]);
+	let detailedTransactions = $state<
+		Array<{
+			tx: any;
+			blockTimestamp: number;
+		}>
+	>([]);
 
 	// Fetch detailed transactions when summaries change
 	async function fetchDetailedTransactions() {
@@ -65,7 +67,9 @@
 			const detailed = await Promise.all(
 				transactions.map(async (summary) => {
 					try {
-						const tx = await publicClient.getTransaction({hash: summary.hash as `0x${string}`});
+						const tx = await publicClient.getTransaction({
+							hash: summary.hash as `0x${string}`,
+						});
 						const block = await publicClient.getBlock({
 							blockNumber: summary.blockNumber,
 						});
@@ -81,7 +85,9 @@
 			);
 
 			// Filter out null values
-			detailedTransactions = detailed.filter((t): t is NonNullable<typeof t> => t !== null);
+			detailedTransactions = detailed.filter(
+				(t): t is NonNullable<typeof t> => t !== null,
+			);
 		} catch (e) {
 			console.error('Error fetching detailed transactions:', e);
 			detailedTransactions = [];
@@ -102,11 +108,13 @@
 				<ClockIcon class="h-5 w-5 text-muted-foreground" />
 				<Card.Title>Recent Transactions</Card.Title>
 				{#if lastBlockNumber}
-					<span class="text-sm text-muted-foreground">Latest Block: {Number(lastBlockNumber)}</span>
+					<span class="text-sm text-muted-foreground"
+						>Latest Block: {Number(lastBlockNumber)}</span
+					>
 				{/if}
 			</div>
 			<button
-				class="text-sm text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+				class="flex items-center gap-1 text-sm text-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
 				disabled={loading}
 				onclick={refresh}
 			>
@@ -144,14 +152,14 @@
 			</div>
 		{:else}
 			<div class="space-y-3">
-				{#each detailedTransactions as {tx, blockTimestamp} (tx.hash)}
+				{#each detailedTransactions as { tx, blockTimestamp } (tx.hash)}
 					<TransactionItem {tx} {blockTimestamp} {publicClient} />
 				{/each}
 			</div>
 
 			{#if transactions.length < targetCount}
 				<Separator.Root class="my-4" />
-				<p class="text-sm text-center text-muted-foreground">
+				<p class="text-center text-sm text-muted-foreground">
 					Showing {transactions.length} of up to {targetCount} recent transactions
 				</p>
 			{/if}

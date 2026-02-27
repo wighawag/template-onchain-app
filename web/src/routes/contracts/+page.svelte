@@ -1,7 +1,7 @@
 <script lang="ts">
 	import DefaultHead from '../metadata/DefaultHead.svelte';
 	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
-	import {getUserContext} from '$lib';
+	import {getUserContext, route} from '$lib';
 	import {
 		Root as Tabs,
 		Content as TabsContent,
@@ -97,7 +97,10 @@
 							<div class="rounded-lg bg-muted/50 p-4">
 								<h2 class="text-xl font-semibold">{contract.name}</h2>
 								<p class="text-sm text-muted-foreground">
-									Address: <a href={`/explorer/address/${contract.address}`} class="text-primary hover:underline">{contract.address}</a>
+									Address: <a
+										href={route(`/explorer/address/${contract.address}`)}
+										class="text-primary hover:underline">{contract.address}</a
+									>
 								</p>
 							</div>
 

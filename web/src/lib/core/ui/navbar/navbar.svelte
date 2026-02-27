@@ -1,11 +1,10 @@
 <script lang="ts">
-	import {getUserContext} from '$lib';
+	import {getUserContext, route} from '$lib';
 	import Button, {buttonVariants} from '$lib/shadcn/ui/button/button.svelte';
 	import BlockieAvatar from '../ethereum/BlockieAvatar.svelte';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Drawer from '$lib/shadcn/ui/drawer/index.js';
 	import Address from '../ethereum/Address.svelte';
-	import {url} from '$lib/core/utils/web/path';
 
 	let {name}: {name?: string} = $props();
 
@@ -23,10 +22,10 @@
 	class="sticky top-0 left-0 z-50 flex h-12 w-full items-center justify-between bg-background pt-4 shadow-md"
 >
 	<div class="m-1 flex h-full items-center space-x-2">
-		<span class="text-lg font-bold">{name}</span> <a href={url('/')}>home</a>
-		<a href={url('/contracts')}>contracts</a>
-		<a href={url('/explorer')}>explorer</a>
-		<a href={url('/examples')}>examples</a>
+		<span class="text-lg font-bold">{name}</span> <a href={route('/')}>home</a>
+		<a href={route('/contracts')}>contracts</a>
+		<a href={route('/explorer')}>explorer</a>
+		<a href={route('/examples')}>examples</a>
 	</div>
 
 	<div class="relative flex h-full items-center space-x-4">

@@ -48,12 +48,16 @@ export function createTransactionListStore() {
 		update((state) => ({...state, loading: true, error: null}));
 
 		try {
-			const txs = await scanLatestTransactions(currentPublicClient, targetCount);
+			const txs = await scanLatestTransactions(
+				currentPublicClient,
+				targetCount,
+			);
 
 			update((state) => ({
 				...state,
 				transactions: txs,
-				lastBlockNumber: txs.length > 0 ? txs[0].blockNumber : state.lastBlockNumber,
+				lastBlockNumber:
+					txs.length > 0 ? txs[0].blockNumber : state.lastBlockNumber,
 				loading: false,
 			}));
 		} catch (e: any) {
@@ -71,7 +75,9 @@ export function createTransactionListStore() {
 	 */
 	async function refresh(): Promise<void> {
 		const state = get({subscribe});
-		await fetchTransactions(state.transactions.length > 0 ? state.transactions.length : 20);
+		await fetchTransactions(
+			state.transactions.length > 0 ? state.transactions.length : 20,
+		);
 	}
 
 	/**
@@ -93,7 +99,9 @@ export function createTransactionListStore() {
 /**
  * Derived stores for individual properties (for convenience)
  */
-export function createDerivedStores(store: ReturnType<typeof createTransactionListStore>) {
+export function createDerivedStores(
+	store: ReturnType<typeof createTransactionListStore>,
+) {
 	return {
 		transactions: derived(store, ($store) => $store.transactions),
 		loading: derived(store, ($store) => $store.loading),
@@ -103,7 +111,8 @@ export function createDerivedStores(store: ReturnType<typeof createTransactionLi
 }
 
 // Create singleton instance
-let transactionListStore: ReturnType<typeof createTransactionListStore> | null = null;
+let transactionListStore: ReturnType<typeof createTransactionListStore> | null =
+	null;
 
 /**
  * Get the transaction list store singleton

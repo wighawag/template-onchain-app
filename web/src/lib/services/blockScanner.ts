@@ -58,7 +58,10 @@ function getLatestScannedBlockKey(chainId: number): string {
 	return `explorer:latestScannedBlock:${chainId}`;
 }
 
-function getBlockIndexEntryKey(chainId: number, blockNumber: bigint | number): string {
+function getBlockIndexEntryKey(
+	chainId: number,
+	blockNumber: bigint | number,
+): string {
 	return `explorer:blockIndex:${chainId}:${Number(blockNumber)}`;
 }
 
@@ -316,7 +319,9 @@ function blockToTransactionSummaries(block: {
 	transactions: Transaction[];
 }): TransactionSummary[] {
 	const blockTimestamp =
-		typeof block.timestamp === 'bigint' ? Number(block.timestamp / 1000n) : block.timestamp;
+		typeof block.timestamp === 'bigint'
+			? Number(block.timestamp / 1000n)
+			: block.timestamp;
 
 	return block.transactions.map((tx) => ({
 		hash: tx.hash,
@@ -379,7 +384,10 @@ async function scanBlocksStandard(
 	const latestBlock = await publicClient.getBlockNumber();
 
 	// Calculate how many blocks to scan (scan backwards from latest)
-	const startBlock = latestBlock - BigInt(maxBlocksToScan) < 0n ? 0n : latestBlock - BigInt(maxBlocksToScan);
+	const startBlock =
+		latestBlock - BigInt(maxBlocksToScan) < 0n
+			? 0n
+			: latestBlock - BigInt(maxBlocksToScan);
 
 	// Create array of block numbers to scan (descending order)
 	const blockNumbers: bigint[] = [];
@@ -388,7 +396,11 @@ async function scanBlocksStandard(
 	}
 
 	// Scan blocks in batches
-	const transactions = await scanBlocksInBatches(publicClient, blockNumbers, batchSize);
+	const transactions = await scanBlocksInBatches(
+		publicClient,
+		blockNumbers,
+		batchSize,
+	);
 
 	// Return only targetCount transactions
 	return {
@@ -420,7 +432,11 @@ async function scanBlocksWithIndex(
 
 	if (latestScannedBlock !== null && blockIndex.size > 0) {
 		// We have some index data
-		blocksToFetch = calculateBlocksToFetch(blockIndex, Number(latestBlock), targetCount);
+		blocksToFetch = calculateBlocksToFetch(
+			blockIndex,
+			Number(latestBlock),
+			targetCount,
+		);
 
 		// Check if we need to scan newer blocks
 		if (Number(latestBlock) > latestScannedBlock) {
@@ -433,7 +449,10 @@ async function scanBlocksWithIndex(
 		}
 	} else {
 		// No index data, fall back to standard scanning
-		const startBlock = latestBlock - BigInt(maxBlocksToScan) < 0n ? 0n : latestBlock - BigInt(maxBlocksToScan);
+		const startBlock =
+			latestBlock - BigInt(maxBlocksToScan) < 0n
+				? 0n
+				: latestBlock - BigInt(maxBlocksToScan);
 
 		for (let b = latestBlock; b > startBlock; b--) {
 			blocksToFetch.push(Number(b));
@@ -442,7 +461,11 @@ async function scanBlocksWithIndex(
 
 	// Fetch blocks in parallel
 	const blockNumbers: bigint[] = blocksToFetch.map((b) => BigInt(b));
-	const transactions = await scanBlocksInBatches(publicClient, blockNumbers, batchSize);
+	const transactions = await scanBlocksInBatches(
+		publicClient,
+		blockNumbers,
+		batchSize,
+	);
 
 	// Update index with newly scanned blocks (only blocks with transactions)
 	if (typeof window !== 'undefined') {
@@ -454,7 +477,9 @@ async function scanBlocksWithIndex(
 			// Check if we already have this block
 			if (!blockIndex.has(blockNumber)) {
 				// Count transactions in this block
-				const txsInBlock = transactions.filter((t) => Number(t.blockNumber) === blockNumber);
+				const txsInBlock = transactions.filter(
+					(t) => Number(t.blockNumber) === blockNumber,
+				);
 				newEntries.push({
 					blockNumber,
 					txCount: txsInBlock.length,

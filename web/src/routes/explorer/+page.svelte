@@ -7,6 +7,7 @@
 	import {Button} from '$lib/shadcn/ui/button';
 	import {SearchIcon} from '@lucide/svelte';
 	import TransactionList from './components/TransactionList.svelte';
+	import {route} from '$lib';
 
 	let inputValue = $state('');
 
@@ -23,9 +24,9 @@
 		if (!trimmed) return;
 
 		if (isValidTxHash(trimmed)) {
-			goto(`/explorer/tx/${trimmed}`);
+			goto(route(`/explorer/tx/${trimmed}`));
 		} else if (isValidAddress(trimmed)) {
-			goto(`/explorer/address/${trimmed}`);
+			goto(route(`/explorer/address/${trimmed}`));
 		} else {
 			alert('Invalid address or transaction hash format');
 		}
@@ -54,7 +55,7 @@
 
 		<Separator.Root />
 
-		<Card.Root class="max-w-2xl mx-auto">
+		<Card.Root class="mx-auto max-w-2xl">
 			<Card.Content class="pt-6">
 				<div class="flex gap-2">
 					<Input
@@ -74,11 +75,11 @@
 		<!-- Recent Transactions -->
 		<TransactionList />
 
-		<div class="max-w-2xl mx-auto space-y-4">
+		<div class="mx-auto max-w-2xl space-y-4">
 			<h2 class="text-lg font-semibold">Quick Links</h2>
 			<div class="grid gap-4 md:grid-cols-2">
 				<a href="/contracts" class="text-primary hover:underline">
-					<Card.Root class="hover:bg-muted/50 transition-colors">
+					<Card.Root class="transition-colors hover:bg-muted/50">
 						<Card.Content class="py-4">
 							<div class="font-medium">View Contracts</div>
 							<div class="text-sm text-muted-foreground">

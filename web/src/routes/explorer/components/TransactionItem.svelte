@@ -1,7 +1,13 @@
 <script lang="ts">
 	import {goto} from '$app/navigation';
 	import * as Card from '$lib/shadcn/ui/card';
-	import {CheckCircleIcon, XCircleIcon, LoaderIcon, FileTextIcon, ZapIcon} from '@lucide/svelte';
+	import {
+		CheckCircleIcon,
+		XCircleIcon,
+		LoaderIcon,
+		FileTextIcon,
+		ZapIcon,
+	} from '@lucide/svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import type {PublicClient, Transaction} from 'viem';
 	import {
@@ -9,7 +15,13 @@
 		formatDecodedTransaction,
 		type DecodedTransactionData,
 	} from '$lib/services/transactionDecoder';
-	import {formatTransactionType, formatTimestamp, formatValue, truncateTxHash} from '../lib/utils';
+	import {
+		formatTransactionType,
+		formatTimestamp,
+		formatValue,
+		truncateTxHash,
+	} from '../lib/utils';
+	import {route} from '$lib';
 
 	interface Props {
 		tx: Transaction;
@@ -53,53 +65,69 @@
 
 	// Navigate to transaction details page
 	function viewTransaction() {
-		goto(`/explorer/tx/${tx.hash}`);
+		goto(route(`/explorer/tx/${tx.hash}`));
 	}
 
 	// Get transaction type icon based on type
 	let isEIP1559 = $derived(formatTransactionType(tx.type) === 'EIP-1559');
 </script>
 
-<Card.Root class="hover:border-primary/50 transition-colors cursor-pointer" onclick={viewTransaction}>
+<Card.Root
+	class="cursor-pointer transition-colors hover:border-primary/50"
+	onclick={viewTransaction}
+>
 	<Card.Content class="p-4">
 		<div class="flex items-start justify-between gap-4">
 			<!-- Left side: Transaction info -->
-			<div class="flex-1 min-w-0 space-y-2">
+			<div class="min-w-0 flex-1 space-y-2">
 				<!-- Transaction Hash and Status -->
-				<div class="flex items-center gap-2 flex-wrap">
-					<button type="button" class="font-mono text-sm font-medium text-primary hover:underline" onclick={viewTransaction}>
+				<div class="flex flex-wrap items-center gap-2">
+					<button
+						type="button"
+						class="font-mono text-sm font-medium text-primary hover:underline"
+						onclick={viewTransaction}
+					>
 						{truncateTxHash(tx.hash)}
 					</button>
 
 					<!-- Status Indicator -->
 					<div class="flex items-center gap-1">
 						{#if loading}
-							<LoaderIcon class="h-4 w-4 text-muted-foreground animate-spin" />
+							<LoaderIcon class="h-4 w-4 animate-spin text-muted-foreground" />
 						{:else if decodedData.status === 'success'}
 							<CheckCircleIcon class="h-4 w-4 text-green-600" />
 						{:else if decodedData.status === 'failed'}
 							<XCircleIcon class="h-4 w-4 text-red-600" />
 						{:else}
-							<LoaderIcon class="h-4 w-4 text-yellow-600 animate-spin" />
+							<LoaderIcon class="h-4 w-4 animate-spin text-yellow-600" />
 						{/if}
-						<span class="text-xs text-muted-foreground">{formattedData.statusText}</span>
+						<span class="text-xs text-muted-foreground"
+							>{formattedData.statusText}</span
+						>
 					</div>
 				</div>
 
 				<!-- Method/Function Name -->
 				{#if decodedData.isDecoded && decodedData.functionName}
 					<div>
-						<div class="font-medium text-sm">{formattedData.methodLabel}</div>
+						<div class="text-sm font-medium">{formattedData.methodLabel}</div>
 						{#if formattedData.methodDetails}
-							<div class="text-xs text-muted-foreground truncate" title={formattedData.methodDetails}>
+							<div
+								class="truncate text-xs text-muted-foreground"
+								title={formattedData.methodDetails}
+							>
 								{formattedData.methodDetails}
 							</div>
 						{/if}
 					</div>
 				{:else if tx.to}
-					<div class="font-mono text-sm text-muted-foreground">Contract Call</div>
+					<div class="font-mono text-sm text-muted-foreground">
+						Contract Call
+					</div>
 				{:else}
-					<div class="font-mono text-sm text-muted-foreground">Contract Creation</div>
+					<div class="font-mono text-sm text-muted-foreground">
+						Contract Creation
+					</div>
 				{/if}
 
 				<!-- From/To Addresses -->
@@ -118,7 +146,7 @@
 			</div>
 
 			<!-- Right side: Block info and value -->
-			<div class="text-right space-y-2 shrink-0">
+			<div class="shrink-0 space-y-2 text-right">
 				<!-- Block Number -->
 				<div>
 					<div class="text-xs text-muted-foreground">Block</div>
@@ -129,22 +157,26 @@
 				{#if tx.value > 0n}
 					<div>
 						<div class="text-xs text-muted-foreground">Value</div>
-						<div class="font-mono text-sm font-medium">{formatValue(tx.value)}</div>
+						<div class="font-mono text-sm font-medium">
+							{formatValue(tx.value)}
+						</div>
 					</div>
 				{/if}
 
 				<!-- Type Icon -->
 				{#if isEIP1559}
-					<ZapIcon class="h-4 w-4 text-muted-foreground mx-auto mt-1" />
+					<ZapIcon class="mx-auto mt-1 h-4 w-4 text-muted-foreground" />
 				{:else}
-					<FileTextIcon class="h-4 w-4 text-muted-foreground mx-auto mt-1" />
+					<FileTextIcon class="mx-auto mt-1 h-4 w-4 text-muted-foreground" />
 				{/if}
 			</div>
 		</div>
 
 		<!-- Timestamp -->
-		<div class="mt-3 pt-3 border-t">
-			<div class="text-xs text-muted-foreground">{formatTimestamp(blockTimestamp)}</div>
+		<div class="mt-3 border-t pt-3">
+			<div class="text-xs text-muted-foreground">
+				{formatTimestamp(blockTimestamp)}
+			</div>
 		</div>
 	</Card.Content>
 </Card.Root>
