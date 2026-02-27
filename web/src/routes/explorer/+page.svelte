@@ -74,21 +74,5 @@
 
 		<!-- Recent Transactions -->
 		<TransactionList />
-
-		<div class="mx-auto max-w-2xl space-y-4">
-			<h2 class="text-lg font-semibold">Quick Links</h2>
-			<div class="grid gap-4 md:grid-cols-2">
-				<a href="/contracts" class="text-primary hover:underline">
-					<Card.Root class="transition-colors hover:bg-muted/50">
-						<Card.Content class="py-4">
-							<div class="font-medium">View Contracts</div>
-							<div class="text-sm text-muted-foreground">
-								Interact with deployed smart contracts
-							</div>
-						</Card.Content>
-					</Card.Root>
-				</a>
-			</div>
-		</div>
 	</div>
 </div>
