@@ -98,5 +98,3 @@ export function createENSService(): ENSContext {
 		getENSState,
 	};
 }
-
-export {default as ENSProvider} from './ENSProvider.svelte';

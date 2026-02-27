@@ -29,7 +29,7 @@
 		decodeTransaction,
 		formatDecodedTransaction,
 		type DecodedTransactionData,
-	} from '$lib/services/transactionDecoder';
+	} from '../lib/services/transactionDecoder';
 
 	interface Props {
 		txHash: `0x${string}` | null;

@@ -5,7 +5,7 @@
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Empty from '$lib/shadcn/ui/empty';
 	import {RefreshCwIcon, ClockIcon, HashIcon} from '@lucide/svelte';
-	import {getTransactionListStore} from '$lib/stores/transactionList';
+	import {getTransactionListStore} from '../lib/stores/transactionList';
 	import {getUserContext} from '$lib';
 	import TransactionItem from './TransactionItem.svelte';
 

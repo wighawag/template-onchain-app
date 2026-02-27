@@ -1,6 +1,6 @@
 import {writable, derived, get} from 'svelte/store';
-import {scanLatestTransactions} from '$lib/services/blockScanner';
-import type {TransactionSummary} from '$lib/services/blockScanner';
+import {scanLatestTransactions} from '../services/blockScanner';
+import type {TransactionSummary} from '../services/blockScanner';
 import type {PublicClient} from 'viem';
 
 /**

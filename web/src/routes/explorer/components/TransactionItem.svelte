@@ -14,7 +14,7 @@
 		decodeTransaction,
 		formatDecodedTransaction,
 		type DecodedTransactionData,
-	} from '$lib/services/transactionDecoder';
+	} from '../lib/services/transactionDecoder';
 	import {
 		formatTransactionType,
 		formatTimestamp,
