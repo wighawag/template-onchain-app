@@ -3,6 +3,7 @@ import type {Context} from './types.js';
 import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
+import {createTrackedWalletClient} from '$lib/core/transactions';
 
 export async function createContext(): Promise<Context> {
 	const window = globalThis as any;
@@ -14,7 +15,7 @@ export async function createContext(): Promise<Context> {
 	const {
 		signer,
 		connection,
-		walletClient,
+		walletClient: rawWalletClient,
 		publicClient,
 		paymentConnection,
 		paymentWalletClient,
@@ -27,7 +28,7 @@ export async function createContext(): Promise<Context> {
 	window.paymentWalletClient = paymentWalletClient;
 	window.paymentPublicClient = paymentPublicClient;
 	window.connection = connection;
-	window.walletClient = walletClient;
+	window.rawWalletClient = rawWalletClient;
 	window.publicClient = publicClient;
 	window.deployments = deployments;
 
@@ -58,6 +59,18 @@ export async function createContext(): Promise<Context> {
 		console.log(`gas fee updated`, v);
 	});
 	window.gasFee = gasFee;
+	// ----------------------------------------------------------------------------
+
+	// ----------------------------------------------------------------------------
+	// TRACKED WALLET CLIENT
+	// ----------------------------------------------------------------------------
+
+	// Wrap the raw wallet client with tracking capabilities
+	// This is exposed as `walletClient` for drop-in compatibility
+	// Use `walletClient.walletClient` to access the underlying viem WalletClient if needed
+	const walletClient = createTrackedWalletClient(rawWalletClient, publicClient);
+	window.walletClient = walletClient;
+
 	// ----------------------------------------------------------------------------
 
 	return {

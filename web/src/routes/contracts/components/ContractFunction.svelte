@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type {AbiFunction, PublicClient, WalletClient} from 'viem';
+	import type {AbiFunction, PublicClient} from 'viem';
 	import * as Card from '$lib/shadcn/ui/card';
 	import {Button} from '$lib/shadcn/ui/button';
 	import FunctionInputs from './FunctionInputs.svelte';
@@ -18,6 +18,7 @@
 		UnderlyingEthereumProvider,
 	} from '@etherplay/connect';
 	import {route} from '$lib';
+	import type {TrackedWalletClient} from '$lib/core/transactions';
 
 	interface Props {
 		functionName: string;
@@ -25,7 +26,7 @@
 		contractAddress: string;
 		connection: ConnectionStore<UnderlyingEthereumProvider>;
 		publicClient: PublicClient;
-		walletClient: WalletClient;
+		walletClient: TrackedWalletClient;
 	}
 
 	let {
@@ -96,6 +97,7 @@
 
 			const currentConnection = await connection.ensureConnected();
 
+			// Use walletClient (which is now TrackedWalletClient) with metadata for tracking
 			const hash = await walletClient.writeContract({
 				address: contractAddress as `0x${string}`,
 				abi: [abiItem],
@@ -103,6 +105,11 @@
 				args: args as any,
 				account: currentConnection.account.address,
 				chain: null as any,
+				// Metadata for transaction tracking
+				metadata: {
+					title: `Execute ${abiItem.name}`,
+					description: `Called ${abiItem.name} on contract ${contractAddress}`,
+				},
 			});
 
 			transactionHash = hash;
