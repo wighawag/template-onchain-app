@@ -34,17 +34,6 @@ export interface BlockIndexSummary {
 }
 
 /**
- * Get feature flag value
- */
-function getFeatureFlag(flagName: string): boolean {
-	if (typeof window === 'undefined') {
-		return false;
-	}
-	// Check if flag is set in Vite env
-	return import.meta.env[`PUBLIC_${flagName}`] === 'true';
-}
-
-/**
  * Get chain ID from deployments
  */
 function getChainId(): number {
@@ -522,7 +511,7 @@ async function scanBlocksWithIndex(
  * @param targetCount - Number of transactions to retrieve (default: 20)
  * @param batchSize - Number of blocks to fetch in parallel (default: 5)
  * @param maxBlocksToScan - Maximum number of blocks to scan (default: 100)
- * @param useIndex - Whether to use localStorage index optimization (default: based on feature flag)
+ * @param useIndex - Whether to use localStorage index optimization (default: false)
  * @returns Array of transaction summaries
  */
 export async function scanLatestTransactions(
@@ -530,7 +519,7 @@ export async function scanLatestTransactions(
 	targetCount: number = 20,
 	batchSize: number = 5,
 	maxBlocksToScan: number = 100,
-	useIndex: boolean = getFeatureFlag('EXPLORER_BLOCK_INDEX_ENABLED'),
+	useIndex: boolean = false,
 ): Promise<TransactionSummary[]> {
 	if (useIndex) {
 		const result = await scanBlocksWithIndex(

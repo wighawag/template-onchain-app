@@ -21,10 +21,19 @@ const initialState: TransactionListState = {
 };
 
 /**
+ * Options for creating a transaction list store
+ */
+export interface TransactionListStoreOptions {
+	useBlockIndex?: boolean;
+}
+
+/**
  * Create a transaction list store
  * This is a generic Svelte store that can be used in any framework
+ * @param options - Configuration options for the store
  */
-export function createTransactionListStore() {
+export function createTransactionListStore(options: TransactionListStoreOptions = {}) {
+	const useBlockIndex = options.useBlockIndex ?? false;
 	const {subscribe, set, update} = writable<TransactionListState>(initialState);
 
 	let currentPublicClient: PublicClient | null = null;
@@ -51,6 +60,9 @@ export function createTransactionListStore() {
 			const txs = await scanLatestTransactions(
 				currentPublicClient,
 				targetCount,
+				5, // batchSize
+				100, // maxBlocksToScan
+				useBlockIndex,
 			);
 
 			update((state) => ({
@@ -116,10 +128,11 @@ let transactionListStore: ReturnType<typeof createTransactionListStore> | null =
 
 /**
  * Get the transaction list store singleton
+ * @param options - Configuration options for the store (only used on first call)
  */
-export function getTransactionListStore() {
+export function getTransactionListStore(options: TransactionListStoreOptions = {}) {
 	if (!transactionListStore) {
-		transactionListStore = createTransactionListStore();
+		transactionListStore = createTransactionListStore(options);
 	}
 	return transactionListStore;
 }
