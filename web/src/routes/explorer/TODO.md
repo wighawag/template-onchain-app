@@ -1,0 +1,4 @@
+- [ ] extract a component so page simply uses it, so we can also use it in other parts of the application
+- [ ] add date
+- [ ] contract creation tx should point to the contract address
+- [ ] "Showing 11 of up to 20 recent transactions" sounds wrong, if there is only 11 tx, we should show 11 of 11 tranactions
