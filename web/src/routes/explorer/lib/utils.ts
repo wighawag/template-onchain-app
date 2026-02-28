@@ -171,7 +171,7 @@ export function getTransactionTypeIcon(type: string): string {
 }
 
 /**
- * Format timestamp to readable date/time
+ * Format timestamp to readable date/time (relative)
  */
 export function formatTimestamp(timestamp: number): string {
 	if (!timestamp) {
@@ -210,5 +210,27 @@ export function formatTimestamp(timestamp: number): string {
 		year: 'numeric',
 		month: 'short',
 		day: 'numeric',
+	});
+}
+
+/**
+ * Format timestamp to precise date and time
+ * Returns full date with time in local timezone
+ */
+export function formatPreciseTimestamp(timestamp: number): string {
+	if (!timestamp) {
+		return 'Unknown';
+	}
+
+	const date = new Date(timestamp * 1000);
+
+	return date.toLocaleString('en-US', {
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		timeZoneName: 'short',
 	});
 }

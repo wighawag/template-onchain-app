@@ -307,9 +307,10 @@ function blockToTransactionSummaries(block: {
 	timestamp: bigint | number;
 	transactions: Transaction[];
 }): TransactionSummary[] {
+	// Ethereum block timestamps are in seconds (Unix timestamp)
 	const blockTimestamp =
 		typeof block.timestamp === 'bigint'
-			? Number(block.timestamp / 1000n)
+			? Number(block.timestamp)
 			: block.timestamp;
 
 	return block.transactions.map((tx) => ({

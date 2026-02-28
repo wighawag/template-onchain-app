@@ -24,6 +24,8 @@
 		formatValue,
 		formatTxStatus,
 		findContractByAddress,
+		formatPreciseTimestamp,
+		formatTimestamp,
 	} from '../lib/utils';
 	import {
 		decodeTransaction,
@@ -46,6 +48,9 @@
 	let receipt = $state<Awaited<
 		ReturnType<PublicClient['getTransactionReceipt']>
 	> | null>(null);
+	let block = $state<Awaited<ReturnType<PublicClient['getBlock']>> | null>(
+		null,
+	);
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let decodedEvents = $state<
@@ -88,6 +93,14 @@
 				hash: txHash,
 			});
 			receipt = txReceipt;
+
+			// Fetch block for timestamp
+			if (transaction.blockNumber) {
+				const txBlock = await publicClient.getBlock({
+					blockNumber: transaction.blockNumber,
+				});
+				block = txBlock;
+			}
 
 			// Decode transaction data
 			const decoded = await decodeTransaction(
@@ -260,6 +273,21 @@
 								Block Number
 							</div>
 							<div class="font-mono">{Number(tx.blockNumber)}</div>
+						</div>
+						<div>
+							<div class="text-sm font-medium text-muted-foreground">
+								Timestamp
+							</div>
+							{#if block}
+								<div class="font-mono">
+									{formatPreciseTimestamp(Number(block.timestamp))}
+								</div>
+								<div class="text-xs text-muted-foreground">
+									({formatTimestamp(Number(block.timestamp))})
+								</div>
+							{:else}
+								<div class="font-mono text-muted-foreground">Loading...</div>
+							{/if}
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">
