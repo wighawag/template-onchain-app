@@ -23,9 +23,19 @@ export type DeploymentsStore = Readable<TypedDeployments> & {
 	current: TypedDeployments;
 };
 
+export type ChainConnection = ConnectionStore<
+	UnderlyingEthereumProvider,
+	'WalletConnected',
+	true
+>;
+
 export type EstablishedConnection = {
-	connection: ConnectionStore<UnderlyingEthereumProvider>;
-	paymentConnection: ConnectionStore<UnderlyingEthereumProvider>;
+	connection: ChainConnection;
+	paymentConnection: ConnectionStore<
+		UnderlyingEthereumProvider,
+		'WalletConnected',
+		true
+	>;
 	walletClient: WalletClient;
 	publicClient: PublicClient;
 	paymentPublicClient: PublicClient;

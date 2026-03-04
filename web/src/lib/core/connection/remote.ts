@@ -18,22 +18,21 @@ export async function establishRemoteConnection(): Promise<EstablishedConnection
 	console.log(`chainInfo`, chainInfo);
 
 	const connection = createConnection({
-		signingOrigin: PUBLIC_SIGNING_ORIGIN,
-		walletHost: PUBLIC_WALLET_HOST,
+		// walletOnly: true,
+		targetStep: 'WalletConnected',
 		chainInfo,
 		prioritizeWalletProvider: false,
 		// alwaysUseCurrentAccount: true,
 		autoConnect: true,
-		requestSignatureAutomaticallyIfPossible: true,
+		// requestSignatureAutomaticallyIfPossible: true,
 	});
 
 	const paymentConnection = createConnection({
-		walletHost: PUBLIC_WALLET_HOST,
+		targetStep: 'WalletConnected',
 		chainInfo,
 		prioritizeWalletProvider: true,
 		alwaysUseCurrentAccount: true,
 		autoConnect: false,
-		requestSignatureAutomaticallyIfPossible: false,
 	});
 
 	const paymentWalletClient = createWalletClient({

@@ -28,13 +28,17 @@
 
 	<div class="relative flex h-full items-center space-x-2">
 		<!-- Connect Button / Connected Address -->
-		{#if ($connection.step === 'Idle' && $connection.loading) || ($connection.step != 'Idle' && $connection.step != 'SignedIn')}
+		{#if ($connection.step === 'Idle' && $connection.loading) || ($connection.step != 'Idle' && !connection.isTargetStepReached($connection))}
 			<Button disabled class="m-1 flex h-8 items-center justify-center p-0">
 				<Spinner /> Connect
 			</Button>
-		{:else if $connection.step === 'SignedIn'}
+		{:else if connection.isTargetStepReached($connection)}
 			<div class="m-1 flex h-8 items-center space-x-2">
-				<Address value={$connection.account.address} />
+				<Address
+					value={$connection.step === 'SignedIn'
+						? $connection.account.address
+						: $connection.mechanism.address}
+				/>
 			</div>
 		{:else}
 			<Button
@@ -54,8 +58,12 @@
 			onclick={toggleMenu}
 			aria-label="Open menu"
 		>
-			{#if $connection.step === 'SignedIn'}
-				<BlockieAvatar address={$connection.account.address} />
+			{#if connection.isTargetStepReached($connection)}
+				<BlockieAvatar
+					address={$connection.step === 'SignedIn'
+						? $connection.account.address
+						: $connection.mechanism.address}
+				/>
 			{:else}
 				<MenuIcon class="h-5 w-5" />
 			{/if}
@@ -64,11 +72,13 @@
 	<Drawer.Root bind:open={showMenu} direction="right">
 		<Drawer.Portal to="#--layer-drawer" />
 		<Drawer.Content>
-			{#if $connection.step === 'SignedIn'}
+			{#if connection.isTargetStepReached($connection)}
 				<Drawer.Header class="text-start">
 					<Drawer.Title
 						>Account <Address
-							value={$connection.account.address}
+							value={$connection.step === 'SignedIn'
+								? $connection.account.address
+								: $connection.mechanism.address}
 						/></Drawer.Title
 					>
 					<!-- <Drawer.Description>
