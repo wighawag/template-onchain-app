@@ -127,8 +127,8 @@ importers:
         version: 0.3.2
     devDependencies:
       '@etherplay/connect':
-        specifier: ^0.0.36
-        version: 0.0.36(@types/node@24.10.1)(bufferutil@4.1.0)(lightningcss@1.30.2)(svelte@5.45.2)(typescript@5.9.3)(utf-8-validate@6.0.6)(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))
+        specifier: ^0.0.38
+        version: 0.0.38(@types/node@24.10.1)(bufferutil@4.1.0)(lightningcss@1.30.2)(svelte@5.45.2)(typescript@5.9.3)(utf-8-validate@6.0.6)(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))
       '@internationalized/date':
         specifier: ^3.11.0
         version: 3.11.0
@@ -718,8 +718,8 @@ packages:
     peerDependencies:
       svelte: ^5.0.0
 
-  '@etherplay/connect@0.0.36':
-    resolution: {integrity: sha512-v0lyr/fVn9qbANAw9hepmPyv5/6KR17yet5tkl79DwHeFCRtsv0NeAdfIGU7cSUZ1aJREWLBD2Vn+ER8Uxvxkg==}
+  '@etherplay/connect@0.0.38':
+    resolution: {integrity: sha512-6uq0zGASEItZeiwqq10xgrSSY+PbQNZjpS3uZM2cAmYqaKUmRqlqvdG80Xce2anzpvxhnoMlZiQL8rcprjQVPw==}
     peerDependencies:
       svelte: ^5.0.0
 
@@ -5039,7 +5039,7 @@ snapshots:
       - utf-8-validate
       - viem
 
-  '@etherplay/connect@0.0.36(@types/node@24.10.1)(bufferutil@4.1.0)(lightningcss@1.30.2)(svelte@5.45.2)(typescript@5.9.3)(utf-8-validate@6.0.6)(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))':
+  '@etherplay/connect@0.0.38(@types/node@24.10.1)(bufferutil@4.1.0)(lightningcss@1.30.2)(svelte@5.45.2)(typescript@5.9.3)(utf-8-validate@6.0.6)(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))':
     dependencies:
       '@account-kit/signer': 4.84.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))
       '@etherplay/alchemy': 0.0.15(bufferutil@4.1.0)(svelte@5.45.2)(typescript@5.9.3)(utf-8-validate@6.0.6)(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))

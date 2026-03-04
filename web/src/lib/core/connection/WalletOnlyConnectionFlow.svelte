@@ -9,7 +9,11 @@
 	import BasicModal from '../ui/modal/basic-modal.svelte';
 
 	interface Props {
-		connection: ConnectionStore<UnderlyingEthereumProvider>;
+		connection: ConnectionStore<
+			UnderlyingEthereumProvider,
+			'WalletConnected',
+			true
+		>;
 	}
 
 	let {connection}: Props = $props();

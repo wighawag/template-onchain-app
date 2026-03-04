@@ -14,7 +14,7 @@
 	import {CircleAlertIcon, CircleCheckIcon, InfoIcon} from '@lucide/svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import type {
-		ConnectionStore,
+		AnyConnectionStore,
 		UnderlyingEthereumProvider,
 	} from '@etherplay/connect';
 	import {route} from '$lib';
@@ -24,7 +24,7 @@
 		functionName: string;
 		abiItem: AbiFunction;
 		contractAddress: string;
-		connection: ConnectionStore<UnderlyingEthereumProvider>;
+		connection: AnyConnectionStore<UnderlyingEthereumProvider>;
 		publicClient: PublicClient;
 		walletClient: TrackedWalletClient;
 	}
@@ -103,7 +103,10 @@
 				abi: [abiItem],
 				functionName: abiItem.name,
 				args: args as any,
-				account: currentConnection.account.address,
+				account:
+					currentConnection.step === 'WalletConnected'
+						? currentConnection.mechanism.address
+						: currentConnection.account.address,
 				chain: null as any,
 				// Metadata for transaction tracking
 				metadata: {

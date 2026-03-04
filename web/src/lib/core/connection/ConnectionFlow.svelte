@@ -2,17 +2,14 @@
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import {Button} from '$lib/shadcn/ui/button';
 	import type {
-		ConnectionStore,
+		AnyConnectionStore,
 		UnderlyingEthereumProvider,
 	} from '@etherplay/connect';
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import BasicModal from '../ui/modal/basic-modal.svelte';
 
 	interface Props {
-		connection: ConnectionStore<
-			UnderlyingEthereumProvider,
-			'SignedIn' | 'WalletConnected'
-		>;
+		connection: AnyConnectionStore<UnderlyingEthereumProvider>;
 	}
 
 	let {connection}: Props = $props();
