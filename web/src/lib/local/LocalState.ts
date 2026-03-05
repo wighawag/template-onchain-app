@@ -1,4 +1,4 @@
-import type {BroadcastedTransaction} from '$lib/core/transactions/processor';
+import type {TransactionIntent} from '@etherkit/tx-observer';
 import {createObservableStore} from 'observator';
 
 export type FuzdSubmission = {
@@ -7,17 +7,20 @@ export type FuzdSubmission = {
 };
 
 export type OnchainOperation = {
-	transactions: BroadcastedTransaction[];
+	transactionIntent: TransactionIntent;
 	fuzd?: FuzdSubmission;
-	expectedUpdate?:
-		| {
-				event: {topics: `0x${string}`[]};
-		  }
-		| {
-				functionCall: {name: string; result: `0x${string}`};
-		  };
+};
+
+export type LocalState = {
+	operations: Record<number, OnchainOperation>;
 };
 
 export function createLocalState() {
-	return createObservableStore({});
+	const store = createObservableStore<LocalState>({
+		operations: {},
+	});
+
+	return {
+		...store,
+	};
 }

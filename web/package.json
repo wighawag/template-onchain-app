@@ -4,7 +4,9 @@
 	"version": "0.0.1",
 	"type": "module",
 	"devDependencies": {
-		"@etherplay/connect": "^0.0.38",
+		"@etherkit/tx-observer": "0.0.3",
+		"@etherkit/viem-tx-tracker": "^0.0.2",
+		"@etherplay/connect": "^0.0.40",
 		"@internationalized/date": "^3.11.0",
 		"@lucide/svelte": "^0.561.0",
 		"@observator/svelte": "^0.3.0",
@@ -17,6 +19,7 @@
 		"@types/node": "^24.3.0",
 		"bits-ui": "^2.16.2",
 		"clsx": "^2.1.1",
+		"eip-1193": "^0.6.5",
 		"ipfs-gateway-emulator": "4.2.1-ipfs.2",
 		"named-logs": "^0.4.1",
 		"observator": "^0.3.0",
@@ -24,6 +27,7 @@
 		"prettier-plugin-svelte": "^3.4.1",
 		"prettier-plugin-tailwindcss": "^0.7.2",
 		"pwag": "^0.4.0",
+		"radiate": "^0.3.2",
 		"shadcn-svelte": "^1.1.1",
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
@@ -48,9 +52,5 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"serve": "ipfs-emulator --only -d build -p 8080"
-	},
-	"dependencies": {
-		"eip-1193": "^0.6.5",
-		"radiate": "^0.3.2"
 	}
 }

@@ -58,11 +58,7 @@ export async function establishRemoteConnection(): Promise<EstablishedConnection
 	const account = derived<typeof connection, Account>(
 		connection,
 		($connection) => {
-			return $connection.step === 'SignedIn'
-				? $connection.account.address
-				: 'account' in $connection
-					? ($connection.account as any)?.address || undefined
-					: undefined;
+			return 'account' in $connection ? $connection.account.address : undefined;
 		},
 	);
 

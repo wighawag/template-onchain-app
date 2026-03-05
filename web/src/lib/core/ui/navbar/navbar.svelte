@@ -34,11 +34,7 @@
 			</Button>
 		{:else if connection.isTargetStepReached($connection)}
 			<div class="m-1 flex h-8 items-center space-x-2">
-				<Address
-					value={$connection.step === 'SignedIn'
-						? $connection.account.address
-						: $connection.mechanism.address}
-				/>
+				<Address value={$connection.account.address} />
 			</div>
 		{:else}
 			<Button
@@ -59,11 +55,7 @@
 			aria-label="Open menu"
 		>
 			{#if connection.isTargetStepReached($connection)}
-				<BlockieAvatar
-					address={$connection.step === 'SignedIn'
-						? $connection.account.address
-						: $connection.mechanism.address}
-				/>
+				<BlockieAvatar address={$connection.account.address} />
 			{:else}
 				<MenuIcon class="h-5 w-5" />
 			{/if}
@@ -76,9 +68,7 @@
 				<Drawer.Header class="text-start">
 					<Drawer.Title
 						>Account <Address
-							value={$connection.step === 'SignedIn'
-								? $connection.account.address
-								: $connection.mechanism.address}
+							value={$connection.account.address}
 						/></Drawer.Title
 					>
 					<!-- <Drawer.Description>

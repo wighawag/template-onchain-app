@@ -3,7 +3,7 @@ import type {Context} from './types.js';
 import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
-import {createTrackedWalletClient} from '$lib/core/transactions';
+import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
 
 export async function createContext(): Promise<Context> {
 	const window = globalThis as any;

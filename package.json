@@ -11,7 +11,10 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "overrides": {
+      "utf-8-validate": "-"
+    }
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",

@@ -10,7 +10,7 @@ import type {
 	ChainConnection,
 	DeploymentsStore,
 } from '$lib/core/connection/types';
-import type {TrackedWalletClient} from '$lib/core/transactions';
+import type {TrackedWalletClient} from '@etherkit/viem-tx-tracker';
 
 export type Context = {
 	gasFee: GasFeeStore;
