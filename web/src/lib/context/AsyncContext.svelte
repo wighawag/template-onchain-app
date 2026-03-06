@@ -4,7 +4,7 @@
 	import ContextComponent from './Context.svelte';
 	import {browser} from '$app/environment';
 	interface Props {
-		getContext: () => Promise<Context>;
+		getContext: () => Promise<{context: Context; start: () => () => void}>;
 		children?: Snippet;
 		loading?: Snippet;
 		// minLoading?: number; // TODO implement a minimum loading for splashscreen

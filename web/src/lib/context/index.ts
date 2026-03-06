@@ -6,7 +6,10 @@ import {createGasFeeStore} from '$lib/core/connection/gasFee';
 import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
 import {createAccountData} from '$lib/account/AccountData.js';
 
-export async function createContext(): Promise<Context> {
+export async function createContext(): Promise<{
+	context: Context;
+	start: () => () => void;
+}> {
 	const window = globalThis as any;
 
 	// ----------------------------------------------------------------------------
@@ -45,9 +48,6 @@ export async function createContext(): Promise<Context> {
 	// ----------------------------------------------------------------------------
 
 	const balance = createBalanceStore({publicClient, signer});
-	// to keep balance in memory
-	// TODO use an methodology to handle this when wanted
-	balance.subscribe((v) => {});
 	window.balance = balance;
 
 	// ----------------------------------------------------------------------------
@@ -56,13 +56,6 @@ export async function createContext(): Promise<Context> {
 	const gasFee = createGasFeeStore({
 		publicClient: publicClient as any, // TODO fix publicClient type
 		deployments: deployments.current,
-	});
-	window.gasFee = gasFee;
-
-	// TODO remove
-	// we trigger it
-	gasFee.subscribe((v) => {
-		console.log(`gas fee updated`, v);
 	});
 	window.gasFee = gasFee;
 	// ----------------------------------------------------------------------------
@@ -80,16 +73,34 @@ export async function createContext(): Promise<Context> {
 	// ----------------------------------------------------------------------------
 
 	return {
-		gasFee,
-		balance,
-		paymentConnection,
-		paymentWalletClient,
-		paymentPublicClient,
-		connection,
-		walletClient,
-		publicClient,
-		account,
-		deployments,
-		accountData,
+		context: {
+			gasFee,
+			balance,
+			paymentConnection,
+			paymentWalletClient,
+			paymentPublicClient,
+			connection,
+			walletClient,
+			publicClient,
+			account,
+			deployments,
+			accountData,
+		},
+		start: () => {
+			// to keep balance in memory
+			// TODO use an methodology to handle this when wanted
+			const unsubscribeFromBalance = balance.subscribe((v) => {});
+			// TODO remove
+			// we trigger it
+			const unsubscribeFromGasFee = gasFee.subscribe((v) => {
+				console.log(`gas fee updated`, v);
+			});
+			accountData.start();
+			return () => {
+				unsubscribeFromBalance();
+				unsubscribeFromGasFee();
+				accountData.stop();
+			};
+		},
 	};
 }

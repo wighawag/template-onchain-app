@@ -132,9 +132,6 @@
 				><Address value={account} /></Button
 			>
 		{/each}
-		<Button
-			><Address value={'0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'} /></Button
-		>
 	{/if}
 	<!-- TODO : cancel Button -->
 </Modal.Root>
