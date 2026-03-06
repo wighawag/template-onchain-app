@@ -78,9 +78,16 @@ type AccountStoreConfig<
 	/**
 	 * Events to emit when state is loaded (account switch or initial load).
 	 * Each event is emitted with the state (or a derived value) as data.
-	 * Example: `onLoad: (state) => [{ event: 'operations', data: state.operations }]`
+	 * Example: `onLoad: (state) => [{ event: 'operations:set', data: state.operations }]`
 	 */
 	onLoad?: (state: S) => Array<{event: keyof E & string; data: E[keyof E]}>;
+
+	/**
+	 * Events to emit when state is cleared (account switch).
+	 * Called before loading the new account's state.
+	 * Example: `onClear: () => [{ event: 'operations:cleared', data: undefined }]`
+	 */
+	onClear?: () => Array<{event: keyof E & string; data: E[keyof E]}>;
 };
 
 /**
@@ -98,13 +105,21 @@ export function createAccountStore<
 	E extends Record<string, unknown>,
 	M extends Record<string, MutationFn<S, keyof E & string, any[], any>>,
 >(config: AccountStoreConfig<S, E, M>) {
-	const {defaultState, mutations, storage, storageKey, account, onLoad} =
-		config;
+	const {
+		defaultState,
+		mutations,
+		storage,
+		storageKey,
+		account,
+		onLoad,
+		onClear,
+	} = config;
 
-	// Emitter with properly typed events
-	const emitter = createEmitter<E & {state: S}>();
+	// Emitter with properly typed events including loading state
+	const emitter = createEmitter<E & {state: S; loading: boolean}>();
 
 	let state = defaultState();
+	let loading = false;
 	const pendingSaves = new Map<string, Promise<void>>();
 	let loadGeneration = 0;
 
@@ -115,11 +130,26 @@ export function createAccountStore<
 	const _save = async (acc: `0x${string}`, s: S) =>
 		storage.save(storageKey(acc), s);
 
+	// Emit clear events
+	function _emitClearEvents(): void {
+		if (onClear) {
+			for (const {event, data} of onClear()) {
+				emitter.emit(
+					event as keyof (E & {state: S; loading: boolean}),
+					data as any,
+				);
+			}
+		}
+	}
+
 	// Emit load events
 	function _emitLoadEvents(s: S): void {
 		if (onLoad) {
 			for (const {event, data} of onLoad(s)) {
-				emitter.emit(event as keyof (E & {state: S}), data as any);
+				emitter.emit(
+					event as keyof (E & {state: S; loading: boolean}),
+					data as any,
+				);
 			}
 		}
 	}
@@ -136,7 +166,7 @@ export function createAccountStore<
 			_save(acc, state).catch(() => {});
 			if (event)
 				emitter.emit(
-					event as keyof (E & {state: S}),
+					event as keyof (E & {state: S; loading: boolean}),
 					(eventData ?? state) as any,
 				);
 			return result;
@@ -161,22 +191,52 @@ export function createAccountStore<
 	async function setAccount(newAccount?: `0x${string}`): Promise<void> {
 		if (newAccount === state.account) return;
 
-		if (state.account) {
-			const pending = pendingSaves.get(state.account);
-			if (pending) await pending;
+		const emitClearEvents = state.account;
+
+		// Immediately set state to default for new account (clears old account data)
+		state = defaultState(newAccount);
+
+		if (emitClearEvents) {
+			_emitClearEvents();
 		}
+
+		// If no account, we're done (no loading needed)
+		if (!newAccount) {
+			emitter.emit(
+				'state',
+				state as (E & {state: S; loading: boolean})['state'],
+			);
+			_emitLoadEvents(state);
+			return;
+		}
+
+		// Set loading state and emit loading event
+		loading = true;
+		emitter.emit(
+			'loading',
+			true as (E & {state: S; loading: boolean})['loading'],
+		);
 
 		loadGeneration++;
 		const gen = loadGeneration;
 
-		state = newAccount
-			? await _load(newAccount).then((s) =>
-					gen === loadGeneration ? s : state,
-				)
-			: defaultState();
+		// Load stored state for the new account
+		const loadedState = await _load(newAccount);
+
+		// Only apply if this is still the current load generation
+		if (gen === loadGeneration) {
+			state = loadedState;
+		}
+
+		// Clear loading state and emit loading event
+		loading = false;
+		emitter.emit(
+			'loading',
+			false as (E & {state: S; loading: boolean})['loading'],
+		);
 
 		// Emit state event
-		emitter.emit('state', state as (E & {state: S})['state']);
+		emitter.emit('state', state as (E & {state: S; loading: boolean})['state']);
 		// Emit configured load events
 		_emitLoadEvents(state);
 	}
@@ -205,8 +265,13 @@ export function createAccountStore<
 	const stop = () => unsub?.();
 
 	return {
+		/** Current state (readonly) */
 		get state() {
 			return state as Readonly<S>;
+		},
+		/** Whether data is currently being loaded (account switch in progress) */
+		get loading() {
+			return loading;
 		},
 		...wrappedMutations,
 		on: emitter.on,

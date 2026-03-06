@@ -19,12 +19,21 @@ export type LocalState = {
 
 /**
  * Event types emitted by the store.
- * - `operations`: Fires when operations are added or removed (structural changes)
+ * - `operations:added`: Fires when an operation is added
+ * - `operations:removed`: Fires when an operation is removed
+ * - `operations:cleared`: Fires when all operations are cleared (account switch)
+ * - `operations:set`: Fires when operations are set (initial load after account switch)
  * - `operation`: Fires when an existing operation is modified (content changes only)
  */
 type Events = {
-	/** Fires when operations are added or removed (structural changes) */
-	operations: LocalState['operations'];
+	/** Fires when an operation is added */
+	'operations:added': {id: number; operation: OnchainOperation};
+	/** Fires when an operation is removed */
+	'operations:removed': {id: number; operation: OnchainOperation};
+	/** Fires when all operations are cleared (account switch, before loading) */
+	'operations:cleared': undefined;
+	/** Fires when operations are set (initial load after account switch) */
+	'operations:set': LocalState['operations'];
 	/** Fires when an existing operation is modified (content changes only) */
 	operation: {id: number; operation: OnchainOperation};
 };
@@ -43,8 +52,13 @@ const mutations = createMutations<LocalState, Events>()({
 	) {
 		let id = Date.now();
 		while (state.operations[id]) id++;
-		state.operations[id] = {type, description, transactionIntent};
-		return {result: id, event: 'operations'};
+		const operation = {type, description, transactionIntent};
+		state.operations[id] = operation;
+		return {
+			result: id,
+			event: 'operations:added',
+			eventData: {id, operation},
+		};
 	},
 
 	setOperation(state, id: number, operation: OnchainOperation) {
@@ -53,7 +67,7 @@ const mutations = createMutations<LocalState, Events>()({
 		if (isNew) {
 			return {
 				result: undefined,
-				event: 'operations',
+				event: 'operations:added',
 				eventData: {id, operation},
 			};
 		}
@@ -65,9 +79,14 @@ const mutations = createMutations<LocalState, Events>()({
 	},
 
 	removeOperation(state, id: number) {
-		if (!state.operations[id]) return {result: false};
+		const operation = state.operations[id];
+		if (!operation) return {result: false};
 		delete state.operations[id];
-		return {result: true, event: 'operations'};
+		return {
+			result: true,
+			event: 'operations:removed',
+			eventData: {id, operation},
+		};
 	},
 });
 
@@ -91,8 +110,11 @@ export function createAccountData(params: {
 
 		defaultState: (account) => ({account, operations: {}}),
 
-		// Emit 'operations' event when state is loaded (account switch)
-		onLoad: (state) => [{event: 'operations', data: state.operations}],
+		// Emit 'operations:cleared' event when account is being switched (before loading)
+		onClear: () => [{event: 'operations:cleared', data: undefined}],
+
+		// Emit 'operations:set' event when state is loaded (account switch)
+		onLoad: (state) => [{event: 'operations:set', data: state.operations}],
 
 		mutations,
 	});
