@@ -1,5 +1,8 @@
-import {createAccountStore, createMutations} from './createAccountStore';
-import {createLocalStorageAdapter, type AsyncStorage} from '$lib/storage';
+import {
+	createAccountStore,
+	createMutations,
+} from '$lib/core/account/createAccountStore';
+import {createLocalStorageAdapter, type AsyncStorage} from '$lib/core/storage';
 import type {AccountStore, TypedDeployments} from '$lib/core/connection/types';
 import type {TransactionIntent} from '@etherkit/tx-observer';
 
@@ -68,7 +71,7 @@ const mutations = createMutations<LocalState, Events>()({
 	},
 });
 
-export function createLocalStore(params: {
+export function createAccountData(params: {
 	account: AccountStore;
 	deployments: TypedDeployments;
 	storage?: AsyncStorage<LocalState>;
@@ -95,11 +98,4 @@ export function createLocalStore(params: {
 	});
 }
 
-// Usage:
-// const store = createLocalStore({ account, deployments });
-// await store.addOperation(account, transactionIntent, 'desc', 'default');
-// await store.setOperation(account, id, operation);
-// await store.removeOperation(account, id);
-// store.on('operations', (operations) => { ... });  // operations is typed as Record<number, OnchainOperation>
-// store.on('operation', (data) => { ... });         // data is typed as {id: number; operation: OnchainOperation}
-// store.on('state', (state) => { ... });            // state is typed as Readonly<LocalState>
+export type AccountData = ReturnType<typeof createAccountData>;

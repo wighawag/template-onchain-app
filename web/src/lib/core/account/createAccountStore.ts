@@ -1,4 +1,4 @@
-import type {AsyncStorage} from '$lib/storage';
+import type {AsyncStorage} from '$lib/core/storage';
 import type {AccountStore} from '$lib/core/connection/types';
 import {createEmitter} from 'radiate';
 

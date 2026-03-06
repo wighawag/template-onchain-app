@@ -4,8 +4,7 @@ import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
 import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
-import {createLocalStore} from '$lib/local/OperationsLocalStore.js';
-import {get} from 'svelte/store';
+import {createAccountData} from '$lib/account/AccountData.js';
 
 export async function createContext(): Promise<Context> {
 	const window = globalThis as any;
@@ -34,22 +33,9 @@ export async function createContext(): Promise<Context> {
 	window.publicClient = publicClient;
 	window.deployments = deployments;
 
-	const store = createLocalStore({account, deployments: deployments.current});
-	const accountAddress = get(account)!;
-	await store.addOperation(
-		accountAddress,
-		{transactions: []},
-		'desc',
-		'default',
-	);
-	await store.setOperation(accountAddress, 1, {
-		transactionIntent: {transactions: []},
-		description: 'desc',
-		type: 'default',
-	});
-	await store.removeOperation(accountAddress, 1);
-	store.on('operations', (operations) => {
-		operations;
+	const accountData = createAccountData({
+		account,
+		deployments: deployments.current,
 	});
 
 	// ----------------------------------------------------------------------------
@@ -104,5 +90,6 @@ export async function createContext(): Promise<Context> {
 		publicClient,
 		account,
 		deployments,
+		accountData,
 	};
 }
