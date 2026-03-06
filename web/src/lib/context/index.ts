@@ -4,6 +4,7 @@ import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
 import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
+import {initTransactionProcessor} from '@etherkit/tx-observer';
 import {createAccountData} from '$lib/account/AccountData.js';
 
 export async function createContext(): Promise<{
@@ -33,6 +34,27 @@ export async function createContext(): Promise<{
 		account,
 		deployments: deployments.current,
 	});
+
+	const txOberserver = initTransactionProcessor({
+		finality: 12, //TODO
+		provider: connection.provider,
+	});
+
+	// accountData.on('operations', (operations) => {
+	// 	// we need to know when an operation is removed
+	// 	txOberserver.remove('1');
+	// 	// we need to know when an operation (or multiple) is added
+	// 	txOberserver.add(operations['1'].transactionIntent);
+	// 	txOberserver.addMultiple(operations.map(op => op.transactionIntent));
+
+	// 	// we need to know when operations are cleared (switching account)
+	// 	txOberserver.clear();
+	// });
+
+	// txOberserver.onOperationStatusUpdated((intent) => {
+	// 	const currentOperation = accountData.state.operations[intent.id.toString()];
+	// 	// currentOperation.accountData.updateOperation(operation);
+	// });
 
 	// ----------------------------------------------------------------------------
 
@@ -86,7 +108,13 @@ export async function createContext(): Promise<{
 				console.log(`gas fee updated`, v);
 			});
 			accountData.start();
+
+			const txObserverInterval = setInterval(() => {
+				txOberserver.process();
+			}, 2 * 1000); // TODO delay or use onNewBlock hook
+
 			return () => {
+				clearInterval(txObserverInterval);
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();
 				accountData.stop();
