@@ -31,15 +31,8 @@ export type ChainConnection = ConnectionStore<
 
 export type EstablishedConnection = {
 	connection: ChainConnection;
-	paymentConnection: ConnectionStore<
-		UnderlyingEthereumProvider,
-		'WalletConnected',
-		true
-	>;
 	walletClient: WalletClient;
 	publicClient: PublicClient;
-	paymentPublicClient: PublicClient;
-	paymentWalletClient: WalletClient;
 	account: AccountStore;
 	signer: OptionalSignerStore;
 	deployments: DeploymentsStore;

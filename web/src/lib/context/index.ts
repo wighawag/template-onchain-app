@@ -21,18 +21,11 @@ export async function createContext(): Promise<{
 		connection,
 		walletClient: rawWalletClient,
 		publicClient,
-		paymentConnection,
-		paymentWalletClient,
-		paymentPublicClient,
 		account,
 		deployments,
 	} = await establishRemoteConnection();
 
-	window.paymentConnection = paymentConnection;
-	window.paymentWalletClient = paymentWalletClient;
-	window.paymentPublicClient = paymentPublicClient;
 	window.connection = connection;
-	window.rawWalletClient = rawWalletClient;
 	window.publicClient = publicClient;
 	window.deployments = deployments;
 
@@ -76,9 +69,6 @@ export async function createContext(): Promise<{
 		context: {
 			gasFee,
 			balance,
-			paymentConnection,
-			paymentWalletClient,
-			paymentPublicClient,
 			connection,
 			walletClient,
 			publicClient,

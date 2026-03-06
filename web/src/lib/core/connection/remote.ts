@@ -1,4 +1,3 @@
-import {PUBLIC_WALLET_HOST, PUBLIC_SIGNING_ORIGIN} from '$env/static/public';
 import deploymentsFromFiles from '$lib/deployments';
 import {createConnection} from '@etherplay/connect';
 import {derived, writable} from 'svelte/store';
@@ -25,24 +24,6 @@ export async function establishRemoteConnection(): Promise<EstablishedConnection
 		// alwaysUseCurrentAccount: true,
 		autoConnect: true,
 		// requestSignatureAutomaticallyIfPossible: true,
-	});
-
-	const paymentConnection = createConnection({
-		targetStep: 'WalletConnected',
-		chainInfo,
-		prioritizeWalletProvider: true,
-		alwaysUseCurrentAccount: true,
-		autoConnect: false,
-	});
-
-	const paymentWalletClient = createWalletClient({
-		chain: chainInfo,
-		transport: custom(paymentConnection.provider),
-	});
-
-	const paymentPublicClient = createPublicClient({
-		chain: chainInfo,
-		transport: custom(paymentConnection.provider),
 	});
 
 	const walletClient = createWalletClient({
@@ -98,11 +79,8 @@ export async function establishRemoteConnection(): Promise<EstablishedConnection
 
 	return {
 		connection,
-		paymentConnection,
 		walletClient,
 		publicClient,
-		paymentPublicClient,
-		paymentWalletClient,
 		account,
 		signer,
 		deployments,

@@ -16,18 +16,10 @@ import type {AccountData} from '$lib/account/AccountData';
 export type Context = {
 	gasFee: GasFeeStore;
 	balance: BalanceStore;
-	paymentConnection: ConnectionStore<
-		UnderlyingEthereumProvider,
-		'WalletConnected',
-		true
-	>;
-	paymentWalletClient: WalletClient;
-	paymentPublicClient: PublicClient;
 	connection: ChainConnection;
 	/**
 	 * Tracked wallet client that wraps the underlying viem WalletClient.
 	 * Supports optional `metadata` field on writeContract/sendTransaction for tracking.
-	 * The underlying WalletClient is accessible via walletClient.walletClient if needed.
 	 */
 	walletClient: TrackedWalletClient;
 	publicClient: PublicClient;
