@@ -815,24 +815,24 @@ if (state.status === 'ready') {
 
 ## Implementation Checklist
 
-- [ ] Add `AsyncState<D>` type export
-- [ ] Update `MutationFn<S>` to `MutationFn<D>`
-- [ ] Update `createMutations<S>` to `createMutations<D>`
-- [ ] Update `AccountStoreConfig` interface
-- [ ] Update `createAccountStore` function signature
-- [ ] Update config destructuring (`defaultState` → `defaultData`)
-- [ ] Update emitter type (remove `loading`)
-- [ ] Replace `state` and `loading` with `asyncState: AsyncState<D>`
-- [ ] Update `_load` helper
-- [ ] Update `_save` helper
-- [ ] Update `_emitClearEvents`
-- [ ] Update `_emitLoadEvents`
-- [ ] Update `_withState`
-- [ ] Rewrite `setAccount` function
-- [ ] Update `WrappedMutations` type
-- [ ] Update return object (remove `loading` getter)
-- [ ] Update `AccountData.ts` - rename `LocalState` to `OperationsData`
-- [ ] Update `AccountData.ts` - update mutations
-- [ ] Update `AccountData.ts` - update `createAccountData`
-- [ ] Verify TypeScript compilation
+- [x] Add `AsyncState<D>` type export
+- [x] Update `MutationFn<S>` to `MutationFn<D>`
+- [x] Update `createMutations<S>` to `createMutations<D>`
+- [x] Update `AccountStoreConfig` interface
+- [x] Update `createAccountStore` function signature
+- [x] Update config destructuring (`defaultState` → `defaultData`)
+- [x] Update emitter type (remove `loading`)
+- [x] Replace `state` and `loading` with `asyncState: AsyncState<D>`
+- [x] Update `_load` helper
+- [x] Update `_save` helper
+- [x] Update `_emitClearEvents`
+- [x] Update `_emitLoadEvents`
+- [x] Update `_withState`
+- [x] Rewrite `setAccount` function
+- [x] Update `WrappedMutations` type
+- [x] Update return object (remove `loading` getter)
+- [x] Update `AccountData.ts` - rename `LocalState` to `OperationsData`
+- [x] Update `AccountData.ts` - update mutations
+- [x] Update `AccountData.ts` - update `createAccountData`
+- [x] Verify TypeScript compilation
 - [ ] Test state transitions manually

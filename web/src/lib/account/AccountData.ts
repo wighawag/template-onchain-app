@@ -12,8 +12,10 @@ export type OnchainOperation = {
 	transactionIntent: TransactionIntent;
 };
 
-export type LocalState = {
-	account?: `0x${string}`;
+/**
+ * Data stored per account
+ */
+export type AccountData = {
 	operations: Record<number, OnchainOperation>;
 };
 
@@ -33,9 +35,9 @@ type Events = {
 	/** Fires when all operations are cleared (account switch, before loading) */
 	'operations:cleared': undefined;
 	/** Fires when operations are set (initial load after account switch) */
-	'operations:set': LocalState['operations'];
+	'operations:set': AccountData['operations'];
 	/** Fires when an existing operation is modified (content changes only) */
-	operation: {id: number; operation: OnchainOperation};
+	'operation:updated': {id: number; operation: OnchainOperation};
 };
 
 /**
@@ -43,17 +45,17 @@ type Events = {
  * Event names are type-checked against the Events type via createMutations.
  * Typos like 'operationss' will cause compile errors.
  */
-const mutations = createMutations<LocalState, Events>()({
+const mutations = createMutations<AccountData, Events>()({
 	addOperation(
-		state,
+		data,
 		transactionIntent: TransactionIntent,
 		description: string,
 		type: OnchainOperation['type'],
 	) {
 		let id = Date.now();
-		while (state.operations[id]) id++;
+		while (data.operations[id]) id++;
 		const operation = {type, description, transactionIntent};
-		state.operations[id] = operation;
+		data.operations[id] = operation;
 		return {
 			result: id,
 			event: 'operations:added',
@@ -61,9 +63,9 @@ const mutations = createMutations<LocalState, Events>()({
 		};
 	},
 
-	setOperation(state, id: number, operation: OnchainOperation) {
-		const isNew = !state.operations[id];
-		state.operations[id] = operation;
+	setOperation(data, id: number, operation: OnchainOperation) {
+		const isNew = !data.operations[id];
+		data.operations[id] = operation;
 		if (isNew) {
 			return {
 				result: undefined,
@@ -73,15 +75,15 @@ const mutations = createMutations<LocalState, Events>()({
 		}
 		return {
 			result: undefined,
-			event: 'operation',
+			event: 'operation:updated',
 			eventData: {id, operation},
 		};
 	},
 
-	removeOperation(state, id: number) {
-		const operation = state.operations[id];
+	removeOperation(data, id: number) {
+		const operation = data.operations[id];
 		if (!operation) return {result: false};
-		delete state.operations[id];
+		delete data.operations[id];
 		return {
 			result: true,
 			event: 'operations:removed',
@@ -93,31 +95,31 @@ const mutations = createMutations<LocalState, Events>()({
 export function createAccountData(params: {
 	account: AccountStore;
 	deployments: TypedDeployments;
-	storage?: AsyncStorage<LocalState>;
+	storage?: AsyncStorage<AccountData>;
 }) {
 	const {
 		account,
 		deployments,
-		storage = createLocalStorageAdapter<LocalState>(),
+		storage = createLocalStorageAdapter<AccountData>(),
 	} = params;
 
-	return createAccountStore<LocalState, Events, typeof mutations>({
+	return createAccountStore<AccountData, Events, typeof mutations>({
 		account,
 		storage,
 
 		storageKey: (addr) =>
 			`__private__${deployments.chain.id}_${deployments.chain.genesisHash}_${deployments.contracts.GreetingsRegistry.address}_${addr}`,
 
-		defaultState: (account) => ({account, operations: {}}),
+		defaultData: () => ({operations: {}}),
 
 		// Emit 'operations:cleared' event when account is being switched (before loading)
 		onClear: () => [{event: 'operations:cleared', data: undefined}],
 
-		// Emit 'operations:set' event when state is loaded (account switch)
-		onLoad: (state) => [{event: 'operations:set', data: state.operations}],
+		// Emit 'operations:set' event when data is loaded (account switch)
+		onLoad: (data) => [{event: 'operations:set', data: data.operations}],
 
 		mutations,
 	});
 }
 
-export type AccountData = ReturnType<typeof createAccountData>;
+export type AccountDataStore = ReturnType<typeof createAccountData>;

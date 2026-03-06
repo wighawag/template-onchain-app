@@ -4,7 +4,10 @@ import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance.js';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
 import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
-import {initTransactionProcessor} from '@etherkit/tx-observer';
+import {
+	createTransactionObserver,
+	type TransactionIntent,
+} from '@etherkit/tx-observer';
 import {createAccountData} from '$lib/account/AccountData.js';
 
 export async function createContext(): Promise<{
@@ -30,31 +33,84 @@ export async function createContext(): Promise<{
 	window.publicClient = publicClient;
 	window.deployments = deployments;
 
+	// ----------------------------------------------------------------------------
+	// TRACKED WALLET CLIENT
+	// ----------------------------------------------------------------------------
+
+	// Wrap the raw wallet client with tracking capabilities
+	// This is exposed as `walletClient` for drop-in compatibility
+	// Use `walletClient.walletClient` to access the underlying viem WalletClient if needed
+	const walletClient = createTrackedWalletClient(rawWalletClient, publicClient);
+	window.walletClient = walletClient;
+
+	// ----------------------------------------------------------------------------
+
 	const accountData = createAccountData({
 		account,
 		deployments: deployments.current,
 	});
 
-	const txOberserver = initTransactionProcessor({
+	const txOberserver = createTransactionObserver({
 		finality: 12, //TODO
 		provider: connection.provider,
 	});
 
-	// accountData.on('operations', (operations) => {
-	// 	// we need to know when an operation is removed
-	// 	txOberserver.remove('1');
-	// 	// we need to know when an operation (or multiple) is added
-	// 	txOberserver.add(operations['1'].transactionIntent);
-	// 	txOberserver.addMultiple(operations.map(op => op.transactionIntent));
+	accountData.on('operations:cleared', () => {
+		txOberserver.clear();
+	});
+	accountData.on('operations:set', (operations) => {
+		const intents: {[id: string]: TransactionIntent} = {};
+		for (const id in operations) {
+			intents[id] = operations[id].transactionIntent;
+		}
+		txOberserver.addMultiple(intents);
+	});
+	accountData.on('operations:added', ({id, operation}) => {
+		txOberserver.add(id.toString(), operation.transactionIntent);
+	});
+	accountData.on('operations:removed', ({id}) => {
+		txOberserver.remove(id.toString());
+	});
 
-	// 	// we need to know when operations are cleared (switching account)
-	// 	txOberserver.clear();
-	// });
+	walletClient.onTransactionBroadcasted((transaction) => {
+		// TODO handle account
+		if (accountData.state.status !== 'ready') {
+			console.error(`broadcasted transaction but accountData is not ready`);
+			return;
+		}
+		const currentAccount = accountData.state.account;
+		accountData.addOperation(
+			currentAccount,
+			{
+				transactions: [
+					{
+						broadcastTimestamp: transaction.initiatedAt, // TODO rename viem-tx-tracker type field
+						from: transaction.from,
+						hash: transaction.txHash, // TODO rename viem-tx-tracker type field
+						nonce: transaction.nonce,
+					},
+				],
+			},
+			transaction.metadata?.description || 'unknown',
+			'default',
+		);
+	});
 
-	// txOberserver.onOperationStatusUpdated((intent) => {
-	// 	const currentOperation = accountData.state.operations[intent.id.toString()];
-	// 	// currentOperation.accountData.updateOperation(operation);
-	// });
+	txOberserver.on('intent:status', (event) => {
+		const operationID = Number(event.id);
+		if (accountData.state.status === 'ready') {
+			// TODO handle account
+			const account = accountData.state.account;
+			const currentOperation = accountData.state.data.operations[operationID];
+			if (currentOperation) {
+				currentOperation.transactionIntent = event.intent;
+				accountData.setOperation(account, operationID, currentOperation);
+			} else {
+				console.error(`operation with id ${operationID} not found`);
+				// TODO remove from tx observer ?
+			}
+		}
+	});
 
 	// ----------------------------------------------------------------------------
 
@@ -73,18 +129,6 @@ export async function createContext(): Promise<{
 		deployments: deployments.current,
 	});
 	window.gasFee = gasFee;
-	// ----------------------------------------------------------------------------
-
-	// ----------------------------------------------------------------------------
-	// TRACKED WALLET CLIENT
-	// ----------------------------------------------------------------------------
-
-	// Wrap the raw wallet client with tracking capabilities
-	// This is exposed as `walletClient` for drop-in compatibility
-	// Use `walletClient.walletClient` to access the underlying viem WalletClient if needed
-	const walletClient = createTrackedWalletClient(rawWalletClient, publicClient);
-	window.walletClient = walletClient;
-
 	// ----------------------------------------------------------------------------
 
 	return {

@@ -7,7 +7,7 @@ import type {
 	DeploymentsStore,
 } from '$lib/core/connection/types';
 import type {TrackedWalletClient} from '@etherkit/viem-tx-tracker';
-import type {AccountData} from '$lib/account/AccountData';
+import type {AccountDataStore} from '$lib/account/AccountData';
 
 export type Context = {
 	gasFee: GasFeeStore;
@@ -21,5 +21,5 @@ export type Context = {
 	publicClient: PublicClient;
 	account: AccountStore;
 	deployments: DeploymentsStore;
-	accountData: AccountData;
+	accountData: AccountDataStore;
 };

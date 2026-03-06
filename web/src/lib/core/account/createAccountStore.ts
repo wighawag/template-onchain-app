@@ -3,6 +3,15 @@ import type {AccountStore} from '$lib/core/connection/types';
 import {createEmitter} from 'radiate';
 
 /**
+ * Async state wrapper for account-bound data.
+ * Discriminated union ensures type-safe data access.
+ */
+export type AsyncState<D> =
+	| {status: 'idle'; account: undefined}
+	| {status: 'loading'; account: `0x${string}`}
+	| {status: 'ready'; account: `0x${string}`; data: D};
+
+/**
  * Result of a state mutation.
  * Event names are constrained to valid keys from the Events type.
  */
@@ -13,39 +22,39 @@ export type MutationResult<T, E extends string> = {
 };
 
 /**
- * A mutation function that operates on state.
- * First param is always state, rest are user-provided args.
+ * A mutation function that operates on data.
+ * First param is always data, rest are user-provided args.
  * Event names are constrained to keys of the Events type.
  */
 export type MutationFn<
-	S,
+	D,
 	EventKeys extends string,
 	Args extends unknown[] = unknown[],
 	R = unknown,
-> = (state: S, ...args: Args) => MutationResult<R, EventKeys>;
+> = (data: D, ...args: Args) => MutationResult<R, EventKeys>;
 
 /**
  * Helper to create typed mutations with constrained event names.
- * Uses curried form: createMutations<State, Events>()(mutations)
+ * Uses curried form: createMutations<Data, Events>()(mutations)
  *
  * This ensures typos in event names are caught at compile time without
  * requiring explicit return type annotations on each mutation.
  *
  * @example
  * ```typescript
- * const mutations = createMutations<LocalState, Events>()({
- *   addItem(state, name: string) {
- *     state.items.push(name);
- *     return { result: state.items.length, event: 'items' }; // 'items' validated against Events
+ * const mutations = createMutations<OperationsData, Events>()({
+ *   addItem(data, name: string) {
+ *     data.items.push(name);
+ *     return { result: data.items.length, event: 'items' }; // 'items' validated against Events
  *   }
  * });
  * ```
  */
-export function createMutations<S, E extends Record<string, unknown>>() {
+export function createMutations<D, E extends Record<string, unknown>>() {
 	return <
 		M extends Record<
 			string,
-			(state: S, ...args: any[]) => MutationResult<any, keyof E & string>
+			(data: D, ...args: any[]) => MutationResult<any, keyof E & string>
 		>,
 	>(
 		mutations: M,
@@ -56,18 +65,18 @@ export function createMutations<S, E extends Record<string, unknown>>() {
  * Configuration for createAccountStore.
  */
 type AccountStoreConfig<
-	S,
+	D,
 	E extends Record<string, unknown>,
-	M extends Record<string, MutationFn<S, keyof E & string, any[], any>>,
+	M extends Record<string, MutationFn<D, keyof E & string, any[], any>>,
 > = {
-	/** Factory to create default state */
-	defaultState: (account?: `0x${string}`) => S;
+	/** Factory to create default data for a new account */
+	defaultData: () => D;
 
-	/** Pure mutation functions - just mutate state and return result + event */
+	/** Pure mutation functions - just mutate data and return result + event */
 	mutations: M;
 
-	/** Async storage adapter */
-	storage: AsyncStorage<S>;
+	/** Async storage adapter - stores D (data), not AsyncState */
+	storage: AsyncStorage<D>;
 
 	/** Function to generate storage key from account */
 	storageKey: (account: `0x${string}`) => string;
@@ -76,16 +85,14 @@ type AccountStoreConfig<
 	account: AccountStore;
 
 	/**
-	 * Events to emit when state is loaded (account switch or initial load).
-	 * Each event is emitted with the state (or a derived value) as data.
-	 * Example: `onLoad: (state) => [{ event: 'operations:set', data: state.operations }]`
+	 * Events to emit when data is loaded (account switch or initial load).
+	 * Receives the loaded data.
 	 */
-	onLoad?: (state: S) => Array<{event: keyof E & string; data: E[keyof E]}>;
+	onLoad?: (data: D) => Array<{event: keyof E & string; data: E[keyof E]}>;
 
 	/**
 	 * Events to emit when state is cleared (account switch).
-	 * Called before loading the new account's state.
-	 * Example: `onClear: () => [{ event: 'operations:cleared', data: undefined }]`
+	 * Called when transitioning away from ready state.
 	 */
 	onClear?: () => Array<{event: keyof E & string; data: E[keyof E]}>;
 };
@@ -93,7 +100,7 @@ type AccountStoreConfig<
 /**
  * Creates an account-aware store with automatic wiring.
  *
- * @typeParam S - The state type
+ * @typeParam D - The data type (stored inside AsyncState)
  * @typeParam E - The events type (e.g., `{operations: Record<number, Op>; operation: {id: number; operation: Op}}`)
  * @typeParam M - The mutations record type (events constrained to keyof E)
  *
@@ -101,12 +108,12 @@ type AccountStoreConfig<
  * - Different account: load-modify-save with serialization, no events
  */
 export function createAccountStore<
-	S extends {account?: `0x${string}`},
+	D,
 	E extends Record<string, unknown>,
-	M extends Record<string, MutationFn<S, keyof E & string, any[], any>>,
->(config: AccountStoreConfig<S, E, M>) {
+	M extends Record<string, MutationFn<D, keyof E & string, any[], any>>,
+>(config: AccountStoreConfig<D, E, M>) {
 	const {
-		defaultState,
+		defaultData,
 		mutations,
 		storage,
 		storageKey,
@@ -115,71 +122,68 @@ export function createAccountStore<
 		onClear,
 	} = config;
 
-	// Emitter with properly typed events including loading state
-	const emitter = createEmitter<E & {state: S; loading: boolean}>();
+	// Emitter with properly typed events - state is now AsyncState<D>
+	const emitter = createEmitter<E & {state: AsyncState<D>}>();
 
-	let state = defaultState();
-	let loading = false;
+	let asyncState: AsyncState<D> = {status: 'idle', account: undefined};
 	const pendingSaves = new Map<string, Promise<void>>();
 	let loadGeneration = 0;
 
-	// Storage helpers
-	const _load = async (acc: `0x${string}`) =>
-		(await storage.load(storageKey(acc))) ?? defaultState(acc);
+	// Storage helpers - loads D (data), not state with account
+	const _load = async (acc: `0x${string}`): Promise<D> =>
+		(await storage.load(storageKey(acc))) ?? defaultData();
 
-	const _save = async (acc: `0x${string}`, s: S) =>
-		storage.save(storageKey(acc), s);
+	// Saves D (data)
+	const _save = async (acc: `0x${string}`, data: D) =>
+		storage.save(storageKey(acc), data);
 
 	// Emit clear events
 	function _emitClearEvents(): void {
 		if (onClear) {
 			for (const {event, data} of onClear()) {
-				emitter.emit(
-					event as keyof (E & {state: S; loading: boolean}),
-					data as any,
-				);
+				emitter.emit(event as keyof (E & {state: AsyncState<D>}), data as any);
 			}
 		}
 	}
 
-	// Emit load events
-	function _emitLoadEvents(s: S): void {
+	// Emit load events - receives D (data) not S (state)
+	function _emitLoadEvents(data: D): void {
 		if (onLoad) {
-			for (const {event, data} of onLoad(s)) {
+			for (const {event, data: eventData} of onLoad(data)) {
 				emitter.emit(
-					event as keyof (E & {state: S; loading: boolean}),
-					data as any,
+					event as keyof (E & {state: AsyncState<D>}),
+					eventData as any,
 				);
 			}
 		}
 	}
 
-	// Core helper
+	// Core helper - mutation operates on data
 	async function _withState<T>(
 		acc: `0x${string}`,
-		mutation: (s: S) => MutationResult<T, keyof E & string>,
+		mutation: (data: D) => MutationResult<T, keyof E & string>,
 	): Promise<T> {
-		const isCurrentAccount = acc === state.account;
-
-		if (isCurrentAccount) {
-			const {result, event, eventData} = mutation(state);
-			_save(acc, state).catch(() => {});
+		// Can only mutate current account when ready
+		const currentState = asyncState;
+		if (currentState.status === 'ready' && currentState.account === acc) {
+			const {result, event, eventData} = mutation(currentState.data);
+			_save(acc, currentState.data).catch(() => {});
 			if (event)
 				emitter.emit(
-					event as keyof (E & {state: S; loading: boolean}),
-					(eventData ?? state) as any,
+					event as keyof (E & {state: AsyncState<D>}),
+					(eventData ?? currentState.data) as any,
 				);
 			return result;
 		}
 
-		// Cross-account path
+		// Cross-account path (unchanged logic, just D instead of S)
 		const pending = pendingSaves.get(acc);
 		if (pending) await pending;
 
-		const targetState = await _load(acc);
-		const {result} = mutation(targetState);
+		const targetData = await _load(acc);
+		const {result} = mutation(targetData);
 
-		const savePromise = _save(acc, targetState);
+		const savePromise = _save(acc, targetData);
 		pendingSaves.set(acc, savePromise);
 		await savePromise;
 		pendingSaves.delete(acc);
@@ -189,61 +193,56 @@ export function createAccountStore<
 
 	// Account switching
 	async function setAccount(newAccount?: `0x${string}`): Promise<void> {
-		if (newAccount === state.account) return;
+		// Same account - no change needed
+		if (newAccount === asyncState.account) return;
 
-		const emitClearEvents = state.account;
+		// Remember if we were ready (to emit clear events)
+		const wasReady = asyncState.status === 'ready';
 
-		// Immediately set state to default for new account (clears old account data)
-		state = defaultState(newAccount);
-
-		if (emitClearEvents) {
-			_emitClearEvents();
-		}
-
-		// If no account, we're done (no loading needed)
+		// No account - transition to idle
 		if (!newAccount) {
-			emitter.emit(
-				'state',
-				state as (E & {state: S; loading: boolean})['state'],
-			);
-			_emitLoadEvents(state);
+			asyncState = {status: 'idle', account: undefined};
+			emitter.emit('state', asyncState);
+			if (wasReady) {
+				_emitClearEvents();
+			}
+			// Note: onLoad is NOT called for idle state (no data to load)
 			return;
 		}
 
-		// Set loading state and emit loading event
-		loading = true;
-		emitter.emit(
-			'loading',
-			true as (E & {state: S; loading: boolean})['loading'],
-		);
+		// Transition to loading state
+		asyncState = {status: 'loading', account: newAccount};
+		emitter.emit('state', asyncState);
 
+		// Emit clear events after state shows loading (so listeners see clean state)
+		if (wasReady) {
+			_emitClearEvents();
+		}
+
+		// Track load generation for race condition handling
 		loadGeneration++;
 		const gen = loadGeneration;
 
-		// Load stored state for the new account
-		const loadedState = await _load(newAccount);
+		// Load data from storage
+		const loadedData = await _load(newAccount);
 
 		// Only apply if this is still the current load generation
-		if (gen === loadGeneration) {
-			state = loadedState;
+		// (handles rapid account switching)
+		if (gen !== loadGeneration) {
+			return; // Another setAccount was called, abort this one
 		}
 
-		// Clear loading state and emit loading event
-		loading = false;
-		emitter.emit(
-			'loading',
-			false as (E & {state: S; loading: boolean})['loading'],
-		);
+		// Transition to ready state
+		asyncState = {status: 'ready', account: newAccount, data: loadedData};
+		emitter.emit('state', asyncState);
 
-		// Emit state event
-		emitter.emit('state', state as (E & {state: S; loading: boolean})['state']);
-		// Emit configured load events
-		_emitLoadEvents(state);
+		// Emit load events
+		_emitLoadEvents(loadedData);
 	}
 
 	// Auto-wrap all mutations with _withState
 	type WrappedMutations = {
-		[K in keyof M]: M[K] extends MutationFn<S, any, infer Args, infer R>
+		[K in keyof M]: M[K] extends MutationFn<D, any, infer Args, infer R>
 			? (account: `0x${string}`, ...args: Args) => Promise<R>
 			: never;
 	};
@@ -253,7 +252,7 @@ export function createAccountStore<
 		(wrappedMutations as any)[name] = (
 			acc: `0x${string}`,
 			...args: unknown[]
-		) => _withState(acc, (s) => fn(s, ...args));
+		) => _withState(acc, (data) => fn(data, ...args));
 	}
 
 	// Start/stop
@@ -265,17 +264,13 @@ export function createAccountStore<
 	const stop = () => unsub?.();
 
 	return {
-		/** Current state (readonly) */
-		get state() {
-			return state as Readonly<S>;
-		},
-		/** Whether data is currently being loaded (account switch in progress) */
-		get loading() {
-			return loading;
+		/** Current async state (readonly) */
+		get state(): Readonly<AsyncState<D>> {
+			return asyncState;
 		},
 		...wrappedMutations,
-		on: emitter.on,
-		off: emitter.off,
+		on: emitter.on.bind(emitter),
+		off: emitter.off.bind(emitter),
 		start,
 		stop,
 	};
