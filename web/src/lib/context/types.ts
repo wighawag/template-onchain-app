@@ -1,8 +1,4 @@
-import type {
-	ConnectionStore,
-	UnderlyingEthereumProvider,
-} from '@etherplay/connect';
-import type {PublicClient, WalletClient} from 'viem';
+import type {PublicClient} from 'viem';
 import type {BalanceStore} from '$lib/core/connection/balance';
 import type {GasFeeStore} from '$lib/core/connection/gasFee';
 import type {

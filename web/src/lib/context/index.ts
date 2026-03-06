@@ -1,7 +1,7 @@
 import type {Context} from './types.js';
 
 import {establishRemoteConnection} from '$lib/core/connection';
-import {createBalanceStore} from '$lib/core/connection/balance';
+import {createBalanceStore} from '$lib/core/connection/balance.js';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
 import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
 import {initTransactionProcessor} from '@etherkit/tx-observer';
@@ -62,7 +62,7 @@ export async function createContext(): Promise<{
 	// BALANCE AND COSTS
 	// ----------------------------------------------------------------------------
 
-	const balance = createBalanceStore({publicClient, signer});
+	const balance = createBalanceStore({publicClient, account});
 	window.balance = balance;
 
 	// ----------------------------------------------------------------------------
@@ -101,7 +101,7 @@ export async function createContext(): Promise<{
 		start: () => {
 			// to keep balance in memory
 			// TODO use an methodology to handle this when wanted
-			const unsubscribeFromBalance = balance.subscribe((v) => {});
+			const unsubscribeFromBalance = balance.subscribe(() => {});
 			// TODO remove
 			// we trigger it
 			const unsubscribeFromGasFee = gasFee.subscribe((v) => {

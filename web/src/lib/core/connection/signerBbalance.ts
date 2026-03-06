@@ -1,8 +1,8 @@
-import type {AccountStore} from '$lib/core/connection/types';
+import type {OptionalSigner, Signer} from '$lib/core/connection/types';
 import {get, writable, type Readable} from 'svelte/store';
 import type {PublicClient} from 'viem';
 
-export type Balance = {error?: {message: string}} & (
+export type SignerBalance = {error?: {message: string}} & (
 	| {
 			step: 'Idle';
 	  }
@@ -11,13 +11,14 @@ export type Balance = {error?: {message: string}} & (
 	  }
 	| {
 			step: 'Loaded';
-			value: bigint;
+			signer: bigint;
+			owner: bigint;
 	  }
 );
 
-export type BalanceStore = Readable<Balance> & {
+export type SignedBalanceStore = Readable<SignerBalance> & {
 	update(): void;
-	value: Balance | undefined;
+	value: SignerBalance | undefined;
 };
 
 function defaultState() {
@@ -26,55 +27,67 @@ function defaultState() {
 	} as const;
 }
 
-export function createBalanceStore(
+export function createSignerBalanceStore(
 	params: {
 		publicClient: PublicClient;
-		account: AccountStore;
+		signer: Readable<OptionalSigner>;
 	},
 	options?: {
 		fetchInterval?: number;
 	},
-): BalanceStore {
-	const {publicClient, account} = params;
+): SignedBalanceStore {
+	const {publicClient, signer} = params;
 	const fetchInterval = options?.fetchInterval || 5 * 1000; // 5 seconds
 
-	let $state: Balance = defaultState();
-	let $account = get(account);
+	let $state: SignerBalance = defaultState();
+	let $signer = get(signer);
 
-	const _store = writable<Balance>($state, start);
-	function set(state: Balance) {
+	const _store = writable<SignerBalance>($state, start);
+	function set(state: SignerBalance) {
 		$state = state;
 		_store.set($state);
 		return $state;
 	}
 
-	async function fetchState($account: `0x${string}`): Promise<boolean> {
+	async function fetchState($signer: Signer): Promise<boolean> {
 		if ($state.step !== 'Loaded') {
 			set({
 				step: 'Loading',
 			});
 		}
 
-		let balance: bigint;
+		let signerBalance: bigint;
 		try {
-			balance = await publicClient.getBalance({address: $account});
+			signerBalance = await publicClient.getBalance({address: $signer.address});
 		} catch (err) {
 			set({
 				step: 'Loading',
-				error: {message: `failed to fetch balance for ${$account}`},
+				error: {message: `failed to fetch balance for ${$signer.address}`},
+			});
+			return false;
+		}
+
+		let ownerBalance: bigint;
+		try {
+			ownerBalance = await publicClient.getBalance({address: $signer.owner});
+		} catch (err) {
+			set({
+				step: 'Loading',
+				error: {message: `failed to fetch balance for ${$signer.owner}`},
 			});
 			return false;
 		}
 
 		set({
 			step: 'Loaded',
-			value: balance,
+			signer: signerBalance,
+			owner: ownerBalance,
 		});
 		return true;
 	}
 
 	async function fetchContinuously() {
-		if (!$account) {
+		if (!$signer) {
 			set({
 				step: 'Idle',
 			});
@@ -83,15 +96,15 @@ export function createBalanceStore(
 			clearTimeout(timeout);
 			timeout = undefined;
 		}
-		if ($account) {
-			await fetchNow($account);
+		if ($signer) {
+			await fetchNow($signer);
 		}
 	}
 
-	async function fetchNow(account: `0x${string}`) {
+	async function fetchNow(signer: Signer) {
 		let interval = fetchInterval;
 		try {
-			const success = await fetchState(account);
+			const success = await fetchState(signer);
 			if (!success) {
 				interval = 500;
 			}
@@ -103,14 +116,15 @@ export function createBalanceStore(
 	}
 
 	let unsubscribeFromAccount: (() => void) | undefined;
+	let unsubscribeFromCost: (() => void) | undefined;
 	let timeout: NodeJS.Timeout | undefined;
 	function start() {
-		unsubscribeFromAccount = account.subscribe(async (newAccount) => {
-			const signerChanged = $account != newAccount;
+		unsubscribeFromAccount = signer.subscribe(async (newSigner) => {
+			const signerChanged = $signer?.address != newSigner?.address;
 
 			if (signerChanged) {
-				if (newAccount) {
-					$account = newAccount;
+				if (newSigner) {
+					$signer = {...newSigner};
 					fetchContinuously();
 				} else {
 					set({step: 'Idle'});
