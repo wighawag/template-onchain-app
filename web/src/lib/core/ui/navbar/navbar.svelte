@@ -100,18 +100,25 @@
 			<!-- Navigation Links -->
 			<div class="mt-4 flex flex-col gap-2 px-4">
 				<a
-					href={route('/contracts')}
+					href={route('/contracts/')}
 					class={buttonVariants({variant: 'outline'})}
 					onclick={() => (showMenu = false)}
 				>
 					Contracts
 				</a>
 				<a
-					href={route('/explorer')}
+					href={route('/explorer/')}
 					class={buttonVariants({variant: 'outline'})}
 					onclick={() => (showMenu = false)}
 				>
 					Explorer
+				</a>
+				<a
+					href={route('/operations/')}
+					class={buttonVariants({variant: 'outline'})}
+					onclick={() => (showMenu = false)}
+				>
+					Operations
 				</a>
 			</div>
 
