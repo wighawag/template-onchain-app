@@ -9,7 +9,8 @@
 		ZapIcon,
 	} from '@lucide/svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
-	import type {PublicClient, Transaction} from 'viem';
+	import type {PublicClient, Transaction, TransactionReceipt} from 'viem';
+	import {formatGwei} from 'viem';
 	import {
 		decodeTransaction,
 		formatDecodedTransaction,
@@ -37,20 +38,22 @@
 	});
 	let formattedData = $derived(formatDecodedTransaction(decodedData));
 	let loading = $state(true);
+	let receipt = $state<TransactionReceipt | null>(null);
 
 	// Decode transaction on mount
 	async function decodeTransactionData() {
 		loading = true;
 		try {
 			// Fetch receipt for status
-			let receipt = null;
+			let txReceipt = null;
 			try {
-				receipt = await publicClient.getTransactionReceipt({hash: tx.hash});
+				txReceipt = await publicClient.getTransactionReceipt({hash: tx.hash});
+				receipt = txReceipt;
 			} catch (e) {
 				// Transaction might be pending
 			}
 
-			const decoded = await decodeTransaction(tx, receipt, publicClient);
+			const decoded = await decodeTransaction(tx, txReceipt, publicClient);
 			decodedData = decoded;
 		} catch (e) {
 			console.error('Error decoding transaction:', e);
@@ -68,8 +71,43 @@
 		goto(route(`/explorer/tx/${tx.hash}`));
 	}
 
+	// Navigate to address page
+	function viewAddress(address: string, event: MouseEvent) {
+		event.stopPropagation();
+		goto(route(`/explorer/address/${address}`));
+	}
+
 	// Get transaction type icon based on type
-	let isEIP1559 = $derived(formatTransactionType(tx.type) === 'EIP-1559');
+	let isEIP1559 = $derived(tx.type === 'eip1559');
+
+	// Check if this is a contract creation transaction
+	let isContractCreation = $derived(!tx.to);
+
+	// Get contract address from receipt for contract creation transactions
+	let contractAddress = $derived(
+		isContractCreation && receipt?.contractAddress
+			? receipt.contractAddress
+			: null,
+	);
+
+	// Format EIP-1559 fee info
+	let maxPriorityFeePerGas = $derived(
+		isEIP1559 && 'maxPriorityFeePerGas' in tx
+			? (tx.maxPriorityFeePerGas as bigint)
+			: null,
+	);
+	let maxFeePerGas = $derived(
+		isEIP1559 && 'maxFeePerGas' in tx ? (tx.maxFeePerGas as bigint) : null,
+	);
+	let effectiveGasPrice = $derived(receipt?.effectiveGasPrice ?? null);
+
+	// Calculate the actual base fee used (effectiveGasPrice - priorityFeePerGas)
+	// Note: The actual priority fee paid is min(maxPriorityFeePerGas, maxFeePerGas - baseFee)
+	let baseFeeUsed = $derived(
+		effectiveGasPrice && maxPriorityFeePerGas
+			? effectiveGasPrice - maxPriorityFeePerGas
+			: null,
+	);
 </script>
 
 <Card.Root
@@ -125,13 +163,34 @@
 						Contract Call
 					</div>
 				{:else}
-					<div class="font-mono text-sm text-muted-foreground">
-						Contract Creation
+					<div class="space-y-1">
+						<div class="font-mono text-sm text-muted-foreground">
+							Contract Creation d
+						</div>
+						{#if contractAddress}
+							<div class="flex items-center gap-1 text-xs">
+								<span class="text-muted-foreground">Created:</span>
+								<button
+									type="button"
+									class="text-primary hover:underline"
+									onclick={(e) => viewAddress(contractAddress, e)}
+								>
+									<Address value={contractAddress} showCopy={false} />
+								</button>
+							</div>
+						{:else if loading}
+							<div
+								class="flex items-center gap-1 text-xs text-muted-foreground"
+							>
+								<LoaderIcon class="h-3 w-3 animate-spin" />
+								<span>Loading contract address...</span>
+							</div>
+						{/if}
 					</div>
 				{/if}
 
 				<!-- From/To Addresses -->
-				<div class="flex items-center gap-3 text-xs">
+				<div class="flex flex-wrap items-center gap-3 text-xs">
 					<div class="flex items-center gap-1">
 						<span class="text-muted-foreground">From:</span>
 						<Address value={tx.from} />
@@ -163,9 +222,30 @@
 					</div>
 				{/if}
 
-				<!-- Type Icon -->
+				<!-- Type and Fee Info -->
 				{#if isEIP1559}
-					<ZapIcon class="mx-auto mt-1 h-4 w-4 text-muted-foreground" />
+					<div class="space-y-1">
+						<div class="flex items-center justify-end gap-1">
+							<ZapIcon class="h-4 w-4 text-muted-foreground" />
+							<span class="text-xs text-muted-foreground">EIP-1559</span>
+						</div>
+						{#if baseFeeUsed !== null}
+							<div>
+								<div class="text-xs text-muted-foreground">Base Fee</div>
+								<div class="font-mono text-xs">
+									{formatGwei(baseFeeUsed)} Gwei
+								</div>
+							</div>
+						{/if}
+						{#if maxPriorityFeePerGas !== null}
+							<div>
+								<div class="text-xs text-muted-foreground">Priority Fee</div>
+								<div class="font-mono text-xs">
+									{formatGwei(maxPriorityFeePerGas)} Gwei
+								</div>
+							</div>
+						{/if}
+					</div>
 				{:else}
 					<FileTextIcon class="mx-auto mt-1 h-4 w-4 text-muted-foreground" />
 				{/if}

@@ -17,6 +17,7 @@
 	} from '@lucide/svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import type {PublicClient} from 'viem';
+	import {formatGwei} from 'viem';
 	import {
 		decodeLogs,
 		formatGas,
@@ -26,7 +27,10 @@
 		findContractByAddress,
 		formatPreciseTimestamp,
 		formatTimestamp,
+		formatTransactionType,
 	} from '../lib/utils';
+	import {route} from '$lib';
+	import {goto} from '$app/navigation';
 	import {
 		decodeTransaction,
 		formatDecodedTransaction,
@@ -309,6 +313,25 @@
 								</div>
 							{/if}
 						</div>
+						{#if !tx.to && receipt?.contractAddress}
+							<div>
+								<div class="text-sm font-medium text-muted-foreground">
+									Created Contract
+								</div>
+								<div class="font-mono">
+									<button
+										type="button"
+										class="text-primary hover:underline"
+										onclick={() =>
+											goto(
+												route(`/explorer/address/${receipt!.contractAddress}`),
+											)}
+									>
+										<Address value={receipt.contractAddress} />
+									</button>
+								</div>
+							</div>
+						{/if}
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">Value</div>
 							<div class="font-mono">{formatValue(tx.value)}</div>
@@ -331,8 +354,47 @@
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">Type</div>
-							<div class="font-mono">{tx.type || 'Legacy'}</div>
+							<div class="font-mono">
+								{tx.type || 'Legacy'}
+							</div>
 						</div>
+						{#if tx.type === 'eip1559'}
+							{@const maxPriorityFee =
+								'maxPriorityFeePerGas' in tx
+									? (tx.maxPriorityFeePerGas as bigint)
+									: null}
+							{@const effectiveGasPrice = receipt.effectiveGasPrice}
+							{@const baseFeeUsed =
+								maxPriorityFee !== null
+									? effectiveGasPrice - maxPriorityFee
+									: null}
+							{#if baseFeeUsed !== null}
+								<div>
+									<div class="text-sm font-medium text-muted-foreground">
+										Base Fee
+									</div>
+									<div class="font-mono">{formatGwei(baseFeeUsed)} Gwei</div>
+								</div>
+							{/if}
+							{#if maxPriorityFee !== null}
+								<div>
+									<div class="text-sm font-medium text-muted-foreground">
+										Priority Fee
+									</div>
+									<div class="font-mono">{formatGwei(maxPriorityFee)} Gwei</div>
+								</div>
+							{/if}
+							{#if 'maxFeePerGas' in tx && tx.maxFeePerGas}
+								<div>
+									<div class="text-sm font-medium text-muted-foreground">
+										Max Fee Per Gas
+									</div>
+									<div class="font-mono">
+										{formatGwei(tx.maxFeePerGas as bigint)} Gwei
+									</div>
+								</div>
+							{/if}
+						{/if}
 					</div>
 				</Card.Content>
 			</Card.Root>
