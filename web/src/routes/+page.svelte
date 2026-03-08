@@ -8,6 +8,7 @@
 	import {BanIcon, DollarSignIcon, LogInIcon, WalletIcon} from '@lucide/svelte';
 	import {formatEther} from 'viem';
 	import {getUserContext} from '$lib';
+	import Address from '$lib/core/ui/ethereum/Address.svelte';
 
 	let dependencies = getUserContext();
 
@@ -52,11 +53,11 @@
 								Balance
 							</Card.Title>
 							<Card.Description class="text-sm">
-								balance for {$account}
+								balance for <Address value={$connection.account.address} />
 							</Card.Description>
 						</Card.Header>
 						<Card.Content>
-							<p class="text-3xl font-bold">
+							<p class="text-3xl font-bold wrap-anywhere">
 								{formatEther($balance.value)}
 								<span class="ml-2 text-xl font-normal text-muted-foreground">
 									{$deployments.chain.nativeCurrency.symbol}
