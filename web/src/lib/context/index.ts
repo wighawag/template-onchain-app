@@ -40,7 +40,9 @@ export async function createContext(): Promise<{
 	// Wrap the raw wallet client with tracking capabilities
 	// This is exposed as `walletClient` for drop-in compatibility
 	// Use `walletClient.walletClient` to access the underlying viem WalletClient if needed
-	const walletClient = createTrackedWalletClient(rawWalletClient, publicClient);
+	const walletClient = createTrackedWalletClient({
+		populateMetadata: true,
+	}).using(rawWalletClient, publicClient);
 	window.walletClient = walletClient;
 
 	// ----------------------------------------------------------------------------
@@ -55,15 +57,17 @@ export async function createContext(): Promise<{
 		provider: connection.provider,
 	});
 
-	accountData.on('operations:cleared', () => {
-		txOberserver.clear();
-	});
-	accountData.on('operations:set', (operations) => {
-		const intents: {[id: string]: TransactionIntent} = {};
-		for (const id in operations) {
-			intents[id] = operations[id].transactionIntent;
+	accountData.on('state', (state) => {
+		if (state.status == 'idle' || state.status == 'loading') {
+			txOberserver.clear();
+		} else {
+			const operations = state.data.operations;
+			const intents: {[id: string]: TransactionIntent} = {};
+			for (const id in operations) {
+				intents[id] = operations[id].transactionIntent;
+			}
+			txOberserver.addMultiple(intents);
 		}
-		txOberserver.addMultiple(intents);
 	});
 	accountData.on('operations:added', ({id, operation}) => {
 		txOberserver.add(id.toString(), operation.transactionIntent);
@@ -84,22 +88,21 @@ export async function createContext(): Promise<{
 			{
 				transactions: [
 					{
-						broadcastTimestamp: transaction.initiatedAt, // TODO rename viem-tx-tracker type field
+						broadcastTimestampMs: transaction.broadcastTimestampMs,
 						from: transaction.from,
-						hash: transaction.txHash, // TODO rename viem-tx-tracker type field
+						hash: transaction.hash,
 						nonce: transaction.nonce,
 					},
 				],
 			},
-			transaction.metadata?.description || 'unknown',
-			'default',
+			transaction.metadata,
 		);
 	});
 
 	txOberserver.on('intent:status', (event) => {
 		const operationID = Number(event.id);
 		if (accountData.state.status === 'ready') {
-			// TODO handle account
+			// tx-observer is built in a way that we can be sure that the tx belong to the current account
 			const account = accountData.state.account;
 			const currentOperation = accountData.state.data.operations[operationID];
 			if (currentOperation) {

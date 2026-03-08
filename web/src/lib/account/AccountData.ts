@@ -5,10 +5,12 @@ import {
 import {createLocalStorageAdapter, type AsyncStorage} from '$lib/core/storage';
 import type {AccountStore, TypedDeployments} from '$lib/core/connection/types';
 import type {TransactionIntent} from '@etherkit/tx-observer';
+import type {PopulatedMetadata} from '@etherkit/viem-tx-tracker';
+
+export type OnchainOperationMetadata = PopulatedMetadata;
 
 export type OnchainOperation = {
-	type: 'set-greeting' | 'default';
-	description: string;
+	metadata: OnchainOperationMetadata;
 	transactionIntent: TransactionIntent;
 };
 
@@ -49,12 +51,11 @@ const mutations = createMutations<AccountData, Events>()({
 	addOperation(
 		data,
 		transactionIntent: TransactionIntent,
-		description: string,
-		type: OnchainOperation['type'],
+		metadata: OnchainOperationMetadata,
 	) {
 		let id = Date.now();
 		while (data.operations[id]) id++;
-		const operation = {type, description, transactionIntent};
+		const operation = {metadata, transactionIntent};
 		data.operations[id] = operation;
 		return {
 			result: id,

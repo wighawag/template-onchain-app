@@ -6,8 +6,14 @@ import type {
 	ChainConnection,
 	DeploymentsStore,
 } from '$lib/core/connection/types';
-import type {TrackedWalletClient} from '@etherkit/viem-tx-tracker';
-import type {AccountDataStore} from '$lib/account/AccountData';
+import type {TrackedWalletClientAutoPopulate} from '@etherkit/viem-tx-tracker';
+import type {
+	AccountDataStore,
+	OnchainOperationMetadata,
+} from '$lib/account/AccountData';
+
+export type WalletClient =
+	TrackedWalletClientAutoPopulate<OnchainOperationMetadata>;
 
 export type Context = {
 	gasFee: GasFeeStore;
@@ -17,7 +23,7 @@ export type Context = {
 	 * Tracked wallet client that wraps the underlying viem WalletClient.
 	 * Supports optional `metadata` field on writeContract/sendTransaction for tracking.
 	 */
-	walletClient: TrackedWalletClient;
+	walletClient: WalletClient;
 	publicClient: PublicClient;
 	account: AccountStore;
 	deployments: DeploymentsStore;

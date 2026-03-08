@@ -18,7 +18,7 @@
 		UnderlyingEthereumProvider,
 	} from '@etherplay/connect';
 	import {route} from '$lib';
-	import type {TrackedWalletClient} from '@etherkit/viem-tx-tracker';
+	import type {WalletClient} from '$lib/context/types';
 
 	interface Props {
 		functionName: string;
@@ -26,7 +26,7 @@
 		contractAddress: string;
 		connection: AnyConnectionStore<UnderlyingEthereumProvider>;
 		publicClient: PublicClient;
-		walletClient: TrackedWalletClient;
+		walletClient: WalletClient;
 	}
 
 	let {
@@ -105,11 +105,6 @@
 				args: args as any,
 				account: currentConnection.account.address,
 				chain: null as any,
-				// Metadata for transaction tracking
-				metadata: {
-					title: `Execute ${abiItem.name}`,
-					description: `Called ${abiItem.name} on contract ${contractAddress}`,
-				},
 			});
 
 			transactionHash = hash;

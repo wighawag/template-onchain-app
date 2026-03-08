@@ -123,11 +123,11 @@ importers:
   web:
     devDependencies:
       '@etherkit/tx-observer':
-        specifier: 0.0.4
-        version: 0.0.4
+        specifier: 0.0.5
+        version: 0.0.5
       '@etherkit/viem-tx-tracker':
-        specifier: ^0.0.2
-        version: 0.0.2(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76))
+        specifier: ^0.0.5
+        version: 0.0.5(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76))
       '@etherplay/connect':
         specifier: ^0.0.40
         version: 0.0.40(@types/node@24.10.1)(bufferutil@4.1.0)(lightningcss@1.30.2)(svelte@5.45.2)(typescript@5.9.3)(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76))
@@ -138,8 +138,8 @@ importers:
         specifier: ^0.561.0
         version: 0.561.0(svelte@5.45.2)
       '@observator/svelte':
-        specifier: ^0.3.0
-        version: 0.3.0(svelte@5.45.2)
+        specifier: ^0.3.1
+        version: 0.3.1(svelte@5.45.2)
       '@sveltejs/adapter-static':
         specifier: ^3.0.10
         version: 3.0.10(@sveltejs/kit@2.49.0(@sveltejs/vite-plugin-svelte@6.2.1(svelte@5.45.2)(vite@7.2.4(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)))(svelte@5.45.2)(vite@7.2.4(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)))
@@ -721,11 +721,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@etherkit/tx-observer@0.0.4':
-    resolution: {integrity: sha512-OZIdhpyQZ9yJTdT1JSN0OxGlkrxiAe3fx8eXMH/G241NdoqzBVk0Dq8Bld6SR1Jy/qYnh3Smfrq579c7LBa5mA==}
+  '@etherkit/tx-observer@0.0.5':
+    resolution: {integrity: sha512-v2+U6CAdMwjQMTVSoJiBbTm/4U7ojM+e0kJOUo//zECNYEkdOTa/hPKeArePgXzn0yMZjUJGwKxnIfqRclytew==}
 
-  '@etherkit/viem-tx-tracker@0.0.2':
-    resolution: {integrity: sha512-6mjUVOvD8790WWSbHGYK1PthG9DkJalHg4yRoJCepoD0ou2dS6exaTOlw952CCQBCAUvjgm9PacOd/fL7U8reg==}
+  '@etherkit/viem-tx-tracker@0.0.5':
+    resolution: {integrity: sha512-AbZ4YnpJ53m8HCzbwPr7k8PVARJuwErN63nGS60Z+ROGswxxu9hkwUFdKlacRfbup59fSne5z2oGWmMUvGQPaw==}
     peerDependencies:
       viem: ^2.46.3
 
@@ -1140,8 +1140,8 @@ packages:
     resolution: {integrity: sha512-q4n32/FNKIhQ3zQGGw5CvPF6GTvDCpYwIf7bEY/dZTZbgfDsHyjJwURxUJf3VQuuJj+fDIFl4+KkBVbw4Ef6jA==}
     engines: {node: '>= 12'}
 
-  '@observator/svelte@0.3.0':
-    resolution: {integrity: sha512-KEXuPQktRTtji5zpoD4eoi5HwsGUCNkwVTwbE66khwNq44SRvbhaEWK/YTfEVh14zmE2AhhuunFNr8RfHpRXJQ==}
+  '@observator/svelte@0.3.1':
+    resolution: {integrity: sha512-aFs8kSjXGmNqOeyvzllrnuZ6hNUteikQtb36jcVu/UOFMSrXRNNGyHJG9rC1/zSR9uft0DQun69c1nqe321M4g==}
     peerDependencies:
       svelte: ^5.0.0
 
@@ -5029,13 +5029,13 @@ snapshots:
   '@esbuild/win32-x64@0.27.2':
     optional: true
 
-  '@etherkit/tx-observer@0.0.4':
+  '@etherkit/tx-observer@0.0.5':
     dependencies:
       lodash-es: 4.17.23
       named-logs: 0.4.1
       radiate: 0.3.2
 
-  '@etherkit/viem-tx-tracker@0.0.2(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76))':
+  '@etherkit/viem-tx-tracker@0.0.5(viem@2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76))':
     dependencies:
       radiate: 0.3.2
       viem: 2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
@@ -5519,7 +5519,7 @@ snapshots:
       '@nomicfoundation/solidity-analyzer-linux-x64-musl': 0.1.2
       '@nomicfoundation/solidity-analyzer-win32-x64-msvc': 0.1.2
 
-  '@observator/svelte@0.3.0(svelte@5.45.2)':
+  '@observator/svelte@0.3.1(svelte@5.45.2)':
     dependencies:
       observator: 0.3.0
       svelte: 5.45.2
