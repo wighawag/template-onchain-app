@@ -6,9 +6,9 @@
 	import * as Card from '$lib/shadcn/ui/card';
 	import * as Separator from '$lib/shadcn/ui/separator';
 	import {BanIcon, DollarSignIcon, LogInIcon, WalletIcon} from '@lucide/svelte';
-	import {formatEther} from 'viem';
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
+	import {formatBalance} from '$lib/core/utils/format/balance';
 
 	let dependencies = getUserContext();
 
@@ -58,7 +58,7 @@
 						</Card.Header>
 						<Card.Content>
 							<p class="text-3xl font-bold wrap-anywhere">
-								{formatEther($balance.value)}
+								{formatBalance($balance.value)}
 								<span class="ml-2 text-xl font-normal text-muted-foreground">
 									{$deployments.chain.nativeCurrency.symbol}
 								</span>
