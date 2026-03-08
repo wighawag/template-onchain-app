@@ -14,6 +14,7 @@
 	import {FileCodeIcon} from '@lucide/svelte';
 	import ContractFunction from './components/ContractFunction.svelte';
 	import {getContractFunctions, isViewFunction} from './lib/utils';
+	import Address from '$lib/core/ui/ethereum/Address.svelte';
 
 	let dependencies = getUserContext();
 
@@ -103,109 +104,114 @@
 			</div>
 
 			<Separator.Root />
-	
-				<!-- Contract Selection -->
-				<Select.Root type="single" bind:value={selectedContractName} onValueChange={handleContractChange}>
-					<Select.Trigger class="w-full">
-						{selectedContractName || 'Select a contract'}
-					</Select.Trigger>
-					<Select.Content>
-						{#each contractFunctionGroups as contract (contract.name)}
-							<Select.Item value={contract.name}>{contract.name}</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
-	
-				<!-- Selected Contract Content -->
-				{#if selectedContract}
-					<div class="space-y-6">
-						<div class="rounded-lg bg-muted/50 p-4">
-							<h2 class="text-xl font-semibold">{selectedContract.name}</h2>
-							<p class="text-sm text-muted-foreground">
-								Address: <a
-									href={route(`/explorer/address/${selectedContract.address}`)}
-									class="text-primary hover:underline">{selectedContract.address}</a
-								>
-							</p>
-						</div>
-	
-						{#if selectedContract.viewFunctions.length === 0 && selectedContract.writeFunctions.length === 0}
-							<Empty.Root>
-								<Empty.Header>
-									<Empty.Title>No Functions Found</Empty.Title>
-									<Empty.Description>
-										This contract has no callable functions.
-									</Empty.Description>
-								</Empty.Header>
-							</Empty.Root>
-						{:else}
-							<Tabs value="read">
-								<TabsList class="mb-6">
-									<TabsTrigger value="read">Read</TabsTrigger>
-									<TabsTrigger value="write">Write</TabsTrigger>
-								</TabsList>
-	
-								<TabsContent value="read">
-									{#if selectedContract.viewFunctions.length > 0}
-										<div class="space-y-4">
-											<h3 class="text-lg font-semibold">View Functions</h3>
-											<div class="grid gap-4 md:grid-cols-2">
-												{#each selectedContract.viewFunctions as func (func.name)}
-													<ContractFunction
-														functionName={func.name}
-														abiItem={func}
-														contractAddress={selectedContract.address}
-														{connection}
-														{publicClient}
-														{walletClient}
-													/>
-												{/each}
-											</div>
-										</div>
-									{:else}
-										<Empty.Root>
-											<Empty.Header>
-												<Empty.Title>No Read Functions</Empty.Title>
-												<Empty.Description>
-													This contract has no view functions.
-												</Empty.Description>
-											</Empty.Header>
-										</Empty.Root>
-									{/if}
-								</TabsContent>
-	
-								<TabsContent value="write">
-									{#if selectedContract.writeFunctions.length > 0}
-										<div class="space-y-4">
-											<h3 class="text-lg font-semibold">Write Functions</h3>
-											<div class="grid gap-4 md:grid-cols-2">
-												{#each selectedContract.writeFunctions as func (func.name)}
-													<ContractFunction
-														functionName={func.name}
-														abiItem={func}
-														contractAddress={selectedContract.address}
-														{connection}
-														{publicClient}
-														{walletClient}
-													/>
-												{/each}
-											</div>
-										</div>
-									{:else}
-										<Empty.Root>
-											<Empty.Header>
-												<Empty.Title>No Write Functions</Empty.Title>
-												<Empty.Description>
-													This contract has no write functions.
-												</Empty.Description>
-											</Empty.Header>
-										</Empty.Root>
-									{/if}
-								</TabsContent>
-							</Tabs>
-						{/if}
+
+			<!-- Contract Selection -->
+			<Select.Root
+				type="single"
+				bind:value={selectedContractName}
+				onValueChange={handleContractChange}
+			>
+				<Select.Trigger class="w-full">
+					{selectedContractName || 'Select a contract'}
+				</Select.Trigger>
+				<Select.Content>
+					{#each contractFunctionGroups as contract (contract.name)}
+						<Select.Item value={contract.name}>{contract.name}</Select.Item>
+					{/each}
+				</Select.Content>
+			</Select.Root>
+
+			<!-- Selected Contract Content -->
+			{#if selectedContract}
+				<div class="space-y-6">
+					<div class="rounded-lg bg-muted/50 p-4">
+						<h2 class="text-xl font-semibold">{selectedContract.name}</h2>
+
+						<a href={route(`/explorer/address/${selectedContract.address}`)}
+							><Address
+								value={selectedContract.address}
+								class="hover:underline"
+							/></a
+						>
 					</div>
-				{/if}
-			</div>
-		{/if}
-	</div>
+
+					{#if selectedContract.viewFunctions.length === 0 && selectedContract.writeFunctions.length === 0}
+						<Empty.Root>
+							<Empty.Header>
+								<Empty.Title>No Functions Found</Empty.Title>
+								<Empty.Description>
+									This contract has no callable functions.
+								</Empty.Description>
+							</Empty.Header>
+						</Empty.Root>
+					{:else}
+						<Tabs value="read">
+							<TabsList class="mb-6">
+								<TabsTrigger value="read">Read</TabsTrigger>
+								<TabsTrigger value="write">Write</TabsTrigger>
+							</TabsList>
+
+							<TabsContent value="read">
+								{#if selectedContract.viewFunctions.length > 0}
+									<div class="space-y-4">
+										<h3 class="text-lg font-semibold">View Functions</h3>
+										<div class="grid gap-4 md:grid-cols-2">
+											{#each selectedContract.viewFunctions as func (func.name)}
+												<ContractFunction
+													functionName={func.name}
+													abiItem={func}
+													contractAddress={selectedContract.address}
+													{connection}
+													{publicClient}
+													{walletClient}
+												/>
+											{/each}
+										</div>
+									</div>
+								{:else}
+									<Empty.Root>
+										<Empty.Header>
+											<Empty.Title>No Read Functions</Empty.Title>
+											<Empty.Description>
+												This contract has no view functions.
+											</Empty.Description>
+										</Empty.Header>
+									</Empty.Root>
+								{/if}
+							</TabsContent>
+
+							<TabsContent value="write">
+								{#if selectedContract.writeFunctions.length > 0}
+									<div class="space-y-4">
+										<h3 class="text-lg font-semibold">Write Functions</h3>
+										<div class="grid gap-4 md:grid-cols-2">
+											{#each selectedContract.writeFunctions as func (func.name)}
+												<ContractFunction
+													functionName={func.name}
+													abiItem={func}
+													contractAddress={selectedContract.address}
+													{connection}
+													{publicClient}
+													{walletClient}
+												/>
+											{/each}
+										</div>
+									</div>
+								{:else}
+									<Empty.Root>
+										<Empty.Header>
+											<Empty.Title>No Write Functions</Empty.Title>
+											<Empty.Description>
+												This contract has no write functions.
+											</Empty.Description>
+										</Empty.Header>
+									</Empty.Root>
+								{/if}
+							</TabsContent>
+						</Tabs>
+					{/if}
+				</div>
+			{/if}
+		</div>
+	{/if}
+</div>

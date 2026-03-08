@@ -1,14 +1,56 @@
+<script lang="ts" module>
+	import {cn} from '$lib/shadcn/utils.js';
+	import type {HTMLAttributes} from 'svelte/elements';
+	import {type VariantProps, tv} from 'tailwind-variants';
+
+	export const addressVariants = tv({
+		base: 'inline-flex items-center gap-1',
+		variants: {
+			size: {
+				xs: 'text-xs',
+				sm: 'text-sm',
+				default: 'text-base',
+				lg: 'text-lg',
+			},
+			mono: {
+				true: 'font-mono',
+				false: '',
+			},
+		},
+		defaultVariants: {
+			size: 'default',
+			mono: false,
+		},
+	});
+
+	export type AddressSize = VariantProps<typeof addressVariants>['size'];
+
+	export interface AddressProps extends HTMLAttributes<HTMLSpanElement> {
+		value: `0x${string}`;
+		truncate?: {start: number; end: number} | false;
+		size?: AddressSize;
+		mono?: boolean;
+		showCopy?: boolean;
+		resolveENS?: boolean;
+		ref?: HTMLSpanElement | null;
+	}
+</script>
+
 <script lang="ts">
 	import {CheckIcon, CopyIcon, LoaderCircleIcon} from '@lucide/svelte';
 	import {getContext, onMount} from 'svelte';
-	import {type HTMLAttributes} from 'svelte/elements';
 
-	interface Props extends HTMLAttributes<HTMLSpanElement> {
-		value: `0x${string}`;
-		start?: number;
-		end?: number;
-	}
-	let {value, start = 4, end = 4, ...restProps}: Props = $props();
+	let {
+		class: className,
+		value,
+		truncate = {start: 4, end: 4},
+		size = 'default',
+		mono = false,
+		showCopy = true,
+		resolveENS = true,
+		ref = $bindable(null),
+		...restProps
+	}: AddressProps = $props();
 
 	// Get ENS context if available - component works without it
 	const ensContext = getContext<
@@ -20,7 +62,7 @@
 	let copied = $state(false);
 
 	onMount(() => {
-		if (value && ensContext) {
+		if (value && ensContext && resolveENS) {
 			loadENS();
 		}
 	});
@@ -38,53 +80,48 @@
 		}
 	}
 
-	function formatAddress(addr: string) {
+	function formatAddress(addr: string): string {
 		if (!addr) return '';
-		return `${addr.slice(0, start)}...${addr.slice(-end)}`;
+		if (truncate === false) return addr;
+		return `${addr.slice(0, 2 + truncate.start)}...${addr.slice(-truncate.end)}`;
 	}
 
 	async function copyAddress(event: MouseEvent) {
 		event.stopPropagation();
+		event.preventDefault();
 		await navigator.clipboard.writeText(value);
 		copied = true;
 		setTimeout(() => (copied = false), 1000);
 	}
+
+	const displayText = $derived(ensName || formatAddress(value));
 </script>
 
-<span {...restProps} class="inline-flex w-full min-w-[8em] items-center">
-	<span class="flex-1"></span>
-	<span class="group relative flex-0 text-center">
-		{#if ensName}
-			{ensName}
-		{:else}
-			{formatAddress(value)}
-		{/if}
-		<!-- {#if !loading} -->
+<span
+	bind:this={ref}
+	data-slot="address"
+	class={cn(addressVariants({size, mono}), className)}
+	{...restProps}
+>
+	<span data-slot="address-text">{displayText}</span>
+
+	{#if loading}
+		<LoaderCircleIcon class="size-3 shrink-0 animate-spin opacity-50" />
+	{/if}
+
+	{#if showCopy}
 		<button
 			type="button"
-			class="absolute top-1/2 right-[-1.5em] -translate-y-1/2 cursor-copy rounded p-0.5 transition"
+			class="inline-flex size-4 shrink-0 cursor-copy items-center justify-center rounded opacity-50 transition-opacity hover:opacity-100 focus:opacity-100"
 			title="Copy address"
 			onclick={copyAddress}
 			aria-label="Copy address"
-			style="margin-left:0.25em;"
 		>
-			<span
-				class="absolute top-1/2 right-0 size-8 -translate-y-1/2 pointer-fine:hidden"
-			></span>
-			<span
-				class="absolute top-1/2 right-0 size-5 -translate-y-1/2 pointer-coarse:hidden"
-			></span>
 			{#if copied}
-				<CheckIcon class="h-3 w-3 text-green-500" />
+				<CheckIcon class="size-3 text-green-500" />
 			{:else}
-				<CopyIcon class="h-3 w-3" />
+				<CopyIcon class="size-3" />
 			{/if}
 		</button>
-		<!-- {/if} -->
-	</span>
-	<span class="flex flex-1 items-center justify-end gap-1">
-		{#if loading}
-			<LoaderCircleIcon class="w-4 animate-spin" />
-		{/if}
-	</span>
+	{/if}
 </span>
