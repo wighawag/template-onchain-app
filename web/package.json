@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"devDependencies": {
-		"@etherkit/tx-observer": "0.0.5",
+		"@etherkit/tx-observer": "0.0.6",
 		"@etherkit/viem-tx-tracker": "^0.0.5",
 		"@etherplay/connect": "^0.0.40",
 		"@internationalized/date": "^3.11.0",
