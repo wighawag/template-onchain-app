@@ -1,5 +1,10 @@
 import type {Abi, Transaction, TransactionReceipt, PublicClient} from 'viem';
-import {decodeFunctionData, decodeErrorResult, BaseError, ContractFunctionRevertedError} from 'viem';
+import {
+	decodeFunctionData,
+	decodeErrorResult,
+	BaseError,
+	ContractFunctionRevertedError,
+} from 'viem';
 import deploymentsFromFiles from '$lib/deployments';
 
 /**
@@ -128,7 +133,7 @@ function parseStandardRevertReason(data: `0x${string}`): string | null {
 		const offset = parseInt(hexData.slice(0, 64), 16);
 		const length = parseInt(hexData.slice(64, 128), 16);
 		const stringHex = hexData.slice(128, 128 + length * 2);
-		
+
 		// Convert hex to string
 		let result = '';
 		for (let i = 0; i < stringHex.length; i += 2) {
@@ -153,7 +158,7 @@ function parsePanicError(data: `0x${string}`): DecodedErrorData | null {
 	try {
 		const codeHex = data.slice(10, 74);
 		const code = parseInt(codeHex, 16);
-		
+
 		const panicMessages: Record<number, string> = {
 			0x00: 'Generic compiler panic',
 			0x01: 'Assertion failed',
@@ -169,7 +174,10 @@ function parsePanicError(data: `0x${string}`): DecodedErrorData | null {
 
 		return {
 			errorName: 'Panic',
-			args: {code, message: panicMessages[code] || `Unknown panic code: ${code}`},
+			args: {
+				code,
+				message: panicMessages[code] || `Unknown panic code: ${code}`,
+			},
 			rawData: data,
 		};
 	} catch {
@@ -196,14 +204,16 @@ async function decodeTransactionError(
 			gas: tx.gas,
 			blockNumber: receipt.blockNumber,
 		});
-		
+
 		// If call succeeded, we can't get the error (shouldn't happen for failed tx)
 		return {error: 'Transaction failed but could not retrieve error reason'};
 	} catch (e) {
 		// Extract error data from the exception
 		if (e instanceof BaseError) {
 			// Check for ContractFunctionRevertedError which has decoded error info
-			const revertError = e.walk((err) => err instanceof ContractFunctionRevertedError);
+			const revertError = e.walk(
+				(err) => err instanceof ContractFunctionRevertedError,
+			);
 			if (revertError instanceof ContractFunctionRevertedError) {
 				const reason = revertError.reason;
 				if (reason) {
@@ -211,17 +221,30 @@ async function decodeTransactionError(
 						error: reason,
 						decodedError: {
 							errorName: revertError.data?.errorName || 'Error',
-							args: revertError.data?.args ? JSON.parse(JSON.stringify(revertError.data.args)) : undefined,
+							args: revertError.data?.args
+								? JSON.parse(JSON.stringify(revertError.data.args))
+								: undefined,
 						},
 					};
 				}
 			}
 
 			// Try to extract raw error data
-			const rawError = e.walk((err) => err !== null && typeof err === 'object' && 'data' in err && typeof (err as {data: unknown}).data === 'string');
-			if (rawError && typeof rawError === 'object' && 'data' in rawError && typeof (rawError as {data: unknown}).data === 'string') {
+			const rawError = e.walk(
+				(err) =>
+					err !== null &&
+					typeof err === 'object' &&
+					'data' in err &&
+					typeof (err as {data: unknown}).data === 'string',
+			);
+			if (
+				rawError &&
+				typeof rawError === 'object' &&
+				'data' in rawError &&
+				typeof (rawError as {data: unknown}).data === 'string'
+			) {
 				const errorData = rawError.data as `0x${string}`;
-				
+
 				// Try standard revert reason
 				const standardReason = parseStandardRevertReason(errorData);
 				if (standardReason) {
@@ -286,16 +309,16 @@ function formatDecodedError(error: DecodedErrorData): string {
 	if (!error.args) {
 		return error.errorName;
 	}
-	
+
 	if (Array.isArray(error.args)) {
 		return `${error.errorName}(${error.args.map(formatArgValue).join(', ')})`;
 	}
-	
+
 	const entries = Object.entries(error.args);
 	if (entries.length === 0) {
 		return error.errorName;
 	}
-	
+
 	return `${error.errorName}(${entries.map(([k, v]) => `${k}: ${formatArgValue(v)}`).join(', ')})`;
 }
 
@@ -332,14 +355,19 @@ export async function decodeTransaction(
 			status,
 			functionName: 'Contract Creation',
 		};
-		
+
 		// If contract creation failed, try to decode the error
 		if (status === 'failed' && receipt) {
-			const errorInfo = await decodeTransactionError(tx, receipt, publicClient, null);
+			const errorInfo = await decodeTransactionError(
+				tx,
+				receipt,
+				publicClient,
+				null,
+			);
 			result.error = errorInfo.error;
 			result.decodedError = errorInfo.decodedError;
 		}
-		
+
 		return result;
 	}
 
@@ -352,14 +380,19 @@ export async function decodeTransaction(
 			isDecoded: false,
 			status,
 		};
-		
+
 		// If simple transfer failed, try to decode the error
 		if (status === 'failed' && receipt) {
-			const errorInfo = await decodeTransactionError(tx, receipt, publicClient, null);
+			const errorInfo = await decodeTransactionError(
+				tx,
+				receipt,
+				publicClient,
+				null,
+			);
 			result.error = errorInfo.error;
 			result.decodedError = errorInfo.decodedError;
 		}
-		
+
 		return result;
 	}
 
@@ -374,14 +407,19 @@ export async function decodeTransaction(
 			isDecoded: true,
 			status,
 		};
-		
+
 		// If transaction failed, try to decode the error
 		if (status === 'failed' && receipt) {
-			const errorInfo = await decodeTransactionError(tx, receipt, publicClient, contractInfo.abi);
+			const errorInfo = await decodeTransactionError(
+				tx,
+				receipt,
+				publicClient,
+				contractInfo.abi,
+			);
 			result.error = errorInfo.error;
 			result.decodedError = errorInfo.decodedError;
 		}
-		
+
 		return result;
 	}
 
@@ -390,14 +428,19 @@ export async function decodeTransaction(
 		isDecoded: false,
 		status,
 	};
-	
+
 	// If transaction failed, try to decode the error
 	if (status === 'failed' && receipt) {
-		const errorInfo = await decodeTransactionError(tx, receipt, publicClient, contractInfo.abi);
+		const errorInfo = await decodeTransactionError(
+			tx,
+			receipt,
+			publicClient,
+			contractInfo.abi,
+		);
 		result.error = errorInfo.error;
 		result.decodedError = errorInfo.decodedError;
 	}
-	
+
 	return result;
 }
 

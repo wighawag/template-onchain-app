@@ -32,7 +32,9 @@ export interface TransactionListStoreOptions {
  * This is a generic Svelte store that can be used in any framework
  * @param options - Configuration options for the store
  */
-export function createTransactionListStore(options: TransactionListStoreOptions = {}) {
+export function createTransactionListStore(
+	options: TransactionListStoreOptions = {},
+) {
 	const useBlockIndex = options.useBlockIndex ?? false;
 	const {subscribe, set, update} = writable<TransactionListState>(initialState);
 
@@ -130,7 +132,9 @@ let transactionListStore: ReturnType<typeof createTransactionListStore> | null =
  * Get the transaction list store singleton
  * @param options - Configuration options for the store (only used on first call)
  */
-export function getTransactionListStore(options: TransactionListStoreOptions = {}) {
+export function getTransactionListStore(
+	options: TransactionListStoreOptions = {},
+) {
 	if (!transactionListStore) {
 		transactionListStore = createTransactionListStore(options);
 	}

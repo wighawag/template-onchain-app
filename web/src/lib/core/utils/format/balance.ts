@@ -84,7 +84,8 @@ export function formatBalance(
 
 	// Determine if we should round up
 	const hasMoreNonZeroDigits =
-		fractionalStr.slice(availableDecimalPlaces + 1).replace(/0/g, '').length > 0;
+		fractionalStr.slice(availableDecimalPlaces + 1).replace(/0/g, '').length >
+		0;
 	let roundUp = false;
 
 	if (nextDigit > 5) {
@@ -100,7 +101,7 @@ export function formatBalance(
 		// Perform the rounding up using bigint arithmetic for precision
 		const roundingScale = 10n ** BigInt(decimals - availableDecimalPlaces);
 		const roundedFractional =
-			((fractionalPart / roundingScale) + 1n) * roundingScale;
+			(fractionalPart / roundingScale + 1n) * roundingScale;
 
 		if (roundedFractional >= divisor) {
 			// Fractional part rolled over to next integer

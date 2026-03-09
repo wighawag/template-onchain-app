@@ -107,10 +107,12 @@
 					Connect
 				</Button>
 			{/if}
-	
+
 			<!-- Public Navigation Links -->
-			<div class="mt-4 flex flex-col gap-2 border-t border-border pt-4 px-4">
-				<span class="text-xs text-muted-foreground uppercase tracking-wide">Explore</span>
+			<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
+				<span class="text-xs tracking-wide text-muted-foreground uppercase"
+					>Explore</span
+				>
 				<a
 					href={route('/contracts/')}
 					class={buttonVariants({variant: 'outline'})}

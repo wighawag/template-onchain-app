@@ -11,7 +11,9 @@ export function createLocalStorageAdapter<T>(
 	options?: LocalStorageAdapterOptions<T>,
 ): AsyncStorage<T> {
 	const serialize = options?.serialize ?? JSON.stringify;
-	const deserialize = (options?.deserialize ?? JSON.parse) as (data: string) => T;
+	const deserialize = (options?.deserialize ?? JSON.parse) as (
+		data: string,
+	) => T;
 
 	return {
 		async load(key: string): Promise<T | undefined> {

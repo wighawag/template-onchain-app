@@ -252,78 +252,84 @@
 			<Separator.Root />
 
 			<!-- Function Arguments (if decoded) -->
-				{#if decodedTxData.isDecoded && decodedTxData.args}
-					<Card.Root>
-						<Card.Header>
-							<Card.Title>Function Arguments</Card.Title>
-						</Card.Header>
-						<Card.Content>
-							<pre
-								class="overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs"><code
-									>{JSON.stringify(decodedTxData.args, null, 2)}</code
-								></pre>
-						</Card.Content>
-					</Card.Root>
-				{/if}
-	
-				<!-- Error Details (if transaction failed) -->
-				{#if decodedTxData.status === 'failed' && (decodedTxData.error || decodedTxData.decodedError)}
-					<Card.Root class="border-red-500/50 bg-red-50/50 dark:bg-red-950/20">
-						<Card.Header>
-							<div class="flex items-center gap-2 text-red-600 dark:text-red-400">
-								<AlertTriangleIcon class="h-5 w-5" />
-								<Card.Title class="text-red-600 dark:text-red-400"
-									>Transaction Error</Card.Title
-								>
-							</div>
-						</Card.Header>
-						<Card.Content class="space-y-4">
-							{#if decodedTxData.decodedError}
-								<div>
-									<div class="text-sm font-medium text-muted-foreground">
-										Error Name
-									</div>
-									<div class="font-mono text-lg font-semibold text-red-600 dark:text-red-400">
-										{decodedTxData.decodedError.errorName}
-									</div>
+			{#if decodedTxData.isDecoded && decodedTxData.args}
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Function Arguments</Card.Title>
+					</Card.Header>
+					<Card.Content>
+						<pre
+							class="overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs"><code
+								>{JSON.stringify(decodedTxData.args, null, 2)}</code
+							></pre>
+					</Card.Content>
+				</Card.Root>
+			{/if}
+
+			<!-- Error Details (if transaction failed) -->
+			{#if decodedTxData.status === 'failed' && (decodedTxData.error || decodedTxData.decodedError)}
+				<Card.Root class="border-red-500/50 bg-red-50/50 dark:bg-red-950/20">
+					<Card.Header>
+						<div class="flex items-center gap-2 text-red-600 dark:text-red-400">
+							<AlertTriangleIcon class="h-5 w-5" />
+							<Card.Title class="text-red-600 dark:text-red-400"
+								>Transaction Error</Card.Title
+							>
+						</div>
+					</Card.Header>
+					<Card.Content class="space-y-4">
+						{#if decodedTxData.decodedError}
+							<div>
+								<div class="text-sm font-medium text-muted-foreground">
+									Error Name
 								</div>
-								{#if decodedTxData.decodedError.args}
-									<div>
-										<div class="mb-2 text-sm font-medium text-muted-foreground">
-											Error Arguments
-										</div>
-										<pre
-											class="overflow-x-auto rounded-md bg-red-100/50 p-3 font-mono text-xs dark:bg-red-900/30"><code
-												>{JSON.stringify(decodedTxData.decodedError.args, null, 2)}</code
-											></pre>
-									</div>
-								{/if}
-								{#if decodedTxData.decodedError.rawData}
-									<div>
-										<div class="mb-2 text-sm font-medium text-muted-foreground">
-											Raw Error Data
-										</div>
-										<pre
-											class="overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs break-all whitespace-pre-wrap"><code
-												>{decodedTxData.decodedError.rawData}</code
-											></pre>
-									</div>
-								{/if}
-							{:else if decodedTxData.error}
+								<div
+									class="font-mono text-lg font-semibold text-red-600 dark:text-red-400"
+								>
+									{decodedTxData.decodedError.errorName}
+								</div>
+							</div>
+							{#if decodedTxData.decodedError.args}
 								<div>
-									<div class="text-sm font-medium text-muted-foreground">
-										Error Message
+									<div class="mb-2 text-sm font-medium text-muted-foreground">
+										Error Arguments
 									</div>
-									<div class="font-mono text-red-600 dark:text-red-400">
-										{decodedTxData.error}
-									</div>
+									<pre
+										class="overflow-x-auto rounded-md bg-red-100/50 p-3 font-mono text-xs dark:bg-red-900/30"><code
+											>{JSON.stringify(
+												decodedTxData.decodedError.args,
+												null,
+												2,
+											)}</code
+										></pre>
 								</div>
 							{/if}
-						</Card.Content>
-					</Card.Root>
-				{/if}
-	
-				<!-- Transaction Details -->
+							{#if decodedTxData.decodedError.rawData}
+								<div>
+									<div class="mb-2 text-sm font-medium text-muted-foreground">
+										Raw Error Data
+									</div>
+									<pre
+										class="overflow-x-auto rounded-md bg-muted p-3 font-mono text-xs break-all whitespace-pre-wrap"><code
+											>{decodedTxData.decodedError.rawData}</code
+										></pre>
+								</div>
+							{/if}
+						{:else if decodedTxData.error}
+							<div>
+								<div class="text-sm font-medium text-muted-foreground">
+									Error Message
+								</div>
+								<div class="font-mono text-red-600 dark:text-red-400">
+									{decodedTxData.error}
+								</div>
+							</div>
+						{/if}
+					</Card.Content>
+				</Card.Root>
+			{/if}
+
+			<!-- Transaction Details -->
 			<Card.Root>
 				<Card.Header>
 					<Card.Title>Transaction</Card.Title>
