@@ -59,6 +59,13 @@ const config: HardhatUserConfig = {
 							accounts: {
 								mnemonic: process.env.MNEMONIC || undefined,
 							},
+						},
+						local: {
+							type: 'edr-simulated',
+							chainType: 'l1',
+							accounts: {
+								mnemonic: process.env.MNEMONIC || undefined,
+							},
 							// this prevent EDR from not mining tx that fails
 							throwOnTransactionFailures: false,
 						},
