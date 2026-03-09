@@ -3,12 +3,11 @@
 	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
 	import {Button} from '$lib/shadcn/ui/button';
 	import {Input} from '$lib/shadcn/ui/input';
-	import * as Card from '$lib/shadcn/ui/card';
-	import * as Separator from '$lib/shadcn/ui/separator';
 	import {Spinner} from '$lib/shadcn/ui/spinner';
-	import {MessageSquareIcon, SendIcon, UserIcon} from '@lucide/svelte';
+	import {MessageSquareIcon, SendIcon} from '@lucide/svelte';
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
+	import ImgBlockie from '$lib/core/ui/ethereum/ImgBlockie.svelte';
 
 	let dependencies = getUserContext();
 
@@ -67,98 +66,67 @@
 
 <ConnectionFlow {connection} />
 
-<div class="container mx-auto max-w-2xl px-4 py-8">
-	<div class="space-y-6">
-		<!-- Header -->
-		<div class="flex flex-col items-center space-y-2">
-			<div class="rounded-full bg-primary/10 p-3">
-				<MessageSquareIcon class="h-8 w-8 text-primary" />
-			</div>
-			<h1 class="text-3xl font-bold">Greetings Registry</h1>
-			<p class="text-muted-foreground">Share your message with the world</p>
-		</div>
-
-		<Separator.Root />
-
+<div class="container mx-auto max-w-2xl px-4 py-2">
+	<div class="space-y-2">
 		<!-- Input Section -->
-		<Card.Root class="border-2">
-			<Card.Header>
-				<Card.Title class="text-lg">Set Your Greeting</Card.Title>
-				<Card.Description>
-					Enter a message to share with everyone
-				</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				<form
-					class="flex gap-2"
-					onsubmit={(e) => {
-						e.preventDefault();
-						setGreeting();
-					}}
-				>
-					<Input
-						type="text"
-						placeholder="Enter your greeting..."
-						bind:value={greetingInput}
-						disabled={isSubmitting}
-						class="flex-1"
-					/>
-					<Button
-						type="submit"
-						disabled={isSubmitting || !greetingInput.trim()}
-					>
-						{#if isSubmitting}
-							<Spinner class="h-4 w-4" />
-						{:else}
-							<SendIcon class="h-4 w-4" />
-						{/if}
-						<span class="ml-2">Send</span>
-					</Button>
-				</form>
-			</Card.Content>
-		</Card.Root>
-
-		<Separator.Root />
+		<form
+			class="flex gap-2"
+			onsubmit={(e) => {
+				e.preventDefault();
+				setGreeting();
+			}}
+		>
+			<Input
+				type="text"
+				placeholder="Enter your greeting..."
+				bind:value={greetingInput}
+				disabled={isSubmitting}
+				class="flex-1"
+			/>
+			<Button
+				type="submit"
+				disabled={isSubmitting || !greetingInput.trim()}
+				size="sm"
+			>
+				{#if isSubmitting}
+					<Spinner class="h-4 w-4" />
+				{:else}
+					<SendIcon class="h-4 w-4" />
+				{/if}
+				<span class="ml-1">Send</span>
+			</Button>
+		</form>
 
 		<!-- Messages List -->
-		<div class="space-y-4">
-			<h2 class="text-xl font-semibold">Recent Messages</h2>
-
+		<div class="space-y-1">
 			{#if $onchainState.length === 0}
-				<Card.Root class="border-dashed">
-					<Card.Content
-						class="flex flex-col items-center justify-center py-8"
-					>
-						<MessageSquareIcon class="mb-4 h-12 w-12 text-muted-foreground" />
-						<p class="text-muted-foreground">No messages yet</p>
-						<p class="text-sm text-muted-foreground">
-							Be the first to share a greeting!
-						</p>
-					</Card.Content>
-				</Card.Root>
-			{:else}
-				<div class="space-y-3">
-					{#each $onchainState as message}
-						<Card.Root>
-							<Card.Header class="pb-2">
-								<div class="flex items-center gap-2">
-									<div class="rounded-full bg-muted p-1.5">
-										<UserIcon class="h-4 w-4 text-muted-foreground" />
-									</div>
-									<Address value={message.account} />
-								</div>
-							</Card.Header>
-							<Card.Content class="pb-2">
-								<p class="text-lg">{message.message}</p>
-							</Card.Content>
-							<Card.Footer>
-								<p class="text-sm text-muted-foreground">
-									{formatRelativeTime(message.timestamp)}
-								</p>
-							</Card.Footer>
-						</Card.Root>
-					{/each}
+				<div
+					class="flex flex-col items-center justify-center py-6 text-muted-foreground"
+				>
+					<MessageSquareIcon class="mb-2 h-8 w-8" />
+					<p class="text-sm">No messages yet. Be the first!</p>
 				</div>
+			{:else}
+				{#each $onchainState as message}
+					<div
+						class="flex items-center gap-1.5 rounded-md border px-2 py-1 text-sm sm:gap-2"
+					>
+						<ImgBlockie
+							address={message.account}
+							class="h-5 w-5 shrink-0 rounded-full"
+						/>
+						<Address
+							value={message.account}
+							class="hidden shrink-0 text-xs sm:inline-flex"
+						/>
+						<p class="min-w-0 flex-1 truncate">{message.message}</p>
+						<span
+							class="overflow-hidden text-xs whitespace-nowrap text-muted-foreground"
+						>
+							{formatRelativeTime(message.timestamp)}
+						</span>
+					</div>
+				{/each}
 			{/if}
 		</div>
 	</div>
