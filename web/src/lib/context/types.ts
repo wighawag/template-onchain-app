@@ -11,6 +11,7 @@ import type {
 	AccountDataStore,
 	OnchainOperationMetadata,
 } from '$lib/account/AccountData';
+import type {OnchainStateStore} from '$lib/onchain/state';
 
 export type WalletClient =
 	TrackedWalletClientAutoPopulate<OnchainOperationMetadata>;
@@ -28,4 +29,5 @@ export type Context = {
 	account: AccountStore;
 	deployments: DeploymentsStore;
 	accountData: AccountDataStore;
+	onchainState: OnchainStateStore;
 };

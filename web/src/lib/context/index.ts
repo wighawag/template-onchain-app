@@ -9,6 +9,7 @@ import {
 	type TransactionIntent,
 } from '@etherkit/tx-observer';
 import {createAccountData} from '$lib/account/AccountData.js';
+import {createOnchainState} from '$lib/onchain/state.js';
 
 export async function createContext(): Promise<{
 	context: Context;
@@ -46,6 +47,11 @@ export async function createContext(): Promise<{
 	window.walletClient = walletClient;
 
 	// ----------------------------------------------------------------------------
+
+	const onchainState = createOnchainState({
+		publicClient,
+		deployments: deployments.current,
+	});
 
 	const accountData = createAccountData({
 		account,
@@ -144,6 +150,7 @@ export async function createContext(): Promise<{
 			account,
 			deployments,
 			accountData,
+			onchainState,
 		},
 		start: () => {
 			// to keep balance in memory
