@@ -9,6 +9,7 @@
 	import {createContext} from '$lib/context/index.js';
 	import AsyncContext from '$lib/context/AsyncContext.svelte';
 	import Navbar from '$lib/core/ui/navbar/navbar.svelte';
+	import DebugOperations from '$lib/core/ui/debug/DebugOperations.svelte';
 	import {createENSService} from '$lib/core/ens';
 	import {setContext} from 'svelte';
 
@@ -24,6 +25,7 @@
 	{/snippet}
 	<Navbar name="Template" />
 	{@render children()}
+	<DebugOperations />
 </AsyncContext>
 
 <VersionAndInstallNotfications

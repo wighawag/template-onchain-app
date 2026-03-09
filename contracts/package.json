@@ -54,7 +54,7 @@
 		"---------------------- INTERNAL ----------------------": "",
 		":deploy+export": "cross-var pnpm hardhat --network $MODE deploy --skip-prompts && cross-var rocketh-export -e $MODE",
 		"---------------------- DEV ---------------------- ": "",
-		"local_node": "ldenv -d localhost hardhat --network local node",
+		"local_node": "ldenv -d localhost hardhat --network local node --port 8546",
 		"compile": "hardhat compile",
 		"compile:watch": "as-soon -w src pnpm compile",
 		"fork:execute": "ldenv tsx @=HARDHAT_FORK=@@MODE @@",
