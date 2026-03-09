@@ -1,5 +1,5 @@
 import type {Abi, Transaction, TransactionReceipt, PublicClient} from 'viem';
-import {decodeFunctionData} from 'viem';
+import {decodeFunctionData, decodeErrorResult, BaseError, ContractFunctionRevertedError} from 'viem';
 import deploymentsFromFiles from '$lib/deployments';
 
 /**
@@ -12,6 +12,16 @@ export interface ContractInfo {
 }
 
 /**
+ * Decoded error data structure
+ */
+export interface DecodedErrorData {
+	errorName: string;
+	args?: Record<string, unknown> | unknown[];
+	signature?: string;
+	rawData?: `0x${string}`;
+}
+
+/**
  * Decoded transaction data structure
  */
 export interface DecodedTransactionData {
@@ -21,6 +31,7 @@ export interface DecodedTransactionData {
 	isDecoded: boolean;
 	status: 'success' | 'failed' | 'pending';
 	error?: string;
+	decodedError?: DecodedErrorData;
 }
 
 /**
@@ -77,6 +88,218 @@ function decodeFunctionCall(
 }
 
 /**
+ * Try to decode error data using ABI
+ */
+function tryDecodeError(
+	data: `0x${string}`,
+	abi: Abi,
+): DecodedErrorData | null {
+	try {
+		const decoded = decodeErrorResult({
+			abi,
+			data,
+		});
+		return {
+			errorName: decoded.errorName,
+			args: decoded.args ? JSON.parse(JSON.stringify(decoded.args)) : undefined,
+			rawData: data,
+		};
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Parse standard revert reason from error data
+ * Standard revert reason starts with 0x08c379a0 (Error(string) selector)
+ */
+function parseStandardRevertReason(data: `0x${string}`): string | null {
+	// Error(string) selector
+	const errorSelector = '0x08c379a0';
+	if (!data.startsWith(errorSelector)) {
+		return null;
+	}
+
+	try {
+		// Decode the string from the ABI-encoded data
+		// Skip the 4-byte selector, then decode as string
+		const hexData = data.slice(10); // Remove '0x' and selector
+		// The string is ABI-encoded: offset (32 bytes) + length (32 bytes) + data
+		const offset = parseInt(hexData.slice(0, 64), 16);
+		const length = parseInt(hexData.slice(64, 128), 16);
+		const stringHex = hexData.slice(128, 128 + length * 2);
+		
+		// Convert hex to string
+		let result = '';
+		for (let i = 0; i < stringHex.length; i += 2) {
+			result += String.fromCharCode(parseInt(stringHex.slice(i, i + 2), 16));
+		}
+		return result;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Parse Panic(uint256) error code
+ * Panic errors start with 0x4e487b71
+ */
+function parsePanicError(data: `0x${string}`): DecodedErrorData | null {
+	const panicSelector = '0x4e487b71';
+	if (!data.startsWith(panicSelector)) {
+		return null;
+	}
+
+	try {
+		const codeHex = data.slice(10, 74);
+		const code = parseInt(codeHex, 16);
+		
+		const panicMessages: Record<number, string> = {
+			0x00: 'Generic compiler panic',
+			0x01: 'Assertion failed',
+			0x11: 'Arithmetic overflow/underflow',
+			0x12: 'Division or modulo by zero',
+			0x21: 'Invalid enum value',
+			0x22: 'Storage byte array incorrectly encoded',
+			0x31: 'pop() on empty array',
+			0x32: 'Array index out of bounds',
+			0x41: 'Memory allocation overflow',
+			0x51: 'Zero-initialized function pointer call',
+		};
+
+		return {
+			errorName: 'Panic',
+			args: {code, message: panicMessages[code] || `Unknown panic code: ${code}`},
+			rawData: data,
+		};
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Decode error from a failed transaction by replaying it
+ */
+async function decodeTransactionError(
+	tx: Transaction,
+	receipt: TransactionReceipt,
+	publicClient: PublicClient,
+	abi: Abi | null,
+): Promise<{error?: string; decodedError?: DecodedErrorData}> {
+	try {
+		// Try to replay the transaction to get the revert reason
+		await publicClient.call({
+			account: tx.from,
+			to: tx.to ?? undefined,
+			data: tx.input,
+			value: tx.value,
+			gas: tx.gas,
+			blockNumber: receipt.blockNumber,
+		});
+		
+		// If call succeeded, we can't get the error (shouldn't happen for failed tx)
+		return {error: 'Transaction failed but could not retrieve error reason'};
+	} catch (e) {
+		// Extract error data from the exception
+		if (e instanceof BaseError) {
+			// Check for ContractFunctionRevertedError which has decoded error info
+			const revertError = e.walk((err) => err instanceof ContractFunctionRevertedError);
+			if (revertError instanceof ContractFunctionRevertedError) {
+				const reason = revertError.reason;
+				if (reason) {
+					return {
+						error: reason,
+						decodedError: {
+							errorName: revertError.data?.errorName || 'Error',
+							args: revertError.data?.args ? JSON.parse(JSON.stringify(revertError.data.args)) : undefined,
+						},
+					};
+				}
+			}
+
+			// Try to extract raw error data
+			const rawError = e.walk((err) => err !== null && typeof err === 'object' && 'data' in err && typeof (err as {data: unknown}).data === 'string');
+			if (rawError && typeof rawError === 'object' && 'data' in rawError && typeof (rawError as {data: unknown}).data === 'string') {
+				const errorData = rawError.data as `0x${string}`;
+				
+				// Try standard revert reason
+				const standardReason = parseStandardRevertReason(errorData);
+				if (standardReason) {
+					return {
+						error: standardReason,
+						decodedError: {
+							errorName: 'Error',
+							args: {message: standardReason},
+							rawData: errorData,
+						},
+					};
+				}
+
+				// Try panic error
+				const panicError = parsePanicError(errorData);
+				if (panicError) {
+					const panicArgs = panicError.args as {code: number; message: string};
+					return {
+						error: `Panic: ${panicArgs.message}`,
+						decodedError: panicError,
+					};
+				}
+
+				// Try custom error decoding with ABI
+				if (abi) {
+					const decoded = tryDecodeError(errorData, abi);
+					if (decoded) {
+						return {
+							error: formatDecodedError(decoded),
+							decodedError: decoded,
+						};
+					}
+				}
+
+				// Return raw data if nothing else worked
+				return {
+					error: `Reverted with data: ${errorData.slice(0, 66)}${errorData.length > 66 ? '...' : ''}`,
+					decodedError: {
+						errorName: 'Unknown',
+						rawData: errorData,
+					},
+				};
+			}
+
+			// Extract message from error
+			return {error: e.shortMessage || e.message || 'Transaction reverted'};
+		}
+
+		// Generic error
+		if (e instanceof Error) {
+			return {error: e.message || 'Transaction reverted'};
+		}
+
+		return {error: 'Transaction failed with unknown error'};
+	}
+}
+
+/**
+ * Format a decoded error for display
+ */
+function formatDecodedError(error: DecodedErrorData): string {
+	if (!error.args) {
+		return error.errorName;
+	}
+	
+	if (Array.isArray(error.args)) {
+		return `${error.errorName}(${error.args.map(formatArgValue).join(', ')})`;
+	}
+	
+	const entries = Object.entries(error.args);
+	if (entries.length === 0) {
+		return error.errorName;
+	}
+	
+	return `${error.errorName}(${entries.map(([k, v]) => `${k}: ${formatArgValue(v)}`).join(', ')})`;
+}
+
+/**
  * Get transaction status from receipt
  */
 function getTransactionStatus(
@@ -104,11 +327,20 @@ export async function decodeTransaction(
 
 	// If no recipient, it's a contract creation
 	if (!tx.to) {
-		return {
+		const result: DecodedTransactionData = {
 			isDecoded: false,
 			status,
 			functionName: 'Contract Creation',
 		};
+		
+		// If contract creation failed, try to decode the error
+		if (status === 'failed' && receipt) {
+			const errorInfo = await decodeTransactionError(tx, receipt, publicClient, null);
+			result.error = errorInfo.error;
+			result.decodedError = errorInfo.decodedError;
+		}
+		
+		return result;
 	}
 
 	// Try to find contract by address
@@ -116,30 +348,57 @@ export async function decodeTransaction(
 
 	// If it's a simple transfer (no function data or no contract found)
 	if (!contractInfo || tx.input === '0x' || tx.input === '0x0') {
-		return {
+		const result: DecodedTransactionData = {
 			isDecoded: false,
 			status,
 		};
+		
+		// If simple transfer failed, try to decode the error
+		if (status === 'failed' && receipt) {
+			const errorInfo = await decodeTransactionError(tx, receipt, publicClient, null);
+			result.error = errorInfo.error;
+			result.decodedError = errorInfo.decodedError;
+		}
+		
+		return result;
 	}
 
 	// Try to decode the function call
 	const decodedCall = decodeFunctionCall(tx, contractInfo.abi);
 
 	if (decodedCall && decodedCall.functionName) {
-		return {
+		const result: DecodedTransactionData = {
 			functionName: decodedCall.functionName,
 			contractName: contractInfo.name,
 			args: decodedCall.args,
 			isDecoded: true,
 			status,
 		};
+		
+		// If transaction failed, try to decode the error
+		if (status === 'failed' && receipt) {
+			const errorInfo = await decodeTransactionError(tx, receipt, publicClient, contractInfo.abi);
+			result.error = errorInfo.error;
+			result.decodedError = errorInfo.decodedError;
+		}
+		
+		return result;
 	}
 
 	// Contract call but couldn't decode
-	return {
+	const result: DecodedTransactionData = {
 		isDecoded: false,
 		status,
 	};
+	
+	// If transaction failed, try to decode the error
+	if (status === 'failed' && receipt) {
+		const errorInfo = await decodeTransactionError(tx, receipt, publicClient, contractInfo.abi);
+		result.error = errorInfo.error;
+		result.decodedError = errorInfo.decodedError;
+	}
+	
+	return result;
 }
 
 /**
