@@ -1,4 +1,5 @@
 import type {AsyncStorage} from '$lib/core/storage';
+import {isWatchable} from '$lib/core/storage';
 import type {AccountStore} from '$lib/core/connection/types';
 import {createEmitter} from 'radiate';
 
@@ -128,6 +129,7 @@ export function createAccountStore<
 	let asyncState: AsyncState<D> = {status: 'idle', account: undefined};
 	const pendingSaves = new Map<string, Promise<void>>();
 	let loadGeneration = 0;
+	let unwatchStorage: (() => void) | undefined;
 
 	// Storage helpers - loads D (data), not state with account
 	const _load = async (acc: `0x${string}`): Promise<D> =>
@@ -200,6 +202,10 @@ export function createAccountStore<
 		// Same account - no change needed
 		if (newAccount === asyncState.account) return;
 
+		// Clean up previous watch
+		unwatchStorage?.();
+		unwatchStorage = undefined;
+
 		// Remember if we were ready (to emit clear events)
 		const wasReady = asyncState.status === 'ready';
 
@@ -242,6 +248,27 @@ export function createAccountStore<
 
 		// Emit load events
 		_emitLoadEvents(loadedData);
+
+		// Set up watch for external storage changes if supported
+		if (isWatchable(storage)) {
+			const key = storageKey(newAccount);
+			unwatchStorage = storage.watch(key, async (_, newValue) => {
+				// Ensure still on same account
+				if (asyncState.status !== 'ready' || asyncState.account !== newAccount) {
+					return;
+				}
+
+				// Reload data (use provided value or defaults if removed)
+				const reloadedData = newValue ?? defaultData();
+
+				// Update state
+				asyncState = {status: 'ready', account: newAccount, data: reloadedData};
+				emitter.emit('state', asyncState);
+
+				// Emit load events for the new data
+				_emitLoadEvents(reloadedData);
+			});
+		}
 	}
 
 	// Auto-wrap all mutations with _withState
@@ -265,7 +292,11 @@ export function createAccountStore<
 		unsub = account.subscribe(setAccount);
 		return stop;
 	};
-	const stop = () => unsub?.();
+	const stop = () => {
+		unsub?.();
+		unwatchStorage?.();
+		unwatchStorage = undefined;
+	};
 
 	return {
 		/** Current async state (readonly) */
