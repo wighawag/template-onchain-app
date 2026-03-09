@@ -76,15 +76,26 @@
 					</Drawer.Description> -->
 				</Drawer.Header>
 
-				<Button
-					class="w-full"
-					onclick={() => {
-						connection.disconnect();
-						showMenu = false;
-					}}
-				>
-					Disconnect
-				</Button>
+				<!-- Connected User Actions -->
+				<div class="flex flex-col gap-2 px-4">
+					<a
+						href={route('/operations/')}
+						class={buttonVariants({variant: 'outline'})}
+						onclick={() => (showMenu = false)}
+					>
+						Your Transactions
+					</a>
+					<Button
+						class="w-full"
+						variant="destructive"
+						onclick={() => {
+							connection.disconnect();
+							showMenu = false;
+						}}
+					>
+						Disconnect
+					</Button>
+				</div>
 			{:else}
 				<Drawer.Header class="text-start">
 					<Drawer.Title>You are disconnected</Drawer.Title>
@@ -96,9 +107,10 @@
 					Connect
 				</Button>
 			{/if}
-
-			<!-- Navigation Links -->
-			<div class="mt-4 flex flex-col gap-2 px-4">
+	
+			<!-- Public Navigation Links -->
+			<div class="mt-4 flex flex-col gap-2 border-t border-border pt-4 px-4">
+				<span class="text-xs text-muted-foreground uppercase tracking-wide">Explore</span>
 				<a
 					href={route('/contracts/')}
 					class={buttonVariants({variant: 'outline'})}
@@ -112,13 +124,6 @@
 					onclick={() => (showMenu = false)}
 				>
 					Explorer
-				</a>
-				<a
-					href={route('/operations/')}
-					class={buttonVariants({variant: 'outline'})}
-					onclick={() => (showMenu = false)}
-				>
-					Operations
 				</a>
 			</div>
 
