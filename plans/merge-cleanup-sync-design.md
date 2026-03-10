@@ -60,7 +60,16 @@ unwatchStorage = storage.watch(key, async (_, newValue) => {
 ```
 
 **AccountData.ts merge function**:
+
+⚠️ **CRITICAL**: The merge function MUST be **stable/convergent** to prevent infinite sync loops. See "Merge Function Stability Requirements" section for details.
+
 ```typescript
+/**
+ * Stable merge: Union of all operations.
+ * - Keeps all operations from current
+ * - Adds new operations from incoming (those with IDs not in current)
+ * - This is STABLE because after one sync round, all tabs converge to the same data
+ */
 function mergeAccountData(current: AccountData, incoming: AccountData): AccountData {
     const merged: AccountData = { operations: { ...current.operations } };
     for (const [idStr, operation] of Object.entries(incoming.operations)) {
@@ -138,6 +147,9 @@ type AccountStoreConfig<D, E, M> = {
      *
      * REQUIRED - consumers must explicitly define their merge strategy.
      *
+     * ⚠️ CRITICAL: The merge function MUST be STABLE/CONVERGENT.
+     * See "Merge Function Stability Requirements" section below.
+     *
      * @param current - Current in-memory data state
      * @param incoming - Incoming data from storage/remote
      * @returns Merged data combining both sources
@@ -166,6 +178,149 @@ type AccountStoreConfig<D, E, M> = {
 // Default cleanup: no-op
 const defaultCleanup = <D>(data: D): D => data;
 ```
+
+## ⚠️ Merge Function Stability Requirements
+
+**CRITICAL**: The merge function MUST be **stable/convergent** to prevent infinite sync loops between tabs.
+
+### What is a Stable Merge?
+
+A merge function is stable when all tabs eventually converge to the same data, regardless of which tab received the event first. Mathematically:
+
+```
+After sync completes:
+Tab1.data === Tab2.data === Tab3.data === ...
+```
+
+### ❌ UNSTABLE Example: "Always Prefer Local"
+
+```typescript
+// BAD - DO NOT USE - Causes infinite loops!
+function unstableMerge(current: Data, incoming: Data): Data {
+    // Always keeps local data, ignores incoming
+    return current;
+}
+```
+
+**Why it fails:**
+```
+Tab 1 has: {a: 1}      Tab 2 has: {b: 2}
+Tab 1 saves {a: 1} → Tab 2 receives, merges to {b: 2}, saves
+Tab 2 saves {b: 2} → Tab 1 receives, merges to {a: 1}, saves
+Tab 1 saves {a: 1} → Tab 2 receives, merges to {b: 2}, saves
+... infinite loop! Data never converges.
+```
+
+### ❌ ALSO UNSTABLE: "Current Wins on Conflict"
+
+```typescript
+// ALSO BAD - Still causes infinite loops when same key has different values!
+function alsoUnstable(current: Data, incoming: Data): Data {
+    return {
+        operations: {
+            ...incoming.operations,  // Take all from incoming
+            ...current.operations,   // Current overwrites if same ID
+        }
+    };
+}
+```
+
+**Why it fails with conflicting values:**
+```
+Tab 1 has: {a:1, b:2}      Tab 2 has: {a:1, b:3}
+
+Tab 1 saves {a:1, b:2} → Tab 2 receives
+Tab 2 merges: {...{a:1,b:2}, ...{a:1,b:3}} = {a:1, b:3}  // Tab 2's b wins
+Tab 2 saves {a:1, b:3} → Tab 1 receives
+Tab 1 merges: {...{a:1,b:3}, ...{a:1,b:2}} = {a:1, b:2}  // Tab 1's b wins
+... infinite loop! Each tab keeps its own value.
+```
+
+### ✅ STABLE Example 1: "Pure Union - No Conflicts"
+
+When keys are guaranteed unique (like timestamp-based IDs), union is stable:
+
+```typescript
+// GOOD - Works when IDs are unique across tabs
+function stableUnionMerge(current: Data, incoming: Data): Data {
+    const merged = { ...current.operations };
+    for (const [id, op] of Object.entries(incoming.operations)) {
+        if (!(id in merged)) {
+            merged[id] = op;  // Add new, never overwrite
+        }
+        // Same ID = same operation, skip (first-write-wins)
+    }
+    return { operations: merged };
+}
+```
+
+**Why it works:**
+```
+Tab 1 adds op 100: {100: opA}    Tab 2 adds op 200: {200: opB}
+
+Tab 1 saves {100: opA} → Tab 2 receives
+Tab 2 merges: adds 100, keeps 200 = {100: opA, 200: opB}, saves
+Tab 2 saves {100: opA, 200: opB} → Tab 1 receives
+Tab 1 merges: has 100, adds 200 = {100: opA, 200: opB}
+JSON.stringify: same data, no save!
+... sync complete.
+```
+
+### ✅ STABLE Example 2: "Deterministic Tiebreaker"
+
+When conflicts CAN occur, use a deterministic tiebreaker:
+
+```typescript
+// GOOD - Uses timestamps for conflict resolution
+function stableTimestampMerge(current: Data, incoming: Data): Data {
+    const merged = { ...current.operations };
+    for (const [id, incomingOp] of Object.entries(incoming.operations)) {
+        const currentOp = merged[id];
+        if (!currentOp) {
+            merged[id] = incomingOp;  // New operation
+        } else if (incomingOp.updatedAt > currentOp.updatedAt) {
+            merged[id] = incomingOp;  // Incoming is newer
+        }
+        // else: current is newer or same, keep current
+    }
+    return { operations: merged };
+}
+```
+
+### Stability Strategies
+
+| Strategy | Stable? | When to Use |
+|----------|---------|-------------|
+| Always prefer local | ❌ No | Never |
+| Union (no conflicts) | ✅ Yes | Unique IDs guaranteed |
+| Timestamp tiebreaker | ✅ Yes | Data has timestamps |
+| Version vector | ✅ Yes | Complex conflict resolution |
+| CRDT-based | ✅ Yes | Eventually consistent systems |
+
+### Our AccountData Merge is Stable
+
+The `mergeAccountData` function is stable because:
+- **Operation IDs are timestamps** (`Date.now()` + increment)
+- **IDs are unique per tab** (increment prevents collisions within tab)
+- **Cross-tab collisions are extremely rare** (same millisecond + same increment = near impossible)
+- **Same ID = same operation** (first-write-wins is acceptable for immutable operations)
+
+```typescript
+function mergeAccountData(current: AccountData, incoming: AccountData): AccountData {
+    const merged: AccountData = { operations: { ...current.operations } };
+    // Add operations from incoming that don't exist in current (pure union)
+    for (const [idStr, operation] of Object.entries(incoming.operations)) {
+        if (!(Number(idStr) in merged.operations)) {
+            merged.operations[Number(idStr)] = operation;
+        }
+        // Same ID exists: first-write-wins (skip incoming)
+        // This is stable because IDs are unique timestamps
+    }
+    return merged;
+}
+```
+
+**Important**: This merge assumes operations are **immutable** (created once, never modified). If operations can be updated, add a timestamp field and use timestamp-based tiebreaking.
 
 ## Implementation Changes
 
