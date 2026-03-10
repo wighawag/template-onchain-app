@@ -15,7 +15,7 @@ layout {
 		pane name="local node" command="pnpm"  {
 			args "contracts:node:local" "--port" "8546"
 		}
-		pane name="local node" command="pnpm"  {
+		pane name="purgatory" command="pnpm"  {
 			args "contracts:node:purgatory" "--rpc-url" "http://localhost:8546"
 		}
 		pane name="watch and compile" command="pnpm"  {
