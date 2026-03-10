@@ -68,6 +68,9 @@ const config: HardhatUserConfig = {
 							},
 							// this prevent EDR from not mining tx that fails
 							throwOnTransactionFailures: false,
+							mining: {
+								interval: 3000,
+							},
 						},
 					},
 				),

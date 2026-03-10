@@ -72,16 +72,27 @@
 {#if $operationStore}
 	{@const statusInfo = getStatusInfo($operationStore.transactionIntent)}
 	{@const StatusIcon = statusInfo.icon}
+	{@const state = $operationStore.transactionIntent.state}
 	<div class="flex items-center justify-between gap-2 px-2 py-1 text-xs">
 		<div class="flex min-w-0 items-center gap-1.5">
 			<StatusIcon class="h-3 w-3 shrink-0" />
 			<span class="truncate">{getOperationName($operationStore)}</span>
 		</div>
-		<Badge
-			variant={statusInfo.variant}
-			class="h-4 shrink-0 px-1.5 py-0 text-[10px]"
-		>
-			{statusInfo.label}
-		</Badge>
+		<div class="flex items-center gap-1">
+			{#if state?.final !== undefined}
+				<Badge
+					variant="outline"
+					class="h-4 shrink-0 px-1.5 py-0 text-[10px]"
+				>
+					Final
+				</Badge>
+			{/if}
+			<Badge
+				variant={statusInfo.variant}
+				class="h-4 shrink-0 px-1.5 py-0 text-[10px]"
+			>
+				{statusInfo.label}
+			</Badge>
+		</div>
 	</div>
 {/if}

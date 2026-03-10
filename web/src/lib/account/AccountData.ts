@@ -1,6 +1,7 @@
 import {
 	createAccountStore,
 	createMutations,
+	type AsyncState,
 } from '$lib/core/account/createAccountStore';
 import {createLocalStorageAdapter, type AsyncStorage} from '$lib/core/storage';
 import type {AccountStore, TypedDeployments} from '$lib/core/connection/types';
@@ -198,7 +199,47 @@ export function createAccountData(params: {
 		off: store.off,
 		start: store.start,
 		stop: store.stop,
-		subscribe: store.subscribe,
+		/**
+		 * Svelte-compatible subscribe method.
+		 * Subscribes to state transitions and list-level changes only.
+		 * Does NOT subscribe to 'operation:updated' - use getOperationStore for that.
+		 */
+		subscribe(
+			callback: (
+				state: Readonly<AsyncState<AccountData>>,
+			) => void,
+		): () => void {
+			// Call with current state immediately (Svelte store contract)
+			callback(store.state);
+
+			// Subscribe to state transitions (idle/loading/ready)
+			const unsubState = store.on('state', callback);
+
+			// Subscribe to list-level changes
+			const unsubAdded = store.on('operations:added', () =>
+				callback(store.state),
+			);
+			const unsubRemoved = store.on('operations:removed', () =>
+				callback(store.state),
+			);
+			const unsubCleared = store.on('operations:cleared', () =>
+				callback(store.state),
+			);
+			const unsubSet = store.on('operations:set', () =>
+				callback(store.state),
+			);
+
+			// NOTE: We intentionally do NOT subscribe to 'operation:updated'
+			// Individual operation updates are handled by getOperationStore
+
+			return () => {
+				unsubState();
+				unsubAdded();
+				unsubRemoved();
+				unsubCleared();
+				unsubSet();
+			};
+		},
 		getOperationStore,
 	};
 

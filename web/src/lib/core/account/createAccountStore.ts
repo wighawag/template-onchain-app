@@ -170,16 +170,13 @@ export function createAccountStore<
 		if (currentState.status === 'ready' && currentState.account === acc) {
 			const {result, event, eventData} = mutation(currentState.data);
 			_save(acc, currentState.data).catch(() => {});
-			// Emit domain-specific event for fine-grained subscriptions
-			if (event)
-				emitter.emit(
-					event as keyof (E & {state: AsyncState<D>}),
-					(eventData ?? currentState.data) as any,
-				);
-			// Also emit 'state' for Svelte store subscribers
-			// Note: We emit the same object reference since data was mutated in-place
-			emitter.emit('state', asyncState);
-			return result;
+		// Emit domain-specific event for fine-grained subscriptions
+		if (event)
+			emitter.emit(
+				event as keyof (E & {state: AsyncState<D>}),
+				(eventData ?? currentState.data) as any,
+			);
+		return result;
 		}
 
 		// Cross-account path (unchanged logic, just D instead of S)
@@ -308,12 +305,5 @@ export function createAccountStore<
 		off: emitter.off.bind(emitter),
 		start,
 		stop,
-		/** Svelte-compatible subscribe method */
-		subscribe(callback: (state: Readonly<AsyncState<D>>) => void): () => void {
-			// Call with current state immediately (Svelte store contract requirement)
-			callback(asyncState);
-			// Subscribe to future updates
-			return emitter.on('state', callback);
-		},
 	};
 }

@@ -21,6 +21,14 @@ export const config = {
 			default: 1,
 		},
 	},
+	environments: {
+		localhost: {
+			chain: 31337,
+			overrides: {
+				autoMine: true,
+			},
+		},
+	},
 	data: {},
 	signerProtocols: {
 		privateKey,

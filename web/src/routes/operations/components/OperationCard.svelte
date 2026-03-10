@@ -112,7 +112,11 @@
 	}
 
 	function needsDismiss(state: TransactionIntentStatus | undefined): boolean {
-		return state?.inclusion === 'NotFound' || state?.inclusion === 'Dropped';
+		return (
+			state?.final !== undefined ||
+			state?.inclusion === 'NotFound' ||
+			state?.inclusion === 'Dropped'
+		);
 	}
 </script>
 
@@ -132,9 +136,14 @@
 						{getOperationName($operationStore)}
 					</Card.Title>
 				</div>
-				<Badge variant={statusInfo.variant}>
-					{statusInfo.label}
-				</Badge>
+				<div class="flex items-center gap-2">
+					{#if state?.final !== undefined}
+						<Badge variant="outline">Final</Badge>
+					{/if}
+					<Badge variant={statusInfo.variant}>
+						{statusInfo.label}
+					</Badge>
+				</div>
 			</div>
 			{#if firstTx}
 				<Card.Description>
