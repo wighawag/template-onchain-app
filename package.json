@@ -36,7 +36,7 @@
     "contracts:compile:watch": "ldenv pnpm --filter ./contracts compile:watch",
     "contracts:build:watch": "ldenv pnpm --filter ./contracts typescript:watch",
     "contracts:build": "ldenv pnpm --filter ./contracts compile ~~ pnpm --filter ./contracts typescript ~~ pnpm --filter ./contracts export @@MODE --ts ../web/src/lib/deployments.ts ~~ @@",
-    "contracts:export": "pnpm --filter ./contracts export @@MODE @@",
+    "contracts:export": "ldenv pnpm --filter ./contracts export @@MODE @@",
     "---------------------- WEB ----------------------": "",
     "web:dev": "ldenv pnpm --filter ./web dev",
     "web:build": "ldenv pnpm --filter ./web build",
