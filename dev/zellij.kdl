@@ -13,7 +13,10 @@ layout {
 
 	pane split_direction="vertical" {
 		pane name="local node" command="pnpm"  {
-			args "contracts:node:local"
+			args "contracts:node:local" "--port" "8546"
+		}
+		pane name="local node" command="pnpm"  {
+			args "contracts:node:purgatory" "--rpc-url" "http://localhost:8546"
 		}
 		pane name="watch and compile" command="pnpm"  {
 			args "contracts:compile:watch"
