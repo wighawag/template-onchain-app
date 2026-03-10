@@ -45,7 +45,7 @@
 	let transactionHash = $state<`0x${string}` | null>(null);
 	let error = $state<string | null>(null);
 
-	const isView = isViewFunction(abiItem.stateMutability);
+	let isView = $derived(isViewFunction(abiItem.stateMutability));
 
 	async function handleFetch() {
 		if (!publicClient) {
