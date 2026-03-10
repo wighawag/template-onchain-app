@@ -48,8 +48,8 @@ importers:
         specifier: ^0.19.3
         version: 0.19.3(bufferutil@4.1.0)(rocketh@0.19.3(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76))(typescript@5.9.3)(zod@3.25.76)
       '@rocketh/proxy':
-        specifier: ^0.19.1
-        version: 0.19.4(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
+        specifier: ^0.19.5
+        version: 0.19.5(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
       '@rocketh/read-execute':
         specifier: ^0.19.0
         version: 0.19.0(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
@@ -86,6 +86,9 @@ importers:
       hardhat-deploy:
         specifier: ^2.0.1
         version: 2.0.1(@rocketh/node@0.19.3(bufferutil@4.1.0)(rocketh@0.19.3(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76))(typescript@5.9.3)(zod@3.25.76))(hardhat@3.1.9(bufferutil@4.1.0))(rocketh@0.19.3(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76))
+      hardhat-external-artifacts:
+        specifier: ^0.0.2
+        version: 0.0.2(bufferutil@4.1.0)(hardhat@3.1.9(bufferutil@4.1.0))(typescript@5.9.3)(zod@3.25.76)
       ldenv:
         specifier: ^0.3.16
         version: 0.3.16
@@ -1291,8 +1294,8 @@ packages:
     peerDependencies:
       rocketh: 0.19.3
 
-  '@rocketh/proxy@0.19.4':
-    resolution: {integrity: sha512-f+Ne4E8d1hdNlQClol0E769YR323S/cpCZ7CFzWEez24dISNgL7xkRSDp8OR+m7rhRPtj2ZdxPRlpRYYoWyw5A==}
+  '@rocketh/proxy@0.19.5':
+    resolution: {integrity: sha512-aezjka4ZX+2gxinSp9YMx4Shob0vbgDCBprjFvWxCUU2EKEt3/vgZ7qZNTBEoFq+xUycJ/JnGW+sL6EDJ/7yEQ==}
 
   '@rocketh/read-execute@0.19.0':
     resolution: {integrity: sha512-nnaOOpvoZy58FYD+Olwcbco+EBk7ngokQ/VMKdSMk1FJ/KpXHfrplH3x5Q6zDymlF/stXdQfSpzPRMbI/ZZpSA==}
@@ -3001,6 +3004,12 @@ packages:
       '@rocketh/node': ^0.19.3
       hardhat: ^3.1.8
       rocketh: ^0.19.3
+
+  hardhat-external-artifacts@0.0.2:
+    resolution: {integrity: sha512-3XEiXosmAQHgCbextXN9Y0fD0QkA/eDza7c8cQZ4uB5wdUh8EUCBAgWbzxKwjHxGId84jQQ/XZDBHr1D7Zp/Cg==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      hardhat: ^3.1.8
 
   hardhat@3.1.9:
     resolution: {integrity: sha512-LCThGBbROzRiI0RwD85i61bYM380ZWwVZ5XRHsY/ADUWnoMKIRYN835f4rQxT2qkVvDnZB0jbmU3RRS/MPy7Gw==}
@@ -5757,7 +5766,7 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@rocketh/proxy@0.19.4(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)':
+  '@rocketh/proxy@0.19.5(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)':
     dependencies:
       '@rocketh/core': 0.19.0(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
       '@rocketh/deploy': 0.19.1(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
@@ -7843,6 +7852,19 @@ snapshots:
       zod: 3.25.76
     transitivePeerDependencies:
       - supports-color
+
+  hardhat-external-artifacts@0.0.2(bufferutil@4.1.0)(hardhat@3.1.9(bufferutil@4.1.0))(typescript@5.9.3)(zod@3.25.76):
+    dependencies:
+      '@nomicfoundation/hardhat-utils': 4.0.0
+      hardhat: 3.1.9(bufferutil@4.1.0)
+      named-logs: 0.4.1
+      viem: 2.46.2(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - typescript
+      - utf-8-validate
+      - zod
 
   hardhat@3.1.9(bufferutil@4.1.0):
     dependencies:

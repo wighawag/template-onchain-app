@@ -6,6 +6,7 @@ import HardhatNetworkHelpers from '@nomicfoundation/hardhat-network-helpers';
 import HardhatKeystore from '@nomicfoundation/hardhat-keystore';
 
 import HardhatDeploy from 'hardhat-deploy';
+import HardhatExternalArtifactsPlugin from 'hardhat-external-artifacts';
 import {
 	addForkConfiguration,
 	addNetworksFromEnv,
@@ -19,6 +20,7 @@ const config: HardhatUserConfig = {
 		HardhatNetworkHelpers,
 		HardhatKeystore,
 		HardhatDeploy,
+		HardhatExternalArtifactsPlugin,
 	],
 	solidity: {
 		profiles: {
@@ -86,6 +88,9 @@ const config: HardhatUserConfig = {
 				mode: 'typescript',
 			},
 		],
+	},
+	externalArtifacts: {
+		modules: ['@rocketh/proxy/artifacts'],
 	},
 };
 
