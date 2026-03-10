@@ -100,7 +100,7 @@ If you prefer running services individually:
 1. Start the local Ethereum node:
 
    ```bash
-   pnpm contracts:local_node
+   pnpm contracts:node:local
    ```
 
 2. In another terminal, compile and deploy:

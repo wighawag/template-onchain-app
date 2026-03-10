@@ -23,7 +23,7 @@
     "format": "pnpm -r format",
     "format:check": "pnpm -r format:check",
     "---------------------- contracts ----------------------": "compile and deploy smart contracts",
-    "contracts:local_node": "ldenv pnpm run --filter ./contracts local_node",
+    "contracts:node:local": "ldenv pnpm run --filter ./contracts node:local",
     "contracts:deploy": "ldenv pnpm run --filter ./contracts deploy @@MODE @@",
     "contracts:deploy:watch": "ldenv pnpm run --filter ./contracts deploy:watch @@MODE @@",
     "contracts:fork:deploy": "ldenv pnpm run --filter ./contracts fork:deploy @@MODE @@",
