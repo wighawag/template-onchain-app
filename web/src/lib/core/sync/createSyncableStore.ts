@@ -17,11 +17,15 @@ import type {
 	ExtractMapItem,
 	DeepPartial,
 	StoreChange,
+	StoreEvents,
+	SyncAdapter,
+	SyncConfig,
 } from './types';
 import type { AsyncStorage } from '../storage';
 import { cleanup } from './cleanup';
 import { mergeStore } from './merge';
 import { isWatchable } from '../storage';
+import { createEmitter } from 'radiate';
 
 // ============================================================================
 // Account Store Interface (minimal interface for dependency injection)
@@ -63,6 +67,12 @@ export interface SyncableStoreConfig<S extends Schema> {
 
 	/** Schema version for migrations */
 	schemaVersion?: number;
+
+	/** Optional: Server sync adapter */
+	sync?: SyncAdapter<S>;
+
+	/** Optional: Sync configuration */
+	syncConfig?: SyncConfig;
 }
 
 // ============================================================================
@@ -102,8 +112,17 @@ export interface SyncableStore<S extends Schema> {
 	/** Subscribe to state changes (Svelte store contract) */
 	subscribe(callback: (state: AsyncState<DataOf<S>>) => void): () => void;
 
-	/** Subscribe to events */
-	on<E extends string>(event: E, callback: (data: unknown) => void): () => void;
+	/** Subscribe to type-safe events */
+	on<E extends keyof StoreEvents<S>>(
+		event: E,
+		callback: (data: StoreEvents<S>[E]) => void,
+	): () => void;
+
+	/** Unsubscribe from events */
+	off<E extends keyof StoreEvents<S>>(
+		event: E,
+		callback: (data: StoreEvents<S>[E]) => void,
+	): void;
 
 	/** Start watching account changes */
 	start(): () => void;
@@ -130,7 +149,14 @@ export function createSyncableStore<S extends Schema>(
 		defaultData,
 		clock = Date.now,
 		schemaVersion = 1,
+		sync: syncAdapter,
+		syncConfig,
 	} = config;
+
+	// Sync configuration with defaults
+	const debounceMs = syncConfig?.debounceMs ?? 1000;
+	const maxRetries = syncConfig?.maxRetries ?? 3;
+	const retryBackoffMs = syncConfig?.retryBackoffMs ?? 1000;
 
 	// State
 	let asyncState: AsyncState<DataOf<S>> = { status: 'idle', account: undefined };
@@ -158,17 +184,8 @@ export function createSyncableStore<S extends Schema>(
 		},
 	};
 
-	// Event emitter
-	const eventListeners = new Map<string, Set<(data: unknown) => void>>();
-
-	function emit(event: string, data: unknown): void {
-		const listeners = eventListeners.get(event);
-		if (listeners) {
-			for (const callback of listeners) {
-				callback(data);
-			}
-		}
-	}
+	// Type-safe event emitter using radiate
+	const emitter = createEmitter<StoreEvents<S>>();
 
 	// State subscribers
 	const stateSubscribers = new Set<(state: AsyncState<DataOf<S>>) => void>();
@@ -177,7 +194,7 @@ export function createSyncableStore<S extends Schema>(
 		for (const callback of stateSubscribers) {
 			callback(asyncState);
 		}
-		emit('state', asyncState);
+		emitter.emit('state', asyncState);
 	}
 
 	// Storage watch cleanup
@@ -185,6 +202,120 @@ export function createSyncableStore<S extends Schema>(
 
 	// Account subscription cleanup
 	let unsubscribeAccount: (() => void) | undefined;
+
+	// Sync debounce timer
+	let syncDebounceTimer: ReturnType<typeof setTimeout> | undefined;
+	let syncDirty = false;
+
+	// Mark dirty and schedule sync
+	function markDirty(): void {
+		if (!syncAdapter) return;
+		syncDirty = true;
+		scheduleSyncPush();
+	}
+
+	// Schedule a debounced push to server
+	function scheduleSyncPush(): void {
+		if (!syncAdapter || !asyncState.account) return;
+
+		if (syncDebounceTimer) {
+			clearTimeout(syncDebounceTimer);
+		}
+
+		syncDebounceTimer = setTimeout(() => {
+			performSyncPush();
+		}, debounceMs);
+	}
+
+	// Perform the actual push to server with retry logic
+	async function performSyncPush(retryCount = 0): Promise<void> {
+		if (!syncAdapter || !internalStorage || asyncState.status !== 'ready') return;
+
+		const account = asyncState.account;
+		syncDirty = false;
+
+		try {
+			(status as { syncState: string }).syncState = 'syncing';
+			if (retryCount === 0) {
+				emitter.emit('sync', { type: 'started' });
+			}
+
+			const serverResponse = await syncAdapter.push(account, internalStorage);
+
+			// Merge server response with local state
+			const { merged, changes } = mergeStore(internalStorage, serverResponse, schema);
+			internalStorage = merged;
+
+			// Update async state data
+			asyncState = { ...asyncState, data: merged.data };
+
+			// Emit change events
+			for (const change of changes) {
+				emitter.emit(change.event as keyof StoreEvents<S>, change.data as StoreEvents<S>[keyof StoreEvents<S>]);
+			}
+
+			// Save merged state to local storage
+			await storage.save(storageKey(account), internalStorage);
+
+			(status as { lastSyncedAt: number | null }).lastSyncedAt = Date.now();
+			(status as { syncError: Error | null }).syncError = null;
+			emitter.emit('sync', { type: 'completed', timestamp: Date.now() });
+			(status as { syncState: string }).syncState = 'idle';
+
+			if (changes.length > 0) {
+				notifyStateChange();
+			}
+		} catch (error) {
+			// Check if we should retry
+			if (retryCount < maxRetries) {
+				// Schedule retry with exponential backoff
+				const backoffDelay = retryBackoffMs * Math.pow(2, retryCount);
+				setTimeout(() => {
+					performSyncPush(retryCount + 1);
+				}, backoffDelay);
+			} else {
+				// Max retries reached, emit failure
+				(status as { syncError: Error | null }).syncError = error as Error;
+				emitter.emit('sync', { type: 'failed', error: error as Error });
+				(status as { syncState: string }).syncState = 'idle';
+			}
+		}
+	}
+
+	// Pull from server and merge with local state
+	async function performSyncPull(account: `0x${string}`): Promise<void> {
+		if (!syncAdapter || !internalStorage) return;
+
+		try {
+			const serverData = await syncAdapter.pull(account);
+
+			if (serverData) {
+				// Merge server data with local state
+				const { merged, changes } = mergeStore(internalStorage, serverData, schema);
+				internalStorage = merged;
+
+				// Update async state data
+				if (asyncState.status === 'ready') {
+					asyncState = { ...asyncState, data: merged.data };
+				}
+
+				// Emit change events
+				for (const change of changes) {
+					emitter.emit(change.event as keyof StoreEvents<S>, change.data as StoreEvents<S>[keyof StoreEvents<S>]);
+				}
+
+				// Save merged state to local storage
+				await storage.save(storageKey(account), internalStorage);
+
+				if (changes.length > 0) {
+					notifyStateChange();
+				}
+			}
+		} catch (error) {
+			// Pull errors are non-fatal - we continue with local data
+			console.warn('Failed to pull from server:', error);
+		}
+	}
 
 	// Create default internal storage
 	function createDefaultInternalStorage(): InternalStorage<S> {
@@ -272,6 +403,11 @@ export function createSyncableStore<S extends Schema>(
 		};
 		notifyStateChange();
 
+		// Pull from server (if sync adapter configured)
+		if (syncAdapter) {
+			performSyncPull(newAccount);
+		}
+
 		// Set up storage watch for cross-tab sync
 		if (isWatchable(storage)) {
 			unwatchStorage = storage.watch(storageKey(newAccount), async (_, newValue) => {
@@ -289,7 +425,7 @@ export function createSyncableStore<S extends Schema>(
 
 				// Emit change events
 				for (const change of changes) {
-					emit(change.event, change.data);
+					emitter.emit(change.event as keyof StoreEvents<S>, change.data as StoreEvents<S>[keyof StoreEvents<S>]);
 				}
 
 				if (changes.length > 0) {
@@ -322,11 +458,12 @@ export function createSyncableStore<S extends Schema>(
 			asyncState = { ...asyncState, data: { ...internalStorage.data } };
 
 			// Emit event
-			emit(`${String(field)}:changed`, value);
+			emitter.emit(`${String(field)}:changed` as keyof StoreEvents<S>, value as StoreEvents<S>[keyof StoreEvents<S>]);
 			notifyStateChange();
 
-			// Save to storage
+			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
+			markDirty();
 		},
 
 		patch<K extends PermanentKeys<S>>(
@@ -348,11 +485,12 @@ export function createSyncableStore<S extends Schema>(
 			asyncState = { ...asyncState, data: { ...internalStorage.data } };
 
 			// Emit event
-			emit(`${String(field)}:changed`, merged);
+			emitter.emit(`${String(field)}:changed` as keyof StoreEvents<S>, merged as StoreEvents<S>[keyof StoreEvents<S>]);
 			notifyStateChange();
 
-			// Save to storage
+			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
+			markDirty();
 		},
 
 		add<K extends MapKeys<S>>(
@@ -385,11 +523,12 @@ export function createSyncableStore<S extends Schema>(
 			asyncState = { ...asyncState, data: { ...internalStorage.data } };
 
 			// Emit event
-			emit(`${String(field)}:added`, { key, item: itemWithDeleteAt });
+			emitter.emit(`${String(field)}:added` as keyof StoreEvents<S>, { key, item: itemWithDeleteAt } as StoreEvents<S>[keyof StoreEvents<S>]);
 			notifyStateChange();
 
-			// Save to storage
+			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
+			markDirty();
 		},
 
 		update<K extends MapKeys<S>>(field: K, key: string, value: ExtractMapItem<S[K]>): void {
@@ -423,11 +562,12 @@ export function createSyncableStore<S extends Schema>(
 			asyncState = { ...asyncState, data: { ...internalStorage.data } };
 
 			// Emit event
-			emit(`${String(field)}:updated`, { key, item: updatedItem });
+			emitter.emit(`${String(field)}:updated` as keyof StoreEvents<S>, { key, item: updatedItem } as StoreEvents<S>[keyof StoreEvents<S>]);
 			notifyStateChange();
 
-			// Save to storage
+			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
+			markDirty();
 		},
 
 		remove<K extends MapKeys<S>>(field: K, key: string): void {
@@ -463,11 +603,12 @@ export function createSyncableStore<S extends Schema>(
 			asyncState = { ...asyncState, data: { ...internalStorage.data } };
 
 			// Emit event
-			emit(`${String(field)}:removed`, { key, item: existing });
+			emitter.emit(`${String(field)}:removed` as keyof StoreEvents<S>, { key, item: existing } as StoreEvents<S>[keyof StoreEvents<S>]);
 			notifyStateChange();
 
-			// Save to storage
+			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
+			markDirty();
 		},
 
 		subscribe(callback: (state: AsyncState<DataOf<S>>) => void): () => void {
@@ -478,15 +619,8 @@ export function createSyncableStore<S extends Schema>(
 			};
 		},
 
-		on<E extends string>(event: E, callback: (data: unknown) => void): () => void {
-			if (!eventListeners.has(event)) {
-				eventListeners.set(event, new Set());
-			}
-			eventListeners.get(event)!.add(callback);
-			return () => {
-				eventListeners.get(event)?.delete(callback);
-			};
-		},
+		on: emitter.on.bind(emitter),
+		off: emitter.off.bind(emitter),
 
 		start(): () => void {
 			unsubscribeAccount = accountStore.subscribe((account) => {
@@ -500,6 +634,11 @@ export function createSyncableStore<S extends Schema>(
 			unsubscribeAccount = undefined;
 			unwatchStorage?.();
 			unwatchStorage = undefined;
+			// Clear sync debounce timer
+			if (syncDebounceTimer) {
+				clearTimeout(syncDebounceTimer);
+				syncDebounceTimer = undefined;
+			}
 		},
 	};
 

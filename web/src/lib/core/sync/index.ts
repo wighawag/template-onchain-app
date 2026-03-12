@@ -24,6 +24,9 @@ export {
 	type StoreStatus,
 	type SyncEvent,
 	type StoreChange,
+	type StoreEvents,
+	type SyncAdapter,
+	type SyncConfig,
 } from './types';
 
 // Store creation

@@ -188,6 +188,58 @@ export type SyncEvent =
 	| { type: 'online' };
 
 // ============================================================================
+// Type-Safe Event Map
+// ============================================================================
+
+/**
+ * Generate event types from schema.
+ * For a schema with `settings: permanent<T>()` and `operations: map<U>()`:
+ *
+ * {
+ *   state: AsyncState<DataOf<S>>;
+ *   'settings:changed': T;
+ *   'operations:added': { key: string; item: U & { deleteAt: number } };
+ *   'operations:updated': { key: string; item: U & { deleteAt: number } };
+ *   'operations:removed': { key: string; item: U & { deleteAt: number } };
+ *   sync: SyncEvent;
+ * }
+ */
+export type StoreEvents<S extends Schema> = {
+	state: AsyncState<DataOf<S>>;
+	sync: SyncEvent;
+} & PermanentEvents<S> &
+	MapEvents<S>;
+
+/**
+ * Helper type - events for permanent fields.
+ * Each permanent field K generates a `K:changed` event with the field's value type.
+ */
+type PermanentEvents<S extends Schema> = {
+	[K in PermanentKeys<S> as `${K & string}:changed`]: ExtractPermanent<S[K]>;
+};
+
+/**
+ * Helper type - events for map fields.
+ * Each map field K generates `K:added`, `K:updated`, and `K:removed` events.
+ */
+type MapEvents<S extends Schema> = {
+	[K in MapKeys<S> as `${K & string}:added`]: {
+		key: string;
+		item: ExtractMapItem<S[K]> & { deleteAt: number };
+	};
+} & {
+	[K in MapKeys<S> as `${K & string}:updated`]: {
+		key: string;
+		item: ExtractMapItem<S[K]> & { deleteAt: number };
+	};
+} & {
+	[K in MapKeys<S> as `${K & string}:removed`]: {
+		key: string;
+		item: ExtractMapItem<S[K]> & { deleteAt: number };
+	};
+};
+
+// ============================================================================
 // Async State Types
 // ============================================================================
 
@@ -212,3 +264,56 @@ export type StoreChange =
 	| { event: `${string}:added`; data: { key: string; item: unknown } }
 	| { event: `${string}:updated`; data: { key: string; item: unknown } }
 	| { event: `${string}:removed`; data: { key: string; item: unknown } };
+
+// ============================================================================
+// Server Sync Types
+// ============================================================================
+
+/**
+ * Server sync adapter interface.
+ * Implement this to sync with your backend.
+ */
+export interface SyncAdapter<S extends Schema> {
+	/**
+	 * Pull latest state from server.
+	 * Returns null if no data exists on server.
+	 */
+	pull(account: `0x${string}`): Promise<InternalStorage<S> | null>;
+
+	/**
+	 * Push local changes to server.
+	 * Returns merged state from server.
+	 */
+	push(account: `0x${string}`, changes: InternalStorage<S>): Promise<InternalStorage<S>>;
+
+	/**
+	 * Subscribe to real-time updates (optional).
+	 */
+	subscribe?(
+		account: `0x${string}`,
+		callback: (data: InternalStorage<S>) => void,
+	): () => void;
+}
+
+/**
+ * Sync configuration.
+ */
+export interface SyncConfig {
+	/** Debounce delay for pushing changes (default: 1000ms) */
+	debounceMs?: number;
+
+	/** Interval for periodic sync (default: 30000ms, 0 to disable) */
+	intervalMs?: number;
+
+	/** Sync when tab becomes visible (default: true) */
+	syncOnVisible?: boolean;
+
+	/** Sync when coming back online (default: true) */
+	syncOnReconnect?: boolean;
+
+	/** Maximum retry attempts (default: 3) */
+	maxRetries?: number;
+
+	/** Initial backoff delay for retries (default: 1000ms) */
+	retryBackoffMs?: number;
+}
