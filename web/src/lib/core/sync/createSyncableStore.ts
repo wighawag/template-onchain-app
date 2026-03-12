@@ -168,8 +168,11 @@ export interface SyncableStore<S extends Schema> {
 	/** Retry loading account data after a migration failure */
 	retryLoad(): void;
 
-	/** Wait for all pending storage saves to complete */
-	flush(): Promise<void>;
+	/** Wait for all pending storage saves to complete
+	 * @param timeoutMs - Maximum time to wait in milliseconds (default: 30000)
+	 * @throws Error if timeout is reached while saves are still pending
+	 */
+	flush(timeoutMs?: number): Promise<void>;
 }
 
 // ============================================================================
@@ -350,7 +353,8 @@ export function createSyncableStore<S extends Schema>(
 		if (!syncAdapter || !internalStorage || asyncState.status !== 'ready') return;
 
 		const account = asyncState.account;
-		syncDirty = false;
+		// Note: syncDirty is cleared only on successful completion to avoid losing
+		// mutations that occur during retry attempts
 
 		try {
 			mutableStatus.syncState = 'syncing';
@@ -391,17 +395,20 @@ export function createSyncableStore<S extends Schema>(
 			// Step 4: Push merged data to server with new counter
 			// Use max(clock, pullCounter + 1) to ensure monotonically increasing counters
 			// even for sub-millisecond operations
-			const newCounter = BigInt(Math.max(clock(), Number(pullResponse.counter) + 1));
+			// Use BigInt arithmetic throughout to avoid precision loss for large counters
+			const clockBigInt = BigInt(clock());
+			const newCounter = clockBigInt > pullResponse.counter ? clockBigInt : pullResponse.counter + 1n;
 			const pushResponse = await syncAdapter.push(account, dataToSync, newCounter);
 
 			if (pushResponse.success) {
-					mutableStatus.lastSyncedAt = Date.now();
-					mutableStatus.syncError = null;
-					mutableStatus.hasPendingSync = false;
-					emitter.emit('sync', { type: 'completed', timestamp: Date.now() });
-					mutableStatus.syncState = 'idle';
-					notifyStatusChange();
-				} else {
+				syncDirty = false; // Clear dirty flag only on successful sync
+				mutableStatus.lastSyncedAt = Date.now();
+				mutableStatus.syncError = null;
+				mutableStatus.hasPendingSync = false;
+				emitter.emit('sync', { type: 'completed', timestamp: Date.now() });
+				mutableStatus.syncState = 'idle';
+				notifyStatusChange();
+			} else {
 				// Push was rejected - counter was stale
 				// This means another client pushed between our pull and push
 				// Retry the entire flow
@@ -459,9 +466,14 @@ export function createSyncableStore<S extends Schema>(
 							change.data as StoreEvents<S>[keyof StoreEvents<S>],
 						);
 					}
-
+	
 					// Save merged state to local storage
-					await storage.save(storageKey(account), merged);
+					try {
+						await storage.save(storageKey(account), merged);
+					} catch (saveError) {
+						// Storage save errors during pull are non-fatal but should be logged
+						console.warn('Failed to save merged state to storage:', saveError);
+					}
 				}
 			}
 		} catch (error) {
@@ -519,10 +531,7 @@ export function createSyncableStore<S extends Schema>(
 
 		// Clear field store cache on account switch
 		fieldStoreCache.clear();
-
-		// Remember if we were ready
-		const wasReady = asyncState.status === 'ready';
-
+	
 		// No account - transition to idle
 		if (!newAccount) {
 			asyncState = { status: 'idle', account: undefined };
@@ -1061,9 +1070,13 @@ export function createSyncableStore<S extends Schema>(
 			setAccount(account);
 		},
 
-		async flush(): Promise<void> {
-			// Wait for all pending storage saves to complete
+		async flush(timeoutMs = 30000): Promise<void> {
+			// Wait for all pending storage saves to complete with timeout
+			const startTime = Date.now();
 			while (mutableStatus.pendingSaves > 0) {
+				if (Date.now() - startTime > timeoutMs) {
+					throw new Error(`flush() timed out after ${timeoutMs}ms waiting for ${mutableStatus.pendingSaves} pending saves`);
+				}
 				await new Promise((r) => setTimeout(r, 10));
 			}
 		},
