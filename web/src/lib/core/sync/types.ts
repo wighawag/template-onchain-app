@@ -139,10 +139,7 @@ export type InternalStorage<S extends Schema> = {
 /**
  * State lifecycle events - emitted on async state transitions.
  */
-export type StateEvent =
-	| {type: 'idle'}
-	| {type: 'loading'}
-	| {type: 'ready'};
+export type StateEvent = {type: 'idle'} | {type: 'loading'} | {type: 'ready'};
 
 // ============================================================================
 // Sync Status and Events

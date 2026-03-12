@@ -57,4 +57,7 @@ export {
 } from './merge';
 
 // Cleanup function
-export {cleanup} from './cleanup';
+export {cleanup, type CleanupResult} from './cleanup';
+
+// Merge and cleanup combined
+export {mergeAndCleanup, type MergeAndCleanupResult} from './merge';

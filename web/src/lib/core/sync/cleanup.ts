@@ -5,7 +5,21 @@
  * Runs on store initialization and after every merge.
  */
 
-import type {Schema, InternalStorage, DataOf} from './types';
+import type {Schema, InternalStorage, DataOf, StoreChange} from './types';
+
+/**
+ * Result of cleanup operation.
+ */
+export interface CleanupResult<S extends Schema> {
+	/** Cleaned storage with expired items and tombstones removed */
+	storage: InternalStorage<S>;
+
+	/** Changes produced by cleanup - expired items become :removed events */
+	changes: StoreChange[];
+
+	/** True if any tombstones were deleted during cleanup */
+	tombstonesDeleted: boolean;
+}
 
 /**
  * Clean up expired items and tombstones from storage.
@@ -14,13 +28,16 @@ import type {Schema, InternalStorage, DataOf} from './types';
  * @param storage - The internal storage to clean
  * @param schema - The schema definition
  * @param now - Current timestamp (default: Date.now())
- * @returns New storage object with expired items/tombstones removed
+ * @returns CleanupResult with new storage object, changes, and tombstonesDeleted flag
  */
 export function cleanup<S extends Schema>(
 	storage: InternalStorage<S>,
 	schema: S,
 	now: number = Date.now(),
-): InternalStorage<S> {
+): CleanupResult<S> {
+	const changes: StoreChange[] = [];
+	let tombstonesDeleted = false;
+
 	const result: InternalStorage<S> = {
 		$version: storage.$version,
 		data: {...storage.data} as DataOf<S>,
@@ -43,6 +60,8 @@ export function cleanup<S extends Schema>(
 			for (const [key, deleteAt] of Object.entries(tombstones)) {
 				if (deleteAt > now) {
 					cleanedTombstones[key] = deleteAt;
+				} else {
+					tombstonesDeleted = true;
 				}
 			}
 
@@ -65,6 +84,12 @@ export function cleanup<S extends Schema>(
 					if (timestamps[key] !== undefined) {
 						cleanedTimestamps[key] = timestamps[key];
 					}
+				} else {
+					// Item expired - emit :removed change
+					changes.push({
+						event: `${field}:removed`,
+						data: {key, item},
+					});
 				}
 			}
 
@@ -72,11 +97,9 @@ export function cleanup<S extends Schema>(
 			(result.$itemTimestamps as Record<string, Record<string, number>>)[
 				field
 			] = cleanedTimestamps;
-		} else if (fieldDef.__type === 'permanent') {
-			// Permanent fields are never cleaned up
-			// They're already copied above
 		}
+		// Permanent fields are never cleaned up - already copied above
 	}
 
-	return result;
+	return {storage: result, changes, tombstonesDeleted};
 }

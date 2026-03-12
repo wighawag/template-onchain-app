@@ -35,7 +35,7 @@ export interface Readable<T> {
 }
 import type {AsyncStorage} from '../storage';
 import {cleanup} from './cleanup';
-import {mergeStore} from './merge';
+import {mergeAndCleanup} from './merge';
 import {isWatchable} from '../storage';
 import {createEmitter} from 'radiate';
 
@@ -310,9 +310,10 @@ export function createSyncableStore<S extends Schema>(
 
 	// Helper to emit sync events (works around TypeScript generic intersection issues)
 	function emitSyncEvent(event: SyncEventData): void {
-		(
-			emitter.emit as (eventName: '$store:sync', data: SyncEventData) => void
-		)('$store:sync', event);
+		(emitter.emit as (eventName: '$store:sync', data: SyncEventData) => void)(
+			'$store:sync',
+			event,
+		);
 	}
 
 	// Helper to emit storage events (works around TypeScript generic intersection issues)
@@ -327,9 +328,10 @@ export function createSyncableStore<S extends Schema>(
 
 	// Helper to emit state events (works around TypeScript generic intersection issues)
 	function emitStateEvent(event: StateEventData): void {
-		(
-			emitter.emit as (eventName: '$store:state', data: StateEventData) => void
-		)('$store:state', event);
+		(emitter.emit as (eventName: '$store:state', data: StateEventData) => void)(
+			'$store:state',
+			event,
+		);
 	}
 
 	// Storage watch cleanup
@@ -423,17 +425,15 @@ export function createSyncableStore<S extends Schema>(
 			// Step 2: Merge server data with local data (if server has data)
 			let dataToSync = internalStorage;
 			if (pullResponse.data) {
-				const {merged, changes} = mergeStore(
+				const {storage: cleanedMerged, changes} = mergeAndCleanup(
 					internalStorage,
 					pullResponse.data,
 					schema,
+					clock(),
 				);
-
-				// Run cleanup on merged data to remove expired items
-				const cleanedMerged = cleanup(merged, schema, clock());
 				dataToSync = cleanedMerged;
 
-				// Update local state if server had newer data
+				// Update local state if there were any changes (from merge or cleanup)
 				if (changes.length > 0) {
 					internalStorage = cleanedMerged;
 					asyncState = {...asyncState, data: cleanedMerged.data};
@@ -449,7 +449,7 @@ export function createSyncableStore<S extends Schema>(
 					}
 
 					// Step 3: Save merged state to local storage
-					await storage.save(storageKey(account), merged);
+					await storage.save(storageKey(account), cleanedMerged);
 				}
 			}
 
@@ -516,15 +516,13 @@ export function createSyncableStore<S extends Schema>(
 			const pullResponse = await syncAdapter.pull(account);
 
 			if (pullResponse.data) {
-				// Merge server data with local state
-				const {merged, changes} = mergeStore(
+				// Merge server data with local state and cleanup expired items
+				const {storage: cleanedMerged, changes} = mergeAndCleanup(
 					internalStorage,
 					pullResponse.data,
 					schema,
+					clock(),
 				);
-
-				// Run cleanup on merged data to remove expired items
-				const cleanedMerged = cleanup(merged, schema, clock());
 
 				if (changes.length > 0) {
 					internalStorage = cleanedMerged;
@@ -662,7 +660,10 @@ export function createSyncableStore<S extends Schema>(
 		}
 
 		// Cleanup expired items
-		internalStorage = cleanup(internalStorage, schema, clock());
+		// Note: We ignore changes here because the store isn't ready yet.
+		// Subscribers haven't seen these items, so no need to emit :removed events.
+		const {storage: cleanedStorage} = cleanup(internalStorage, schema, clock());
+		internalStorage = cleanedStorage;
 
 		// Save cleaned state
 		await storage.save(storageKey(newAccount), internalStorage);
@@ -690,15 +691,13 @@ export function createSyncableStore<S extends Schema>(
 				async (_, newValue) => {
 					if (!newValue || !internalStorage) return;
 
-					// Merge with current state
-					const {merged, changes} = mergeStore(
+					// Merge with current state and cleanup expired items
+					const {storage: cleanedMerged, changes} = mergeAndCleanup(
 						internalStorage,
 						newValue,
 						schema,
+						clock(),
 					);
-
-					// Run cleanup on merged data to remove expired items
-					const cleanedMerged = cleanup(merged, schema, clock());
 
 					if (changes.length > 0) {
 						internalStorage = cleanedMerged;

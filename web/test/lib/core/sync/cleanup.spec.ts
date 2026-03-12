@@ -30,10 +30,18 @@ describe('cleanup', () => {
 
 		const result = cleanup(storage, testSchema, now);
 
-		expect(result.data.operations['op-1']).toBeUndefined();
-		expect(result.data.operations['op-2']).toBeDefined();
-		expect(result.$itemTimestamps.operations?.['op-1']).toBeUndefined();
-		expect(result.$itemTimestamps.operations?.['op-2']).toBe(2000);
+		expect(result.storage.data.operations['op-1']).toBeUndefined();
+		expect(result.storage.data.operations['op-2']).toBeDefined();
+		expect(result.storage.$itemTimestamps.operations?.['op-1']).toBeUndefined();
+		expect(result.storage.$itemTimestamps.operations?.['op-2']).toBe(2000);
+
+		// Should emit :removed change for expired item
+		expect(result.changes).toHaveLength(1);
+		expect(result.changes[0].event).toBe('operations:removed');
+		expect(result.changes[0].data).toEqual({
+			key: 'op-1',
+			item: {tx: '0x1', status: 'done', deleteAt: 3000},
+		});
 	});
 
 	it('removes expired tombstones past their deleteAt', () => {
@@ -56,8 +64,13 @@ describe('cleanup', () => {
 
 		const result = cleanup(storage, testSchema, now);
 
-		expect(result.$tombstones.operations?.['old-item']).toBeUndefined();
-		expect(result.$tombstones.operations?.['recent-item']).toBe(7000);
+		expect(result.storage.$tombstones.operations?.['old-item']).toBeUndefined();
+		expect(result.storage.$tombstones.operations?.['recent-item']).toBe(7000);
+
+		// Should set tombstonesDeleted flag
+		expect(result.tombstonesDeleted).toBe(true);
+		// No items were cleaned up, so no changes
+		expect(result.changes).toHaveLength(0);
 	});
 
 	it('keeps valid items and tombstones', () => {
@@ -77,8 +90,12 @@ describe('cleanup', () => {
 
 		const result = cleanup(storage, testSchema, now);
 
-		expect(result.data.operations['op-1']).toBeDefined();
-		expect(result.$tombstones.operations?.['deleted-1']).toBe(6000);
+		expect(result.storage.data.operations['op-1']).toBeDefined();
+		expect(result.storage.$tombstones.operations?.['deleted-1']).toBe(6000);
+
+		// No items or tombstones expired
+		expect(result.changes).toHaveLength(0);
+		expect(result.tombstonesDeleted).toBe(false);
 	});
 
 	it('does not modify permanent fields', () => {
@@ -97,8 +114,8 @@ describe('cleanup', () => {
 		const result = cleanup(storage, testSchema, now);
 
 		// Permanent fields are never cleaned up regardless of timestamp
-		expect(result.data.settings).toStrictEqual({theme: 'dark'});
-		expect(result.$timestamps.settings).toBe(1000);
+		expect(result.storage.data.settings).toStrictEqual({theme: 'dark'});
+		expect(result.storage.$timestamps.settings).toBe(1000);
 	});
 
 	it('uses Date.now() when no time is provided', () => {
@@ -118,6 +135,10 @@ describe('cleanup', () => {
 		const result = cleanup(storage, testSchema);
 
 		// Item with deleteAt: 1 should be expired (it's in the past)
-		expect(result.data.operations['old-op']).toBeUndefined();
+		expect(result.storage.data.operations['old-op']).toBeUndefined();
+
+		// Should emit :removed change
+		expect(result.changes).toHaveLength(1);
+		expect(result.changes[0].event).toBe('operations:removed');
 	});
 });

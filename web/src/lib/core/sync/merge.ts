@@ -339,3 +339,134 @@ export function mergeStore<S extends Schema>(
 
 	return {merged: result, changes};
 }
+
+// ============================================================================
+// Merge and Cleanup Combined
+// ============================================================================
+
+import {cleanup, type CleanupResult} from './cleanup';
+
+/**
+ * Result of merge + cleanup operation.
+ */
+export interface MergeAndCleanupResult<S extends Schema> {
+	/** Final storage after merge and cleanup */
+	storage: InternalStorage<S>;
+
+	/** All changes from both merge AND cleanup combined */
+	changes: StoreChange[];
+
+	/** True if cleanup deleted any tombstones */
+	tombstonesDeleted: boolean;
+
+	/** True if cleanup deleted any expired items */
+	itemsExpired: boolean;
+}
+
+/**
+ * Merge two stores and then run cleanup.
+ * Returns combined changes from both operations.
+ *
+ * Handles deduplication: if an item is added in merge but immediately expires
+ * in cleanup, we emit only the final state (removed), not both added then removed.
+ */
+export function mergeAndCleanup<S extends Schema>(
+	current: InternalStorage<S>,
+	incoming: InternalStorage<S>,
+	schema: S,
+	now: number = Date.now(),
+): MergeAndCleanupResult<S> {
+	// Step 1: Merge
+	const {merged, changes: mergeChanges} = mergeStore(current, incoming, schema);
+
+	// Step 2: Cleanup
+	const {
+		storage: cleaned,
+		changes: cleanupChanges,
+		tombstonesDeleted,
+	} = cleanup(merged, schema, now);
+
+	// Step 3: Deduplicate changes
+	// An item that was :added/:updated in merge but :removed in cleanup
+	// should only emit :removed (or nothing if it was :added then :removed)
+	const allChanges = deduplicateChanges(mergeChanges, cleanupChanges);
+
+	return {
+		storage: cleaned,
+		changes: allChanges,
+		tombstonesDeleted,
+		itemsExpired: cleanupChanges.length > 0,
+	};
+}
+
+/**
+ * Deduplicate merge and cleanup changes.
+ *
+ * Edge cases:
+ * - :added then :removed -> no event (item was added then immediately expired)
+ * - :updated then :removed -> :removed only (final state is removed)
+ * - :removed (merge) -> :removed (tombstone-based removal from merge, keep it)
+ * - :removed (cleanup only) -> :removed (item existed before, now expired)
+ */
+function deduplicateChanges(
+	mergeChanges: StoreChange[],
+	cleanupChanges: StoreChange[],
+): StoreChange[] {
+	const result: StoreChange[] = [];
+
+	// Build set of keys that were expired during cleanup
+	const expiredKeys = new Set<string>();
+	for (const change of cleanupChanges) {
+		if (change.event.endsWith(':removed')) {
+			const data = change.data as {key: string};
+			const fieldName = change.event.split(':')[0];
+			expiredKeys.add(`${fieldName}:${data.key}`);
+		}
+	}
+
+	// Build set of keys that were added during merge (to filter out add+remove pairs)
+	const addedKeys = new Set<string>();
+	for (const change of mergeChanges) {
+		if (change.event.endsWith(':added')) {
+			const data = change.data as {key: string};
+			const fieldName = change.event.split(':')[0];
+			addedKeys.add(`${fieldName}:${data.key}`);
+		}
+	}
+
+	// Filter merge changes
+	for (const change of mergeChanges) {
+		const fieldName = change.event.split(':')[0];
+
+		if (change.event.endsWith(':added') || change.event.endsWith(':updated')) {
+			const data = change.data as {key: string};
+			const keyPath = `${fieldName}:${data.key}`;
+
+			if (expiredKeys.has(keyPath)) {
+				// Item was added/updated but then expired - skip this change
+				continue;
+			}
+		}
+
+		result.push(change);
+	}
+
+	// Filter cleanup changes - skip :removed for items that were just :added
+	// (add+remove = no net change, item was never visible)
+	for (const change of cleanupChanges) {
+		if (change.event.endsWith(':removed')) {
+			const data = change.data as {key: string};
+			const fieldName = change.event.split(':')[0];
+			const keyPath = `${fieldName}:${data.key}`;
+
+			if (addedKeys.has(keyPath)) {
+				// Item was added then removed - no net change, skip
+				continue;
+			}
+		}
+
+		result.push(change);
+	}
+
+	return result;
+}
