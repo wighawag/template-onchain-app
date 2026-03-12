@@ -232,6 +232,16 @@ export function createSyncableStore<S extends Schema>(
 	// Account subscription cleanup
 	let unsubscribeAccount: (() => void) | undefined;
 
+	// Visibility change handler for syncOnVisible
+	let handleVisibilityChange: (() => void) | undefined;
+
+	// Online/offline handlers for syncOnReconnect
+	let handleOnline: (() => void) | undefined;
+	let handleOffline: (() => void) | undefined;
+
+	// Periodic sync interval timer
+	let syncIntervalTimer: ReturnType<typeof setInterval> | undefined;
+
 	// Sync debounce timer
 	let syncDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 	let syncDirty = false;
@@ -689,6 +699,44 @@ export function createSyncableStore<S extends Schema>(
 			unsubscribeAccount = accountStore.subscribe((account) => {
 				setAccount(account);
 			});
+
+			// Set up visibility change listener for syncOnVisible
+			if (syncConfig?.syncOnVisible !== false && typeof document !== 'undefined') {
+				handleVisibilityChange = () => {
+					if (document.visibilityState === 'visible' && asyncState.status === 'ready') {
+						performSyncPull(asyncState.account);
+					}
+				};
+				document.addEventListener('visibilitychange', handleVisibilityChange);
+			}
+
+			// Set up online/offline listeners for syncOnReconnect
+			if (syncConfig?.syncOnReconnect !== false && typeof window !== 'undefined') {
+				handleOnline = () => {
+					(status as { syncState: string }).syncState = 'idle';
+					notifyStatusChange();
+					if (asyncState.status === 'ready') {
+						performSyncPush();
+					}
+				};
+				handleOffline = () => {
+					(status as { syncState: string }).syncState = 'offline';
+					notifyStatusChange();
+				};
+				window.addEventListener('online', handleOnline);
+				window.addEventListener('offline', handleOffline);
+			}
+
+			// Set up periodic sync interval
+			const intervalMs = syncConfig?.intervalMs;
+			if (syncAdapter && intervalMs && intervalMs > 0) {
+				syncIntervalTimer = setInterval(() => {
+					if (asyncState.status === 'ready' && !syncPaused) {
+						performSyncPull(asyncState.account);
+					}
+				}, intervalMs);
+			}
+
 			return () => store.stop();
 		},
 
@@ -701,6 +749,25 @@ export function createSyncableStore<S extends Schema>(
 			if (syncDebounceTimer) {
 				clearTimeout(syncDebounceTimer);
 				syncDebounceTimer = undefined;
+			}
+			// Clean up visibility change listener
+			if (handleVisibilityChange) {
+				document.removeEventListener('visibilitychange', handleVisibilityChange);
+				handleVisibilityChange = undefined;
+			}
+			// Clean up online/offline listeners
+			if (handleOnline) {
+				window.removeEventListener('online', handleOnline);
+				handleOnline = undefined;
+			}
+			if (handleOffline) {
+				window.removeEventListener('offline', handleOffline);
+				handleOffline = undefined;
+			}
+			// Clean up periodic sync interval
+			if (syncIntervalTimer) {
+				clearInterval(syncIntervalTimer);
+				syncIntervalTimer = undefined;
 			}
 		},
 

@@ -1147,6 +1147,457 @@ describe('createSyncableStore', () => {
 		});
 	});
 
+	describe('syncOnVisible', () => {
+		it('can be disabled via syncConfig.syncOnVisible = false', async () => {
+			let pullCallCount = 0;
+			const mockSyncAdapter = {
+				async pull(_account: `0x${string}`) {
+					pullCallCount++;
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					return changes;
+				},
+			};
+
+			// Mock document visibility API
+			let visibilityState = 'visible';
+			let visibilityHandler: (() => void) | undefined;
+			const originalDocument = globalThis.document;
+
+			(globalThis as unknown as { document: unknown }).document = {
+				get visibilityState() {
+					return visibilityState;
+				},
+				addEventListener(event: string, handler: () => void) {
+					if (event === 'visibilitychange') {
+						visibilityHandler = handler;
+					}
+				},
+				removeEventListener() {},
+			};
+
+			try {
+				const store = createSyncableStore({
+					schema: testSchema,
+					account: accountStore,
+					storage,
+					storageKey: (addr) => `test-${addr}`,
+					defaultData: () => ({
+						settings: {theme: 'dark', volume: 0.5},
+						operations: {},
+					}),
+					clock: () => clock,
+					sync: mockSyncAdapter,
+					syncConfig: {syncOnVisible: false}, // Disable syncOnVisible
+				});
+
+				accountStore.set('0x1234567890123456789012345678901234567890');
+				await new Promise((r) => setTimeout(r, 20));
+
+				const initialPullCount = pullCallCount;
+
+				// Simulate tab becoming visible
+				visibilityState = 'visible';
+				visibilityHandler?.();
+
+				await new Promise((r) => setTimeout(r, 20));
+
+				// Should NOT have triggered an additional pull because disabled
+				expect(pullCallCount).toBe(initialPullCount);
+
+				store.stop();
+			} finally {
+				globalThis.document = originalDocument;
+			}
+		});
+
+		it('triggers pull when tab becomes visible', async () => {
+			let pullCallCount = 0;
+			const mockSyncAdapter = {
+				async pull(_account: `0x${string}`) {
+					pullCallCount++;
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					return changes;
+				},
+			};
+
+			// Mock document visibility API
+			let visibilityState = 'visible';
+			let visibilityHandler: (() => void) | undefined;
+			const originalDocument = globalThis.document;
+			
+			// @ts-expect-error - mocking document
+			globalThis.document = {
+				get visibilityState() {
+					return visibilityState;
+				},
+				addEventListener(event: string, handler: () => void) {
+					if (event === 'visibilitychange') {
+						visibilityHandler = handler;
+					}
+				},
+				removeEventListener() {},
+			};
+
+			try {
+				const store = createSyncableStore({
+					schema: testSchema,
+					account: accountStore,
+					storage,
+					storageKey: (addr) => `test-${addr}`,
+					defaultData: () => ({
+						settings: {theme: 'dark', volume: 0.5},
+						operations: {},
+					}),
+					clock: () => clock,
+					sync: mockSyncAdapter,
+				});
+
+				accountStore.set('0x1234567890123456789012345678901234567890');
+				await new Promise((r) => setTimeout(r, 20));
+
+				// Record pull count after initial load (may include initial pull)
+				const initialPullCount = pullCallCount;
+
+				// Simulate tab becoming hidden then visible
+				visibilityState = 'hidden';
+				visibilityState = 'visible';
+				visibilityHandler?.();
+
+				// Wait for async pull to complete
+				await new Promise((r) => setTimeout(r, 20));
+
+				// Should have triggered an additional pull
+				expect(pullCallCount).toBeGreaterThan(initialPullCount);
+
+				store.stop();
+			} finally {
+				globalThis.document = originalDocument;
+			}
+		});
+	});
+
+	describe('syncOnReconnect', () => {
+		it('triggers push sync when coming back online', async () => {
+			let pushCallCount = 0;
+			const mockSyncAdapter = {
+				async pull(_account: `0x${string}`) {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					pushCallCount++;
+					return changes;
+				},
+			};
+
+			// Mock window online/offline events
+			let onlineHandler: (() => void) | undefined;
+			let offlineHandler: (() => void) | undefined;
+			const originalWindow = globalThis.window;
+
+			(globalThis as unknown as { window: unknown }).window = {
+				addEventListener(event: string, handler: () => void) {
+					if (event === 'online') onlineHandler = handler;
+					if (event === 'offline') offlineHandler = handler;
+				},
+				removeEventListener() {},
+			};
+
+			try {
+				const store = createSyncableStore({
+					schema: testSchema,
+					account: accountStore,
+					storage,
+					storageKey: (addr) => `test-${addr}`,
+					defaultData: () => ({
+						settings: {theme: 'dark', volume: 0.5},
+						operations: {},
+					}),
+					clock: () => clock,
+					sync: mockSyncAdapter,
+					syncConfig: {debounceMs: 10},
+				});
+
+				accountStore.set('0x1234567890123456789012345678901234567890');
+				await new Promise((r) => setTimeout(r, 20));
+
+				const initialPushCount = pushCallCount;
+
+				// Simulate going offline then online
+				offlineHandler?.();
+				await new Promise((r) => setTimeout(r, 10));
+				onlineHandler?.();
+				await new Promise((r) => setTimeout(r, 20));
+
+				// Should have triggered a push sync
+				expect(pushCallCount).toBeGreaterThan(initialPushCount);
+
+				store.stop();
+			} finally {
+				globalThis.window = originalWindow;
+			}
+		});
+
+		it('updates syncState to offline when going offline', async () => {
+			const mockSyncAdapter = {
+				async pull(_account: `0x${string}`) {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					return changes;
+				},
+			};
+
+			// Mock window online/offline events
+			let offlineHandler: (() => void) | undefined;
+			const originalWindow = globalThis.window;
+
+			(globalThis as unknown as { window: unknown }).window = {
+				addEventListener(event: string, handler: () => void) {
+					if (event === 'offline') offlineHandler = handler;
+				},
+				removeEventListener() {},
+			};
+
+			try {
+				const store = createSyncableStore({
+					schema: testSchema,
+					account: accountStore,
+					storage,
+					storageKey: (addr) => `test-${addr}`,
+					defaultData: () => ({
+						settings: {theme: 'dark', volume: 0.5},
+						operations: {},
+					}),
+					clock: () => clock,
+					sync: mockSyncAdapter,
+				});
+
+				accountStore.set('0x1234567890123456789012345678901234567890');
+				await new Promise((r) => setTimeout(r, 20));
+
+				// Initial state should be idle
+				expect(store.status.syncState).toBe('idle');
+
+				// Simulate going offline
+				offlineHandler?.();
+
+				// Status should be offline
+				expect(store.status.syncState).toBe('offline');
+
+				store.stop();
+			} finally {
+				globalThis.window = originalWindow;
+			}
+		});
+
+		it('can be disabled via syncConfig.syncOnReconnect = false', async () => {
+			let pushCallCount = 0;
+			const mockSyncAdapter = {
+				async pull(_account: `0x${string}`) {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					pushCallCount++;
+					return changes;
+				},
+			};
+
+			// Mock window online/offline events
+			let onlineHandler: (() => void) | undefined;
+			const originalWindow = globalThis.window;
+
+			(globalThis as unknown as { window: unknown }).window = {
+				addEventListener(event: string, handler: () => void) {
+					if (event === 'online') onlineHandler = handler;
+				},
+				removeEventListener() {},
+			};
+
+			try {
+				const store = createSyncableStore({
+					schema: testSchema,
+					account: accountStore,
+					storage,
+					storageKey: (addr) => `test-${addr}`,
+					defaultData: () => ({
+						settings: {theme: 'dark', volume: 0.5},
+						operations: {},
+					}),
+					clock: () => clock,
+					sync: mockSyncAdapter,
+					syncConfig: {syncOnReconnect: false}, // Disable
+				});
+
+				accountStore.set('0x1234567890123456789012345678901234567890');
+				await new Promise((r) => setTimeout(r, 20));
+
+				const initialPushCount = pushCallCount;
+
+				// Simulate coming online
+				onlineHandler?.();
+				await new Promise((r) => setTimeout(r, 20));
+
+				// Should NOT have triggered a push because disabled
+				expect(pushCallCount).toBe(initialPushCount);
+
+				store.stop();
+			} finally {
+				globalThis.window = originalWindow;
+			}
+		});
+	});
+
+	describe('intervalMs - Periodic Sync', () => {
+		it('triggers periodic pull at configured interval', async () => {
+			let pullCallCount = 0;
+			const mockSyncAdapter = {
+				async pull(_account: `0x${string}`) {
+					pullCallCount++;
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {intervalMs: 50}, // Very short interval for testing
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			const initialPullCount = pullCallCount;
+
+			// Wait for two intervals to pass
+			await new Promise((r) => setTimeout(r, 120));
+
+			// Should have triggered at least one additional pull
+			expect(pullCallCount).toBeGreaterThan(initialPullCount);
+
+			store.stop();
+		});
+
+		it('respects 0 to disable periodic sync', async () => {
+			let pullCallCount = 0;
+			const mockSyncAdapter = {
+				async pull(_account: `0x${string}`) {
+					pullCallCount++;
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {intervalMs: 0}, // Disabled
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			const initialPullCount = pullCallCount;
+
+			// Wait for a period
+			await new Promise((r) => setTimeout(r, 100));
+
+			// Should NOT have triggered additional pulls (only initial)
+			expect(pullCallCount).toBe(initialPullCount);
+
+			store.stop();
+		});
+
+		it('cleans up interval timer on stop', async () => {
+			let pullCallCount = 0;
+			const mockSyncAdapter = {
+				async pull(_account: `0x${string}`) {
+					pullCallCount++;
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {intervalMs: 50},
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Stop the store
+			store.stop();
+
+			const countAfterStop = pullCallCount;
+
+			// Wait for periods to pass
+			await new Promise((r) => setTimeout(r, 150));
+
+			// Should NOT have triggered additional pulls after stop
+			expect(pullCallCount).toBe(countAfterStop);
+		});
+	});
+
 	describe('state transition events', () => {
 		it('emits state events during account load: loading -> ready', async () => {
 			// Register listener BEFORE creating store to capture all events
