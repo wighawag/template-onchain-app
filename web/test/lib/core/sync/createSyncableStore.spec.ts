@@ -1874,4 +1874,232 @@ describe('createSyncableStore', () => {
 			}
 		});
 	});
+
+	describe('migrations', () => {
+		it('runs migrations sequentially when loading data with older version', async () => {
+			// Pre-populate storage with version 1 data
+			storage.data.set('test-0x1234567890123456789012345678901234567890', {
+				$version: 1,
+				data: {
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				},
+				$timestamps: {settings: 500},
+				$itemTimestamps: {operations: {}},
+				$tombstones: {operations: {}},
+			});
+
+			// Track migration calls
+			const migrationCalls: number[] = [];
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				schemaVersion: 3, // Target version 3
+				migrations: {
+					2: (oldData: unknown) => {
+						migrationCalls.push(2);
+						const data = oldData as any;
+						// Migration from v1 to v2: Add 'newField' to settings (simulated)
+						return {
+							...data,
+							$version: 2,
+							data: {
+								...data.data,
+								settings: {
+									...data.data.settings,
+									migratedFrom: 1,
+								},
+							},
+						};
+					},
+					3: (oldData: unknown) => {
+						migrationCalls.push(3);
+						const data = oldData as any;
+						// Migration from v2 to v3
+						return {
+							...data,
+							$version: 3,
+							data: {
+								...data.data,
+								settings: {
+									...data.data.settings,
+									migratedFrom: 2,
+								},
+							},
+						};
+					},
+				},
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Verify migrations were called in order
+			expect(migrationCalls).toEqual([2, 3]);
+
+			// Verify store is ready with migrated data
+			if (store.state.status === 'ready') {
+				expect((store.state.data.settings as any).migratedFrom).toBe(2);
+			} else {
+				expect.fail('Store should be ready');
+			}
+
+			// Verify migrated data was saved to storage
+			const saved = storage.data.get(
+				'test-0x1234567890123456789012345678901234567890',
+			);
+			expect(saved?.$version).toBe(3);
+		});
+
+		it('sets error when migration is missing', async () => {
+			// Pre-populate storage with version 1 data
+			storage.data.set('test-0x1234567890123456789012345678901234567890', {
+				$version: 1,
+				data: {
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				},
+				$timestamps: {settings: 500},
+				$itemTimestamps: {operations: {}},
+				$tombstones: {operations: {}},
+			});
+
+			// Create store with schemaVersion 3 but only migration for v3 (missing v2)
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				schemaVersion: 3, // Target version 3
+				migrations: {
+					// Missing migration for version 2!
+					3: (oldData: unknown) => {
+						const data = oldData as any;
+						return {
+							...data,
+							$version: 3,
+						};
+					},
+				},
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 50));
+
+			// Store should remain in loading state since migration failed
+			expect(store.state.status).toBe('loading');
+
+			// Error should be captured in status
+			expect(store.status.storageError).toBeDefined();
+			expect(store.status.storageError?.message).toBe(
+				'Missing migration for version 2',
+			);
+		});
+
+		it('does not run migrations when schema version matches', async () => {
+			// Pre-populate storage with version 3 data (same as target)
+			storage.data.set('test-0x1234567890123456789012345678901234567890', {
+				$version: 3,
+				data: {
+					settings: {theme: 'existing', volume: 0.7},
+					operations: {},
+				},
+				$timestamps: {settings: 500},
+				$itemTimestamps: {operations: {}},
+				$tombstones: {operations: {}},
+			});
+
+			const migrationCalls: number[] = [];
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				schemaVersion: 3,
+				migrations: {
+					2: () => {
+						migrationCalls.push(2);
+						return {} as any;
+					},
+					3: () => {
+						migrationCalls.push(3);
+						return {} as any;
+					},
+				},
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// No migrations should have been called
+			expect(migrationCalls).toEqual([]);
+
+			// Store should be ready with existing data
+			if (store.state.status === 'ready') {
+				expect(store.state.data.settings.theme).toBe('existing');
+			} else {
+				expect.fail('Store should be ready');
+			}
+		});
+
+		it('uses default data for new accounts (no migration needed)', async () => {
+			// No pre-existing data in storage
+			const migrationCalls: number[] = [];
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'default-theme', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				schemaVersion: 3,
+				migrations: {
+					2: () => {
+						migrationCalls.push(2);
+						return {} as any;
+					},
+					3: () => {
+						migrationCalls.push(3);
+						return {} as any;
+					},
+				},
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// No migrations should have been called (new account uses default)
+			expect(migrationCalls).toEqual([]);
+
+			// Store should be ready with default data
+			if (store.state.status === 'ready') {
+				expect(store.state.data.settings.theme).toBe('default-theme');
+			} else {
+				expect.fail('Store should be ready');
+			}
+		});
+	});
 });

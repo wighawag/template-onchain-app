@@ -84,6 +84,9 @@ export interface SyncableStoreConfig<S extends Schema> {
 
 	/** Optional: Sync configuration */
 	syncConfig?: SyncConfig;
+
+	/** Migration functions keyed by target version. Old data is passed as unknown type and must be cast appropriately. */
+	migrations?: Record<number, (oldData: unknown) => InternalStorage<S>>;
 }
 
 // ============================================================================
@@ -180,6 +183,7 @@ export function createSyncableStore<S extends Schema>(
 		schemaVersion = 1,
 		sync: syncAdapter,
 		syncConfig,
+		migrations,
 	} = config;
 
 	// Sync configuration with defaults
@@ -458,7 +462,35 @@ export function createSyncableStore<S extends Schema>(
 		// Check if account changed during async load
 		if (currentGeneration !== loadGeneration) return;
 
-		internalStorage = localData ?? createDefaultInternalStorage();
+		if (localData) {
+			const storedVersion = localData.$version ?? 0;
+
+			if (storedVersion < schemaVersion) {
+				// Run migrations sequentially
+				let migrated: unknown = localData;
+				try {
+					for (let v = storedVersion + 1; v <= schemaVersion; v++) {
+						const migration = migrations?.[v];
+						if (!migration) {
+							throw new Error(`Missing migration for version ${v}`);
+						}
+						migrated = migration(migrated);
+						(migrated as { $version: number }).$version = v;
+					}
+					internalStorage = migrated as InternalStorage<S>;
+				} catch (error) {
+					// Migration failed - store error and stay in loading state
+					(status as { storageError: Error | null }).storageError = error as Error;
+					notifyStatusChange();
+					// Don't proceed to ready state - leave in loading state
+					return;
+				}
+			} else {
+				internalStorage = localData;
+			}
+		} else {
+			internalStorage = createDefaultInternalStorage();
+		}
 
 		// Cleanup expired items
 		internalStorage = cleanup(internalStorage, schema, clock());
