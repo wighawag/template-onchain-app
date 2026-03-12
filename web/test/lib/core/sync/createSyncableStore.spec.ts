@@ -285,6 +285,28 @@ describe('createSyncableStore', () => {
 		}
 	});
 
+	it('throws when removing non-existent item', async () => {
+		const store = createSyncableStore({
+			schema: testSchema,
+			account: accountStore,
+			storage,
+			storageKey: (addr) => `test-${addr}`,
+			defaultData: () => ({
+				settings: {theme: 'dark', volume: 0.5},
+				operations: {},
+			}),
+			clock: () => clock,
+		});
+		store.start();
+
+		accountStore.set('0x1234567890123456789012345678901234567890');
+		await new Promise((r) => setTimeout(r, 10));
+
+		expect(() => store.remove('operations', 'non-existent')).toThrow(
+			'Item non-existent does not exist in operations',
+		);
+	});
+
 	it('persists data to storage', async () => {
 		const store = createSyncableStore({
 			schema: testSchema,
@@ -939,6 +961,101 @@ describe('createSyncableStore', () => {
 
 			// Should be back to idle
 			expect(statusHistory[statusHistory.length - 1]).toBe('idle');
+		});
+	});
+
+	describe('flush', () => {
+		it('resolves immediately when no pending saves', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+			store.start();
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// No pending saves - should resolve immediately
+			expect(store.status.pendingSaves).toBe(0);
+			await expect(store.flush()).resolves.toBeUndefined();
+		});
+
+		it('waits for pending saves to complete', async () => {
+			// Create a slow storage that we can control
+			let saveResolve: (() => void) | undefined;
+			let saveStarted = false;
+
+			const slowStorage: AsyncStorage<InternalStorage<TestSchema>> = {
+				async load(key: string) {
+					return storage.data.get(key);
+				},
+				async save(key: string, value: InternalStorage<TestSchema>) {
+					if (saveStarted) {
+						// Second save (after set()) - wait for our signal
+						await new Promise<void>((resolve) => {
+							saveResolve = resolve;
+						});
+					}
+					saveStarted = true;
+					storage.data.set(key, value);
+				},
+				async remove(key: string) {
+					storage.data.delete(key);
+				},
+				async exists(key: string) {
+					return storage.data.has(key);
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage: slowStorage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+			store.start();
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Trigger a save
+			store.set('settings', {theme: 'light', volume: 0.8});
+
+			// Wait a moment for the save to start
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Should have pending saves
+			expect(store.status.pendingSaves).toBeGreaterThan(0);
+
+			// Start flush - it should wait
+			let flushComplete = false;
+			const flushPromise = store.flush().then(() => {
+				flushComplete = true;
+			});
+
+			// Flush should not be complete yet
+			await new Promise((r) => setTimeout(r, 20));
+			expect(flushComplete).toBe(false);
+
+			// Complete the save
+			saveResolve!();
+
+			// Now flush should complete
+			await flushPromise;
+			expect(flushComplete).toBe(true);
+			expect(store.status.pendingSaves).toBe(0);
 		});
 	});
 
