@@ -411,48 +411,99 @@ async syncNow(): Promise<void> {
 
 ---
 
-## Phase 6: Enhanced Event Handling (Lower Priority)
+## Phase 6: Enhanced Event Handling (Lower Priority) ✅ IMPLEMENTED
 
-### 6.1 Add Load/Clear Event Helpers
+### 6.1 Load/Clear Event Helpers - SKIPPED
 
-**Purpose:** Emit proper events on account transitions.
+**Status:** Not implemented - users should watch the `state` event instead to be notified of account transitions and data loading.
 
-**Implementation:**
-
-1. Add `emitLoadEvents` helper:
-   ```typescript
-   function emitLoadEvents(data: DataOf<S>): void {
-     for (const field of Object.keys(schema)) {
-       if (schema[field].__type === 'permanent') {
-         emitter.emit(`${field}:changed` as keyof StoreEvents<S>, 
-           data[field] as StoreEvents<S>[keyof StoreEvents<S>]);
-       } else if (schema[field].__type === 'map') {
-         const items = (data[field] ?? {}) as Record<string, unknown>;
-         for (const [key, item] of Object.entries(items)) {
-           emitter.emit(`${field}:added` as keyof StoreEvents<S>, 
-             { key, item } as StoreEvents<S>[keyof StoreEvents<S>]);
-         }
-       }
-     }
-   }
-   ```
-
-2. Call after transitioning to ready state in `setAccount`.
+**Rationale:** The `state` event already fires when transitioning to `ready` state. Components can subscribe to the store's `state` event and read the current data when notified. This is simpler and avoids emitting potentially large numbers of synthetic events on account load.
 
 ---
 
-### 6.2 Enhance `subscribe()` Behavior
+### 6.2 Hierarchical Reactivity Model ✅ IMPLEMENTED
 
-**Purpose:** Make the main store subscription not trigger on individual item updates (leave that to `getItemStore`).
+**Purpose:** Provide three levels of reactivity to optimize re-renders:
 
-**Current behavior:** Notifies on all state changes.
+1. **Level 1 - `subscribe()`**: State transitions only (idle/loading/ready)
+2. **Level 2 - `getFieldStore(field)`**: Field-level changes
+3. **Level 3 - `getItemStore(field, key)`**: Individual item changes (Phase 1)
 
-**Enhanced behavior:** Only notify on:
-- State transitions (idle/loading/ready)
-- Permanent field changes
-- Map add/remove (not update)
+**Implementation:**
 
-This is an **optimization** - the current implementation works but may cause unnecessary re-renders. Consider implementing after `getItemStore` is available and in use.
+#### 6.2.1 Enhanced `subscribe()` Behavior
+
+Main store `subscribe()` now ONLY triggers on state transitions, NOT on data mutations.
+
+**Changes made:**
+- Removed `notifyStateChange()` calls from `set()`, `patch()`, `add()`, `update()`, `remove()` methods
+- State change notifications now only happen during account transitions
+
+**Behavior:**
+- ✅ Triggers when state changes: idle → loading → ready
+- ❌ Does NOT trigger on `set()` or `patch()` for permanent fields
+- ❌ Does NOT trigger on `add()`, `update()`, or `remove()` for map fields
+
+#### 6.2.2 Add `getFieldStore()` Method
+
+**Interface:**
+```typescript
+getFieldStore<K extends keyof S>(field: K): Readable<DataOf<S>[K] | undefined>;
+```
+
+**Behavior by field type:**
+
+| Field Type | Triggers on |
+|------------|-------------|
+| `permanent` | `set()`, `patch()` |
+| `map` | `add()`, `remove()` (NOT `update()`) |
+
+**Implementation:**
+```typescript
+getFieldStore<K extends keyof S>(field: K): Readable<DataOf<S>[K] | undefined> {
+  const cacheKey = `field:${String(field)}`;
+  const cached = fieldStoreCache.get(cacheKey);
+  if (cached) return cached as Readable<DataOf<S>[K] | undefined>;
+
+  const getCurrentValue = (): DataOf<S>[K] | undefined => {
+    if (asyncState.status !== 'ready') return undefined;
+    return asyncState.data[field];
+  };
+
+  const schemaField = schema[field];
+  const fieldStore: Readable<DataOf<S>[K] | undefined> = {
+    subscribe(callback) {
+      callback(getCurrentValue());
+
+      const unsubState = emitter.on('state', () => callback(getCurrentValue()));
+      
+      if (schemaField.__type === 'permanent') {
+        const unsubChanged = emitter.on(`${String(field)}:changed` as keyof StoreEvents<S>, () => {
+          callback(getCurrentValue());
+        });
+        return () => { unsubState(); unsubChanged(); };
+      } else if (schemaField.__type === 'map') {
+        const unsubAdded = emitter.on(`${String(field)}:added` as keyof StoreEvents<S>, () => {
+          callback(getCurrentValue());
+        });
+        const unsubRemoved = emitter.on(`${String(field)}:removed` as keyof StoreEvents<S>, () => {
+          callback(getCurrentValue());
+        });
+        return () => { unsubState(); unsubAdded(); unsubRemoved(); };
+      }
+
+      return () => { unsubState(); };
+    },
+  };
+
+  fieldStoreCache.set(cacheKey, fieldStore);
+  return fieldStore;
+}
+```
+
+**Cache management:**
+- Field stores are cached for efficiency
+- Cache is cleared on account switch (in `setAccount`)
 
 ---
 
@@ -498,6 +549,8 @@ gantt
 | `intervalMs` | Triggers periodic sync, respects 0 value to disable |
 | `pendingCount` | Increments on mutations, resets on sync |
 | `migrations` | Runs migrations sequentially, throws on missing migration |
+| `subscribe()` enhanced ✅ | Only triggers on state transitions (idle/loading/ready), NOT on data mutations (set/patch/add/update/remove) |
+| `getFieldStore` ✅ | Returns cached store, triggers on field changes, permanent field triggers on set/patch, map field triggers on add/remove only (not update), cache cleared on account switch |
 
 ### Integration Tests
 
@@ -530,6 +583,9 @@ export interface SyncableStore<S extends Schema> {
     field: K,
     key: string,
   ): Readable<(ExtractMapItem<S[K]> & { deleteAt: number }) | undefined>;
+  
+  /** Get a reactive store for an entire field (Phase 6) ✅ IMPLEMENTED */
+  getFieldStore<K extends keyof S>(field: K): Readable<DataOf<S>[K] | undefined>;
   
   /** Subscribe to status changes (Svelte store contract) */
   readonly statusStore: Readable<StoreStatus>;

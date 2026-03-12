@@ -1843,7 +1843,7 @@ describe('createSyncableStore', () => {
 			expect(events[events.length - 1].status).toBe('idle');
 		});
 
-		it('emits state event when data is modified', async () => {
+		it('does NOT emit state event when data is modified (use field events instead)', async () => {
 			const store = createSyncableStore({
 				schema: testSchema,
 				account: accountStore,
@@ -1862,16 +1862,14 @@ describe('createSyncableStore', () => {
 			const events: AsyncState<DataOf<TestSchema>>[] = [];
 			store.on('state', (state) => events.push(state));
 
+			// Clear any events from the initial setup
+			events.length = 0;
+
 			store.set('settings', {theme: 'light', volume: 0.8});
 
-			// Should emit state event with updated data
-			expect(events.length).toBeGreaterThan(0);
-			const lastEvent = events[events.length - 1];
-			if (lastEvent.status === 'ready') {
-				expect(lastEvent.data.settings.theme).toBe('light');
-			} else {
-				expect.fail('Expected ready state');
-			}
+			// State event should NOT be emitted on data modifications
+			// (use field-level events like 'settings:changed' instead)
+			expect(events.length).toBe(0);
 		});
 	});
 
@@ -2100,6 +2098,420 @@ describe('createSyncableStore', () => {
 			} else {
 				expect.fail('Store should be ready');
 			}
+		});
+	});
+
+	describe('enhanced subscribe - state transitions only', () => {
+		it('subscribe() triggers on state transitions (idle -> loading -> ready)', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			const states: AsyncState<DataOf<TestSchema>>[] = [];
+			store.subscribe((state) => states.push(state));
+
+			// Clear initial subscription
+			states.length = 0;
+
+			// Trigger state transitions
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Should have loading -> ready transitions
+			const statuses = states.map((s) => s.status);
+			expect(statuses).toContain('loading');
+			expect(statuses).toContain('ready');
+		});
+
+		it('subscribe() does NOT trigger on permanent field set()', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Track subscription calls after ready state
+			let subscriptionCallCount = 0;
+			store.subscribe(() => {
+				subscriptionCallCount++;
+			});
+
+			// Reset count after initial subscription
+			subscriptionCallCount = 0;
+
+			// Make a change to permanent field
+			store.set('settings', {theme: 'light', volume: 0.8});
+
+			// Should NOT have triggered another subscription call
+			expect(subscriptionCallCount).toBe(0);
+		});
+
+		it('subscribe() does NOT trigger on map add/update/remove', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Track subscription calls after ready state
+			let subscriptionCallCount = 0;
+			store.subscribe(() => {
+				subscriptionCallCount++;
+			});
+
+			// Reset count after initial subscription
+			subscriptionCallCount = 0;
+
+			// Add item
+			store.add(
+				'operations',
+				'op-1',
+				{tx: '0xabc', status: 'pending'},
+				{deleteAt: 9999},
+			);
+			expect(subscriptionCallCount).toBe(0);
+
+			// Update item
+			clock = 2000;
+			store.update('operations', 'op-1', {tx: '0xabc', status: 'confirmed'});
+			expect(subscriptionCallCount).toBe(0);
+
+			// Remove item
+			store.remove('operations', 'op-1');
+			expect(subscriptionCallCount).toBe(0);
+		});
+	});
+
+	describe('getFieldStore', () => {
+		it('returns undefined when store is not ready (permanent field)', () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			// Store is idle - no account set
+			let fieldValue: unknown;
+			const fieldStore = store.getFieldStore('settings');
+			fieldStore.subscribe((v) => (fieldValue = v));
+
+			expect(fieldValue).toBeUndefined();
+		});
+
+		it('returns current value for permanent field', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			let fieldValue: {theme: string; volume: number} | undefined;
+			const fieldStore = store.getFieldStore('settings');
+			fieldStore.subscribe((v) => (fieldValue = v));
+
+			expect(fieldValue).toBeDefined();
+			expect(fieldValue?.theme).toBe('dark');
+			expect(fieldValue?.volume).toBe(0.5);
+		});
+
+		it('triggers on set() for permanent field', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			let fieldValue: {theme: string; volume: number} | undefined;
+			const fieldStore = store.getFieldStore('settings');
+			fieldStore.subscribe((v) => (fieldValue = v));
+
+			// Change the field
+			store.set('settings', {theme: 'light', volume: 0.9});
+
+			expect(fieldValue?.theme).toBe('light');
+			expect(fieldValue?.volume).toBe(0.9);
+		});
+
+		it('triggers on patch() for permanent field', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			let fieldValue: {theme: string; volume: number} | undefined;
+			const fieldStore = store.getFieldStore('settings');
+			fieldStore.subscribe((v) => (fieldValue = v));
+
+			// Patch the field
+			store.patch('settings', {volume: 0.9});
+
+			expect(fieldValue?.theme).toBe('dark'); // unchanged
+			expect(fieldValue?.volume).toBe(0.9); // patched
+		});
+
+		it('returns current value for map field', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Add some items first
+			store.add(
+				'operations',
+				'op-1',
+				{tx: '0xabc', status: 'pending'},
+				{deleteAt: 9999},
+			);
+
+			let fieldValue: Record<string, {tx: string; status: string; deleteAt: number}> | undefined;
+			const fieldStore = store.getFieldStore('operations');
+			fieldStore.subscribe((v) => (fieldValue = v as any));
+
+			expect(fieldValue).toBeDefined();
+			expect(Object.keys(fieldValue || {}).length).toBe(1);
+			expect(fieldValue?.['op-1']?.tx).toBe('0xabc');
+		});
+
+		it('triggers on add() for map field', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			let fieldValue: Record<string, {tx: string; status: string; deleteAt: number}> | undefined;
+			const fieldStore = store.getFieldStore('operations');
+			fieldStore.subscribe((v) => (fieldValue = v as any));
+
+			// Initially empty
+			expect(Object.keys(fieldValue || {}).length).toBe(0);
+
+			// Add an item
+			store.add(
+				'operations',
+				'op-1',
+				{tx: '0xabc', status: 'pending'},
+				{deleteAt: 9999},
+			);
+
+			// Should now have the item
+			expect(Object.keys(fieldValue || {}).length).toBe(1);
+			expect(fieldValue?.['op-1']?.tx).toBe('0xabc');
+		});
+
+		it('triggers on remove() for map field', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Add item first
+			store.add(
+				'operations',
+				'op-1',
+				{tx: '0xabc', status: 'pending'},
+				{deleteAt: 9999},
+			);
+
+			let fieldValue: Record<string, {tx: string; status: string; deleteAt: number}> | undefined;
+			const fieldStore = store.getFieldStore('operations');
+			fieldStore.subscribe((v) => (fieldValue = v as any));
+
+			// Has item
+			expect(Object.keys(fieldValue || {}).length).toBe(1);
+
+			// Remove it
+			store.remove('operations', 'op-1');
+
+			// Should be empty
+			expect(Object.keys(fieldValue || {}).length).toBe(0);
+		});
+
+		it('does NOT trigger on update() for map field', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Add item first
+			store.add(
+				'operations',
+				'op-1',
+				{tx: '0xabc', status: 'pending'},
+				{deleteAt: 9999},
+			);
+
+			let subscribeCallCount = 0;
+			const fieldStore = store.getFieldStore('operations');
+			fieldStore.subscribe(() => {
+				subscribeCallCount++;
+			});
+
+			// Reset count after initial subscription
+			subscribeCallCount = 0;
+
+			// Update item
+			clock = 2000;
+			store.update('operations', 'op-1', {tx: '0xabc', status: 'confirmed'});
+
+			// Should NOT have triggered the field store
+			expect(subscribeCallCount).toBe(0);
+		});
+
+		it('returns cached instance for same field', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Get field store twice
+			const fieldStore1 = store.getFieldStore('settings');
+			const fieldStore2 = store.getFieldStore('settings');
+
+			// Should be the same instance
+			expect(fieldStore1).toBe(fieldStore2);
+
+			// Different field should return different instance
+			const fieldStore3 = store.getFieldStore('operations');
+			expect(fieldStore1).not.toBe(fieldStore3);
+		});
+
+		it('clears cache on account switch', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			// First account
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			const fieldStore1 = store.getFieldStore('settings');
+
+			// Switch to different account
+			accountStore.set('0x0000000000000000000000000000000000000001');
+			await new Promise((r) => setTimeout(r, 20));
+
+			const fieldStore2 = store.getFieldStore('settings');
+
+			// Should be different instances after account switch
+			expect(fieldStore1).not.toBe(fieldStore2);
 		});
 	});
 });

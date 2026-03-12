@@ -150,6 +150,9 @@ export interface SyncableStore<S extends Schema> {
 		key: string,
 	): Readable<(ExtractMapItem<S[K]> & { deleteAt: number }) | undefined>;
 
+	/** Get a reactive store for a top-level field */
+	getFieldStore<K extends keyof S>(field: K): Readable<DataOf<S>[K] | undefined>;
+
 	/** Subscribe to status changes (Svelte store contract) */
 	readonly statusStore: Readable<StoreStatus>;
 
@@ -253,6 +256,9 @@ export function createSyncableStore<S extends Schema>(
 
 	// Item store cache for fine-grained reactivity
 	const itemStoreCache = new Map<string, Readable<unknown>>();
+
+	// Field store cache for field-level reactivity
+	const fieldStoreCache = new Map<string, Readable<unknown>>();
 
 	// Status subscribers for reactive status store
 	const statusSubscribers = new Set<(status: StoreStatus) => void>();
@@ -437,6 +443,9 @@ export function createSyncableStore<S extends Schema>(
 		// Clear item store cache on account switch
 		itemStoreCache.clear();
 
+		// Clear field store cache on account switch
+		fieldStoreCache.clear();
+
 		// Remember if we were ready
 		const wasReady = asyncState.status === 'ready';
 
@@ -563,9 +572,8 @@ export function createSyncableStore<S extends Schema>(
 			// Update state
 			asyncState = { ...asyncState, data: { ...internalStorage.data } };
 
-			// Emit event
+			// Emit event (for field-level subscribers, NOT main subscribe)
 			emitter.emit(`${String(field)}:changed` as keyof StoreEvents<S>, value as StoreEvents<S>[keyof StoreEvents<S>]);
-			notifyStateChange();
 
 			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
@@ -590,9 +598,8 @@ export function createSyncableStore<S extends Schema>(
 			// Update state
 			asyncState = { ...asyncState, data: { ...internalStorage.data } };
 
-			// Emit event
+			// Emit event (for field-level subscribers, NOT main subscribe)
 			emitter.emit(`${String(field)}:changed` as keyof StoreEvents<S>, merged as StoreEvents<S>[keyof StoreEvents<S>]);
-			notifyStateChange();
 
 			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
@@ -628,9 +635,8 @@ export function createSyncableStore<S extends Schema>(
 			// Update state
 			asyncState = { ...asyncState, data: { ...internalStorage.data } };
 
-			// Emit event
+			// Emit event (for field-level subscribers, NOT main subscribe)
 			emitter.emit(`${String(field)}:added` as keyof StoreEvents<S>, { key, item: itemWithDeleteAt } as StoreEvents<S>[keyof StoreEvents<S>]);
-			notifyStateChange();
 
 			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
@@ -667,9 +673,8 @@ export function createSyncableStore<S extends Schema>(
 			// Update state
 			asyncState = { ...asyncState, data: { ...internalStorage.data } };
 
-			// Emit event
+			// Emit event (for item-level subscribers, NOT main subscribe)
 			emitter.emit(`${String(field)}:updated` as keyof StoreEvents<S>, { key, item: updatedItem } as StoreEvents<S>[keyof StoreEvents<S>]);
-			notifyStateChange();
 
 			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
@@ -708,9 +713,8 @@ export function createSyncableStore<S extends Schema>(
 			// Update state
 			asyncState = { ...asyncState, data: { ...internalStorage.data } };
 
-			// Emit event
+			// Emit event (for field-level subscribers, NOT main subscribe)
 			emitter.emit(`${String(field)}:removed` as keyof StoreEvents<S>, { key, item: existing } as StoreEvents<S>[keyof StoreEvents<S>]);
-			notifyStateChange();
 
 			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
@@ -856,6 +860,67 @@ export function createSyncableStore<S extends Schema>(
 			// Cache the store
 			itemStoreCache.set(cacheKey, itemStore);
 			return itemStore;
+		},
+
+		getFieldStore<K extends keyof S>(field: K): Readable<DataOf<S>[K] | undefined> {
+			type FieldType = DataOf<S>[K] | undefined;
+
+			// Check cache first
+			const cacheKey = String(field);
+			const cached = fieldStoreCache.get(cacheKey);
+			if (cached) return cached as Readable<FieldType>;
+
+			const getCurrentValue = (): FieldType => {
+				if (asyncState.status !== 'ready') return undefined;
+				return asyncState.data[field];
+			};
+
+			// Determine if this is a map field or permanent field
+			const fieldDef = schema[field];
+			const isMap = fieldDef.__type === 'map';
+
+			const fieldStore: Readable<FieldType> = {
+				subscribe(callback: (value: FieldType) => void): () => void {
+					callback(getCurrentValue());
+
+					// Subscribe to state changes for initial load
+					const unsubState = emitter.on('state', () => callback(getCurrentValue()));
+
+					// For permanent fields: listen to :changed events
+					// For map fields: listen to :added and :removed events (NOT :updated)
+					const unsubs: (() => void)[] = [unsubState];
+
+					if (isMap) {
+						unsubs.push(
+							emitter.on(`${String(field)}:added` as keyof StoreEvents<S>, () => {
+								callback(getCurrentValue());
+							}),
+						);
+						unsubs.push(
+							emitter.on(`${String(field)}:removed` as keyof StoreEvents<S>, () => {
+								callback(getCurrentValue());
+							}),
+						);
+						// Intentionally NOT listening to :updated - use getItemStore for that
+					} else {
+						unsubs.push(
+							emitter.on(`${String(field)}:changed` as keyof StoreEvents<S>, () => {
+								callback(getCurrentValue());
+							}),
+						);
+					}
+
+					return () => {
+						for (const unsub of unsubs) {
+							unsub();
+						}
+					};
+				},
+			};
+
+			// Cache the store
+			fieldStoreCache.set(cacheKey, fieldStore);
+			return fieldStore;
 		},
 
 		async syncNow(): Promise<void> {
