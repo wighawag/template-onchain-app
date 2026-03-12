@@ -528,7 +528,7 @@ describe('createSyncableStore', () => {
 			store.start();
 
 			const events: AsyncState<DataOf<TestSchema>>[] = [];
-			store.on('state', (state) => events.push(state));
+			store.on('$store:state', (state) => events.push(state));
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -2023,7 +2023,7 @@ describe('createSyncableStore', () => {
 			});
 			store.start();
 
-			store.on('state', (state) => events.push(state));
+			store.on('$store:state', (state) => events.push(state));
 
 			// Set account to trigger loading -> ready
 			accountStore.set('0x1234567890123456789012345678901234567890');
@@ -2053,7 +2053,7 @@ describe('createSyncableStore', () => {
 			await new Promise((r) => setTimeout(r, 10));
 
 			const events: AsyncState<DataOf<TestSchema>>[] = [];
-			store.on('state', (state) => events.push(state));
+			store.on('$store:state', (state) => events.push(state));
 
 			accountStore.set(undefined);
 			await new Promise((r) => setTimeout(r, 10));
@@ -2079,7 +2079,7 @@ describe('createSyncableStore', () => {
 			await new Promise((r) => setTimeout(r, 10));
 
 			const events: AsyncState<DataOf<TestSchema>>[] = [];
-			store.on('state', (state) => events.push(state));
+			store.on('$store:state', (state) => events.push(state));
 
 			// Clear any events from the initial setup
 			events.length = 0;

@@ -203,7 +203,7 @@ export interface SyncableStore<S extends Schema> {
  * const store = createSyncableStore(config);
  *
  * // Set up event listeners first
- * store.on('sync', (event) => console.log(event));
+ * store.on('$store:sync', (event) => console.log(event));
  *
  * // Then start watching account changes
  * store.start();
@@ -311,8 +311,8 @@ export function createSyncableStore<S extends Schema>(
 
 	// Helper to emit status events (works around TypeScript generic intersection issues)
 	function emitStatus(): void {
-		(emitter.emit as (event: 'store:status', data: StoreStatus) => void)(
-			'store:status',
+		(emitter.emit as (event: '$store:status', data: StoreStatus) => void)(
+			'$store:status',
 			status,
 		);
 	}
@@ -351,7 +351,7 @@ export function createSyncableStore<S extends Schema>(
 	const statusStore: Readable<StoreStatus> = {
 		subscribe(callback: (status: StoreStatus) => void): () => void {
 			callback(status);
-			return emitter.on('store:status', callback);
+			return emitter.on('$store:status', callback);
 		},
 	};
 
@@ -392,7 +392,7 @@ export function createSyncableStore<S extends Schema>(
 			mutableStatus.syncError = null; // Clear previous error when starting new sync
 			emitStatus();
 			if (retryCount === 0) {
-				emitter.emit('sync', {type: 'started'});
+				emitter.emit('$store:sync', {type: 'started'});
 			}
 
 			// Step 1: Pull latest from server
@@ -452,7 +452,7 @@ export function createSyncableStore<S extends Schema>(
 				mutableStatus.syncError = null;
 				mutableStatus.hasPendingSync = false;
 				mutableStatus.isSyncing = false;
-				emitter.emit('sync', {type: 'completed', timestamp: Date.now()});
+				emitter.emit('$store:sync', {type: 'completed', timestamp: Date.now()});
 				emitStatus();
 			} else {
 				// Push was rejected - counter was stale
@@ -482,7 +482,7 @@ export function createSyncableStore<S extends Schema>(
 				// Max retries reached, emit failure
 				mutableStatus.syncError = error as Error;
 				mutableStatus.isSyncing = false;
-				emitter.emit('sync', {type: 'failed', error: error as Error});
+				emitter.emit('$store:sync', {type: 'failed', error: error as Error});
 				emitStatus();
 			}
 		}
@@ -536,7 +536,7 @@ export function createSyncableStore<S extends Schema>(
 			// Pull errors are non-fatal - we continue with local data
 			// Emit sync failed event so consumers can react to repeated failures
 			console.warn('Failed to pull from server:', error);
-			emitter.emit('sync', {type: 'failed', error: error as Error});
+			emitter.emit('$store:sync', {type: 'failed', error: error as Error});
 		}
 	}
 
@@ -592,13 +592,13 @@ export function createSyncableStore<S extends Schema>(
 		if (!newAccount) {
 			asyncState = {status: 'idle', account: undefined};
 			internalStorage = null;
-			emitter.emit('state', asyncState);
+			emitter.emit('$store:state', asyncState);
 			return;
 		}
 
 		// Transition to loading state
 		asyncState = {status: 'loading', account: newAccount};
-		emitter.emit('state', asyncState);
+		emitter.emit('$store:state', asyncState);
 
 		// Increment generation for race condition handling
 		loadGeneration++;
@@ -655,7 +655,7 @@ export function createSyncableStore<S extends Schema>(
 			account: newAccount,
 			data: internalStorage.data,
 		};
-		emitter.emit('state', asyncState);
+		emitter.emit('$store:state', asyncState);
 
 		// Pull from server (if sync adapter configured)
 		if (syncAdapter) {
@@ -933,7 +933,7 @@ export function createSyncableStore<S extends Schema>(
 
 		subscribe(callback: (state: AsyncState<DataOf<S>>) => void): () => void {
 			callback(asyncState);
-			return emitter.on('state', callback);
+			return emitter.on('$store:state', callback);
 		},
 
 		on: emitter.on.bind(emitter),
@@ -970,7 +970,7 @@ export function createSyncableStore<S extends Schema>(
 				handleOnline = () => {
 					mutableStatus.isOnline = true;
 					emitStatus();
-					emitter.emit('sync', {type: 'online'});
+					emitter.emit('$store:sync', {type: 'online'});
 					if (asyncState.status === 'ready') {
 						performSyncPush();
 					}
@@ -978,7 +978,7 @@ export function createSyncableStore<S extends Schema>(
 				handleOffline = () => {
 					mutableStatus.isOnline = false;
 					emitStatus();
-					emitter.emit('sync', {type: 'offline'});
+					emitter.emit('$store:sync', {type: 'offline'});
 				};
 				window.addEventListener('online', handleOnline);
 				window.addEventListener('offline', handleOffline);
@@ -1072,7 +1072,7 @@ export function createSyncableStore<S extends Schema>(
 					callback(getCurrentValue());
 
 					// Subscribe to state changes for initial load
-					const unsubState = emitter.on('state', () =>
+					const unsubState = emitter.on('$store:state', () =>
 						callback(getCurrentValue()),
 					);
 
@@ -1137,7 +1137,7 @@ export function createSyncableStore<S extends Schema>(
 					callback(getCurrentValue());
 
 					// Subscribe to state changes for initial load
-					const unsubState = emitter.on('state', () =>
+					const unsubState = emitter.on('$store:state', () =>
 						callback(getCurrentValue()),
 					);
 
@@ -1207,14 +1207,14 @@ export function createSyncableStore<S extends Schema>(
 				syncDebounceTimer = undefined;
 			}
 			emitStatus();
-			emitter.emit('sync', {type: 'paused'});
+			emitter.emit('$store:sync', {type: 'paused'});
 		},
 
 		resumeSync(): void {
 			syncPaused = false;
 			mutableStatus.isPaused = false;
 			emitStatus();
-			emitter.emit('sync', {type: 'resumed'});
+			emitter.emit('$store:sync', {type: 'resumed'});
 			if (syncDirty) {
 				scheduleSyncPush();
 			}

@@ -219,7 +219,7 @@ describe('Server Sync', () => {
 			await new Promise((r) => setTimeout(r, 50));
 
 			const syncEvents: {type: string}[] = [];
-			store.on('sync', (e) => syncEvents.push(e));
+			store.on('$store:sync', (e) => syncEvents.push(e));
 
 			store.set('settings', {theme: 'light', volume: 0.9});
 
@@ -254,7 +254,7 @@ describe('Server Sync', () => {
 			await new Promise((r) => setTimeout(r, 50));
 
 			const syncEvents: {type: string; timestamp?: number}[] = [];
-			store.on('sync', (e) => syncEvents.push(e));
+			store.on('$store:sync', (e) => syncEvents.push(e));
 
 			store.set('settings', {theme: 'light', volume: 0.9});
 
@@ -291,7 +291,7 @@ describe('Server Sync', () => {
 			await new Promise((r) => setTimeout(r, 50));
 
 			const syncEvents: {type: string; error?: Error}[] = [];
-			store.on('sync', (e) => syncEvents.push(e));
+			store.on('$store:sync', (e) => syncEvents.push(e));
 
 			store.set('settings', {theme: 'light', volume: 0.9});
 
@@ -520,7 +520,7 @@ describe('Server Sync', () => {
 			await new Promise((r) => setTimeout(r, 50));
 
 			const syncEvents: {type: string; error?: Error}[] = [];
-			store.on('sync', (e) => syncEvents.push(e));
+			store.on('$store:sync', (e) => syncEvents.push(e));
 
 			store.set('settings', {theme: 'light', volume: 0.9});
 

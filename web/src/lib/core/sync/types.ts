@@ -228,11 +228,12 @@ export type SyncEvent =
 
 /**
  * Base store events that are always present (not schema-derived).
+ * All use '$store:' prefix to avoid collision with schema-derived events.
  */
 type BaseStoreEvents<S extends Schema> = {
-	state: AsyncState<DataOf<S>>;
-	'store:status': StoreStatus;
-	sync: SyncEvent;
+	'$store:state': AsyncState<DataOf<S>>;
+	'$store:status': StoreStatus;
+	'$store:sync': SyncEvent;
 };
 
 /**
