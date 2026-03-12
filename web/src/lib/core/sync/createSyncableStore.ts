@@ -272,11 +272,6 @@ export function createSyncableStore<S extends Schema>(
 	let syncDirty = false;
 	let syncPaused = false;
 
-	// Server counter for optimistic locking (timestamp-based versioning)
-	// TODO: This is currently only used for tracking server state. The actual conflict
-	// detection happens server-side. Revisit this for potential client-side validation.
-	let serverCounter: bigint = 0n;
-
 	// Item store cache for fine-grained reactivity
 	const itemStoreCache = new Map<string, Readable<unknown>>();
 
@@ -343,9 +338,6 @@ export function createSyncableStore<S extends Schema>(
 			// Step 1: Pull latest from server
 			const pullResponse = await syncAdapter.pull(account);
 
-			// Update server counter tracking
-			serverCounter = pullResponse.counter;
-
 			// Step 2: Merge server data with local data (if server has data)
 			let dataToSync = internalStorage;
 			if (pullResponse.data) {
@@ -373,13 +365,12 @@ export function createSyncableStore<S extends Schema>(
 			}
 
 			// Step 4: Push merged data to server with new counter
-			const newCounter = BigInt(clock());
+			// Use max(clock, pullCounter + 1) to ensure monotonically increasing counters
+			// even for sub-millisecond operations
+			const newCounter = BigInt(Math.max(clock(), Number(pullResponse.counter) + 1));
 			const pushResponse = await syncAdapter.push(account, dataToSync, newCounter);
 
 			if (pushResponse.success) {
-				// Update server counter tracking
-				serverCounter = newCounter;
-
 				(status as { lastSyncedAt: number | null }).lastSyncedAt = Date.now();
 				(status as { syncError: Error | null }).syncError = null;
 				(status as { hasPendingSync: boolean }).hasPendingSync = false;
@@ -423,9 +414,6 @@ export function createSyncableStore<S extends Schema>(
 
 		try {
 			const pullResponse = await syncAdapter.pull(account);
-
-			// Update counter tracking
-			serverCounter = pullResponse.counter;
 
 			if (pullResponse.data) {
 				// Merge server data with local state
