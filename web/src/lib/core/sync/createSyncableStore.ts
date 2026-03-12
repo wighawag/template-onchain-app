@@ -387,12 +387,15 @@ export function createSyncableStore<S extends Schema>(
 					pullResponse.data,
 					schema,
 				);
-				dataToSync = merged;
+
+				// Run cleanup on merged data to remove expired items
+				const cleanedMerged = cleanup(merged, schema, clock());
+				dataToSync = cleanedMerged;
 
 				// Update local state if server had newer data
 				if (changes.length > 0) {
-					internalStorage = merged;
-					asyncState = {...asyncState, data: merged.data};
+					internalStorage = cleanedMerged;
+					asyncState = {...asyncState, data: cleanedMerged.data};
 
 					// Emit change events for any server-side updates
 					// NOTE: We do NOT call notifyStateChange() here - field-level events are sufficient
@@ -481,12 +484,15 @@ export function createSyncableStore<S extends Schema>(
 					schema,
 				);
 
+				// Run cleanup on merged data to remove expired items
+				const cleanedMerged = cleanup(merged, schema, clock());
+
 				if (changes.length > 0) {
-					internalStorage = merged;
+					internalStorage = cleanedMerged;
 
 					// Update async state data
 					if (asyncState.status === 'ready') {
-						asyncState = {...asyncState, data: merged.data};
+						asyncState = {...asyncState, data: cleanedMerged.data};
 					}
 
 					// Emit field-level change events - no notifyStateChange() needed
@@ -500,7 +506,7 @@ export function createSyncableStore<S extends Schema>(
 
 					// Save merged state to local storage
 					try {
-						await storage.save(storageKey(account), merged);
+						await storage.save(storageKey(account), cleanedMerged);
 					} catch (saveError) {
 						// Storage save errors during pull are non-fatal but should be logged
 						console.warn('Failed to save merged state to storage:', saveError);
@@ -509,7 +515,9 @@ export function createSyncableStore<S extends Schema>(
 			}
 		} catch (error) {
 			// Pull errors are non-fatal - we continue with local data
+			// Emit sync failed event so consumers can react to repeated failures
 			console.warn('Failed to pull from server:', error);
+			emitter.emit('sync', {type: 'failed', error: error as Error});
 		}
 	}
 
@@ -653,12 +661,15 @@ export function createSyncableStore<S extends Schema>(
 						schema,
 					);
 
+					// Run cleanup on merged data to remove expired items
+					const cleanedMerged = cleanup(merged, schema, clock());
+
 					if (changes.length > 0) {
-						internalStorage = merged;
+						internalStorage = cleanedMerged;
 
 						// Update async state data
 						if (asyncState.status === 'ready') {
-							asyncState = {...asyncState, data: merged.data};
+							asyncState = {...asyncState, data: cleanedMerged.data};
 						}
 
 						// Emit field-level change events - no notifyStateChange() needed
@@ -969,11 +980,11 @@ export function createSyncableStore<S extends Schema>(
 				}, intervalMs);
 			}
 
-			// Set up beforeunload listener to flush pending saves
+			// Set up beforeunload listener to warn about pending saves or unsynced changes
 			if (typeof window !== 'undefined') {
 				handleBeforeUnload = (e: BeforeUnloadEvent) => {
-					if (mutableStatus.pendingSaves > 0) {
-						// Attempt to prevent close and warn user about pending saves
+					if (mutableStatus.pendingSaves > 0 || mutableStatus.hasPendingSync) {
+						// Attempt to prevent close and warn user about pending saves or unsynced changes
 						e.preventDefault();
 						// Note: Most modern browsers ignore custom messages and show a generic one
 						e.returnValue =
