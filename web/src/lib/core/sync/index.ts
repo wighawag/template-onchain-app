@@ -35,6 +35,7 @@ export {
 	type SyncableStore,
 	type SyncableStoreConfig,
 	type AccountStore,
+	type Readable,
 } from './createSyncableStore';
 
 // Merge functions (for advanced use cases)

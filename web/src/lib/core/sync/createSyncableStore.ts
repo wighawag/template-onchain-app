@@ -21,6 +21,17 @@ import type {
 	SyncAdapter,
 	SyncConfig,
 } from './types';
+
+// ============================================================================
+// Readable Store Interface (Svelte store contract)
+// ============================================================================
+
+/**
+ * Minimal readable store interface matching Svelte's store contract.
+ */
+export interface Readable<T> {
+	subscribe(callback: (value: T) => void): () => void;
+}
 import type { AsyncStorage } from '../storage';
 import { cleanup } from './cleanup';
 import { mergeStore } from './merge';
@@ -129,6 +140,15 @@ export interface SyncableStore<S extends Schema> {
 
 	/** Stop watching */
 	stop(): void;
+
+	/** Get a reactive store for a specific map item */
+	getItemStore<K extends MapKeys<S>>(
+		field: K,
+		key: string,
+	): Readable<(ExtractMapItem<S[K]> & { deleteAt: number }) | undefined>;
+
+	/** Subscribe to status changes (Svelte store contract) */
+	readonly statusStore: Readable<StoreStatus>;
 }
 
 // ============================================================================
@@ -207,6 +227,29 @@ export function createSyncableStore<S extends Schema>(
 	let syncDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 	let syncDirty = false;
 
+	// Item store cache for fine-grained reactivity
+	const itemStoreCache = new Map<string, Readable<unknown>>();
+
+	// Status subscribers for reactive status store
+	const statusSubscribers = new Set<(status: StoreStatus) => void>();
+
+	function notifyStatusChange(): void {
+		for (const callback of statusSubscribers) {
+			callback(status);
+		}
+	}
+
+	// Status store for reactive binding
+	const statusStore: Readable<StoreStatus> = {
+		subscribe(callback: (status: StoreStatus) => void): () => void {
+			statusSubscribers.add(callback);
+			callback(status);
+			return () => {
+				statusSubscribers.delete(callback);
+			};
+		},
+	};
+
 	// Mark dirty and schedule sync
 	function markDirty(): void {
 		if (!syncAdapter) return;
@@ -236,6 +279,7 @@ export function createSyncableStore<S extends Schema>(
 
 		try {
 			(status as { syncState: string }).syncState = 'syncing';
+			notifyStatusChange();
 			if (retryCount === 0) {
 				emitter.emit('sync', { type: 'started' });
 			}
@@ -261,6 +305,7 @@ export function createSyncableStore<S extends Schema>(
 			(status as { syncError: Error | null }).syncError = null;
 			emitter.emit('sync', { type: 'completed', timestamp: Date.now() });
 			(status as { syncState: string }).syncState = 'idle';
+			notifyStatusChange();
 
 			if (changes.length > 0) {
 				notifyStateChange();
@@ -278,6 +323,7 @@ export function createSyncableStore<S extends Schema>(
 				(status as { syncError: Error | null }).syncError = error as Error;
 				emitter.emit('sync', { type: 'failed', error: error as Error });
 				(status as { syncState: string }).syncState = 'idle';
+				notifyStatusChange();
 			}
 		}
 	}
@@ -335,6 +381,7 @@ export function createSyncableStore<S extends Schema>(
 		try {
 			(status as { storageState: string }).storageState = 'saving';
 			(status as { pendingSaves: number }).pendingSaves++;
+			notifyStatusChange();
 
 			await storage.save(storageKey(account), internalStorage);
 
@@ -347,6 +394,7 @@ export function createSyncableStore<S extends Schema>(
 			if (status.pendingSaves === 0) {
 				(status as { storageState: string }).storageState = 'idle';
 			}
+			notifyStatusChange();
 		}
 	}
 
@@ -358,6 +406,9 @@ export function createSyncableStore<S extends Schema>(
 		// Clean up previous watch
 		unwatchStorage?.();
 		unwatchStorage = undefined;
+
+		// Clear item store cache on account switch
+		itemStoreCache.clear();
 
 		// Remember if we were ready
 		const wasReady = asyncState.status === 'ready';
@@ -622,6 +673,8 @@ export function createSyncableStore<S extends Schema>(
 		on: emitter.on.bind(emitter),
 		off: emitter.off.bind(emitter),
 
+		statusStore,
+
 		start(): () => void {
 			unsubscribeAccount = accountStore.subscribe((account) => {
 				setAccount(account);
@@ -639,6 +692,58 @@ export function createSyncableStore<S extends Schema>(
 				clearTimeout(syncDebounceTimer);
 				syncDebounceTimer = undefined;
 			}
+		},
+
+		getItemStore<K extends MapKeys<S>>(
+			field: K,
+			key: string,
+		): Readable<(ExtractMapItem<S[K]> & { deleteAt: number }) | undefined> {
+			type ItemType = (ExtractMapItem<S[K]> & { deleteAt: number }) | undefined;
+
+			// Check cache first
+			const cacheKey = `${String(field)}:${key}`;
+			const cached = itemStoreCache.get(cacheKey);
+			if (cached) return cached as Readable<ItemType>;
+
+			const getCurrentValue = (): ItemType => {
+				if (asyncState.status !== 'ready') return undefined;
+				const items = (asyncState.data[field] as Record<string, unknown>) ?? {};
+				return items[key] as ItemType;
+			};
+
+			const itemStore: Readable<ItemType> = {
+				subscribe(callback: (value: ItemType) => void): () => void {
+					callback(getCurrentValue());
+
+					// Subscribe to state changes for initial load
+					const unsubState = emitter.on('state', () => callback(getCurrentValue()));
+
+					// Subscribe to field-specific events
+					const unsubAdded = emitter.on(`${String(field)}:added` as keyof StoreEvents<S>, (e) => {
+						const event = e as { key: string; item: unknown };
+						if (event.key === key) callback(event.item as ItemType);
+					});
+					const unsubUpdated = emitter.on(`${String(field)}:updated` as keyof StoreEvents<S>, (e) => {
+						const event = e as { key: string; item: unknown };
+						if (event.key === key) callback(event.item as ItemType);
+					});
+					const unsubRemoved = emitter.on(`${String(field)}:removed` as keyof StoreEvents<S>, (e) => {
+						const event = e as { key: string };
+						if (event.key === key) callback(undefined);
+					});
+
+					return () => {
+						unsubState();
+						unsubAdded();
+						unsubUpdated();
+						unsubRemoved();
+					};
+				},
+			};
+
+			// Cache the store
+			itemStoreCache.set(cacheKey, itemStore);
+			return itemStore;
 		},
 	};
 

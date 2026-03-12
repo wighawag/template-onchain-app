@@ -493,6 +493,393 @@ describe('createSyncableStore', () => {
 		});
 	});
 
+	describe('getItemStore', () => {
+		it('returns undefined when store is not ready', () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			// Store is idle - no account set
+			let itemValue: unknown;
+			const itemStore = store.getItemStore('operations', 'op-1');
+			itemStore.subscribe((v) => (itemValue = v));
+
+			expect(itemValue).toBeUndefined();
+		});
+
+		it('returns item value when it exists', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Add an item first
+			store.add(
+				'operations',
+				'op-1',
+				{tx: '0xabc', status: 'pending'},
+				{deleteAt: 9999},
+			);
+
+			// Get item store and subscribe
+			let itemValue: {tx: string; status: string; deleteAt: number} | undefined;
+			const itemStore = store.getItemStore('operations', 'op-1');
+			itemStore.subscribe((v) => (itemValue = v));
+
+			expect(itemValue).toBeDefined();
+			expect(itemValue?.tx).toBe('0xabc');
+			expect(itemValue?.status).toBe('pending');
+			expect(itemValue?.deleteAt).toBe(9999);
+		});
+
+		it('updates when item is added', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Subscribe to item store BEFORE adding item
+			let itemValue: {tx: string; status: string; deleteAt: number} | undefined;
+			const itemStore = store.getItemStore('operations', 'op-1');
+			itemStore.subscribe((v) => (itemValue = v));
+
+			// Initially undefined
+			expect(itemValue).toBeUndefined();
+
+			// Add the item
+			store.add(
+				'operations',
+				'op-1',
+				{tx: '0xabc', status: 'pending'},
+				{deleteAt: 9999},
+			);
+
+			// Should be updated
+			expect(itemValue).toBeDefined();
+			expect(itemValue?.tx).toBe('0xabc');
+		});
+
+		it('updates when item is updated', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Add an item first
+			store.add(
+				'operations',
+				'op-1',
+				{tx: '0xabc', status: 'pending'},
+				{deleteAt: 9999},
+			);
+
+			// Subscribe to item store
+			let itemValue: {tx: string; status: string; deleteAt: number} | undefined;
+			const itemStore = store.getItemStore('operations', 'op-1');
+			itemStore.subscribe((v) => (itemValue = v));
+
+			expect(itemValue?.status).toBe('pending');
+
+			// Update the item
+			clock = 2000;
+			store.update('operations', 'op-1', {tx: '0xabc', status: 'confirmed'});
+
+			// Should be updated
+			expect(itemValue?.status).toBe('confirmed');
+		});
+
+		it('returns undefined when item is removed', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Add an item first
+			store.add(
+				'operations',
+				'op-1',
+				{tx: '0xabc', status: 'pending'},
+				{deleteAt: 9999},
+			);
+
+			// Subscribe to item store
+			let itemValue: {tx: string; status: string; deleteAt: number} | undefined;
+			const itemStore = store.getItemStore('operations', 'op-1');
+			itemStore.subscribe((v) => (itemValue = v));
+
+			expect(itemValue).toBeDefined();
+
+			// Remove the item
+			store.remove('operations', 'op-1');
+
+			// Should be undefined
+			expect(itemValue).toBeUndefined();
+		});
+
+		it('returns cached store instance for same field/key', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Get item store twice for same key
+			const itemStore1 = store.getItemStore('operations', 'op-1');
+			const itemStore2 = store.getItemStore('operations', 'op-1');
+
+			// Should be the same instance
+			expect(itemStore1).toBe(itemStore2);
+
+			// Different key should return different instance
+			const itemStore3 = store.getItemStore('operations', 'op-2');
+			expect(itemStore1).not.toBe(itemStore3);
+		});
+
+		it('clears cache on account switch', async () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			// First account
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 10));
+
+			const itemStore1 = store.getItemStore('operations', 'op-1');
+
+			// Switch to different account
+			accountStore.set('0x0000000000000000000000000000000000000001');
+			await new Promise((r) => setTimeout(r, 10));
+
+			const itemStore2 = store.getItemStore('operations', 'op-1');
+
+			// Should be different instances after account switch
+			expect(itemStore1).not.toBe(itemStore2);
+		});
+	});
+
+	describe('statusStore', () => {
+		it('provides current status on subscribe', () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			let receivedStatus:
+				| {
+						syncState: string;
+						pendingCount: number;
+						storageState: string;
+				  }
+				| undefined;
+			store.statusStore.subscribe((status) => {
+				receivedStatus = status;
+			});
+
+			expect(receivedStatus).toBeDefined();
+			expect(receivedStatus?.syncState).toBe('idle');
+			expect(receivedStatus?.storageState).toBe('idle');
+			expect(receivedStatus?.pendingCount).toBe(0);
+		});
+
+		it('notifies when syncState changes', async () => {
+			let pushResolve: (() => void) | undefined;
+			const pushPromise = new Promise<void>((resolve) => {
+				pushResolve = resolve;
+			});
+
+			const mockSyncAdapter = {
+				async pull() {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					// Wait a bit to simulate network delay
+					await pushPromise;
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {debounceMs: 10},
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Track status changes
+			const statusHistory: string[] = [];
+			store.statusStore.subscribe((status) => {
+				statusHistory.push(status.syncState);
+			});
+
+			// Trigger sync by making a change
+			store.set('settings', {theme: 'light', volume: 0.8});
+
+			// Wait for sync to start
+			await new Promise((r) => setTimeout(r, 50));
+
+			// At this point, sync should be in 'syncing' state
+			expect(statusHistory).toContain('syncing');
+
+			// Complete the sync
+			pushResolve!();
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Should be back to idle
+			expect(statusHistory[statusHistory.length - 1]).toBe('idle');
+		});
+
+		it('notifies when storageState changes', async () => {
+			// Create a slow storage that we can control
+			let saveResolve: (() => void) | undefined;
+			const savePromise = new Promise<void>((resolve) => {
+				saveResolve = resolve;
+			});
+			let firstSave = true;
+
+			const slowStorage: AsyncStorage<InternalStorage<TestSchema>> = {
+				async load(key: string) {
+					return storage.data.get(key);
+				},
+				async save(key: string, value: InternalStorage<TestSchema>) {
+					if (!firstSave) {
+						// After the initial save, wait for our signal
+						await savePromise;
+					}
+					firstSave = false;
+					storage.data.set(key, value);
+				},
+				async remove(key: string) {
+					storage.data.delete(key);
+				},
+				async exists(key: string) {
+					return storage.data.has(key);
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage: slowStorage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Track status changes
+			const statusHistory: string[] = [];
+			store.statusStore.subscribe((status) => {
+				statusHistory.push(status.storageState);
+			});
+
+			// Trigger storage save by making a change
+			store.set('settings', {theme: 'light', volume: 0.8});
+
+			// Give it time to start saving
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Should show 'saving' in history
+			expect(statusHistory).toContain('saving');
+
+			// Complete the save
+			saveResolve!();
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Should be back to idle
+			expect(statusHistory[statusHistory.length - 1]).toBe('idle');
+		});
+	});
+
 	describe('state transition events', () => {
 		it('emits state events during account load: loading -> ready', async () => {
 			// Register listener BEFORE creating store to capture all events
