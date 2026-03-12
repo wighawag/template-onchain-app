@@ -254,6 +254,9 @@ export function createSyncableStore<S extends Schema>(
 	let syncDirty = false;
 	let syncPaused = false;
 
+	// Server counter for optimistic locking (timestamp-based versioning)
+	let serverCounter: bigint = 0n;
+
 	// Item store cache for fine-grained reactivity
 	const itemStoreCache = new Map<string, Readable<unknown>>();
 
@@ -302,7 +305,8 @@ export function createSyncableStore<S extends Schema>(
 		}, debounceMs);
 	}
 
-	// Perform the actual push to server with retry logic
+	// Perform the actual sync: pull → merge → save → push
+	// This implements client-side merging for a "dumb" server that only stores/retrieves data
 	async function performSyncPush(retryCount = 0): Promise<void> {
 		if (!syncAdapter || !internalStorage || asyncState.status !== 'ready') return;
 
@@ -316,32 +320,64 @@ export function createSyncableStore<S extends Schema>(
 				emitter.emit('sync', { type: 'started' });
 			}
 
-			const serverResponse = await syncAdapter.push(account, internalStorage);
+			// Step 1: Pull latest from server
+			const pullResponse = await syncAdapter.pull(account);
 
-			// Merge server response with local state
-			const { merged, changes } = mergeStore(internalStorage, serverResponse, schema);
-			internalStorage = merged;
+			// Update server counter tracking
+			serverCounter = pullResponse.counter;
 
-			// Update async state data
-			asyncState = { ...asyncState, data: merged.data };
+			// Step 2: Merge server data with local data (if server has data)
+			let dataToSync = internalStorage;
+			if (pullResponse.data) {
+				const { merged, changes } = mergeStore(internalStorage, pullResponse.data, schema);
+				dataToSync = merged;
 
-			// Emit change events
-			for (const change of changes) {
-				emitter.emit(change.event as keyof StoreEvents<S>, change.data as StoreEvents<S>[keyof StoreEvents<S>]);
+				// Update local state if server had newer data
+				if (changes.length > 0) {
+					internalStorage = merged;
+					asyncState = { ...asyncState, data: merged.data };
+
+					// Emit change events for any server-side updates
+					// NOTE: We do NOT call notifyStateChange() here - field-level events are sufficient
+					// Main subscribe() should only trigger on state transitions (idle/loading/ready)
+					for (const change of changes) {
+						emitter.emit(
+							change.event as keyof StoreEvents<S>,
+							change.data as StoreEvents<S>[keyof StoreEvents<S>],
+						);
+					}
+
+					// Step 3: Save merged state to local storage
+					await storage.save(storageKey(account), merged);
+				}
 			}
 
-			// Save merged state to local storage
-			await storage.save(storageKey(account), internalStorage);
+			// Step 4: Push merged data to server with new counter
+			const newCounter = BigInt(clock());
+			const pushResponse = await syncAdapter.push(account, dataToSync, newCounter);
 
-			(status as { lastSyncedAt: number | null }).lastSyncedAt = Date.now();
-			(status as { syncError: Error | null }).syncError = null;
-			(status as { hasPendingSync: boolean }).hasPendingSync = false;
-			emitter.emit('sync', { type: 'completed', timestamp: Date.now() });
-			(status as { syncState: string }).syncState = 'idle';
-			notifyStatusChange();
+			if (pushResponse.success) {
+				// Update server counter tracking
+				serverCounter = newCounter;
 
-			if (changes.length > 0) {
-				notifyStateChange();
+				(status as { lastSyncedAt: number | null }).lastSyncedAt = Date.now();
+				(status as { syncError: Error | null }).syncError = null;
+				(status as { hasPendingSync: boolean }).hasPendingSync = false;
+				emitter.emit('sync', { type: 'completed', timestamp: Date.now() });
+				(status as { syncState: string }).syncState = 'idle';
+				notifyStatusChange();
+			} else {
+				// Push was rejected - counter was stale
+				// This means another client pushed between our pull and push
+				// Retry the entire flow
+				if (retryCount < maxRetries) {
+					const backoffDelay = retryBackoffMs * Math.pow(2, retryCount);
+					setTimeout(() => {
+						performSyncPush(retryCount + 1);
+					}, backoffDelay);
+				} else {
+					throw new Error(pushResponse.error || 'Push rejected: counter stale after max retries');
+				}
 			}
 		} catch (error) {
 			// Check if we should retry
@@ -366,28 +402,34 @@ export function createSyncableStore<S extends Schema>(
 		if (!syncAdapter || !internalStorage) return;
 
 		try {
-			const serverData = await syncAdapter.pull(account);
+			const pullResponse = await syncAdapter.pull(account);
 
-			if (serverData) {
+			// Update counter tracking
+			serverCounter = pullResponse.counter;
+
+			if (pullResponse.data) {
 				// Merge server data with local state
-				const { merged, changes } = mergeStore(internalStorage, serverData, schema);
-				internalStorage = merged;
-
-				// Update async state data
-				if (asyncState.status === 'ready') {
-					asyncState = { ...asyncState, data: merged.data };
-				}
-
-				// Emit change events
-				for (const change of changes) {
-					emitter.emit(change.event as keyof StoreEvents<S>, change.data as StoreEvents<S>[keyof StoreEvents<S>]);
-				}
-
-				// Save merged state to local storage
-				await storage.save(storageKey(account), internalStorage);
+				const { merged, changes } = mergeStore(internalStorage, pullResponse.data, schema);
 
 				if (changes.length > 0) {
-					notifyStateChange();
+					internalStorage = merged;
+
+					// Update async state data
+					if (asyncState.status === 'ready') {
+						asyncState = { ...asyncState, data: merged.data };
+					}
+
+					// Emit field-level change events - no notifyStateChange() needed
+					// Main subscribe() should only trigger on state transitions
+					for (const change of changes) {
+						emitter.emit(
+							change.event as keyof StoreEvents<S>,
+							change.data as StoreEvents<S>[keyof StoreEvents<S>],
+						);
+					}
+
+					// Save merged state to local storage
+					await storage.save(storageKey(account), merged);
 				}
 			}
 		} catch (error) {
@@ -531,20 +573,22 @@ export function createSyncableStore<S extends Schema>(
 				// Merge with current state
 				const { merged, changes } = mergeStore(internalStorage, newValue, schema);
 
-				internalStorage = merged;
-
-				// Update async state data
-				if (asyncState.status === 'ready') {
-					asyncState = { ...asyncState, data: merged.data };
-				}
-
-				// Emit change events
-				for (const change of changes) {
-					emitter.emit(change.event as keyof StoreEvents<S>, change.data as StoreEvents<S>[keyof StoreEvents<S>]);
-				}
-
 				if (changes.length > 0) {
-					notifyStateChange();
+					internalStorage = merged;
+
+					// Update async state data
+					if (asyncState.status === 'ready') {
+						asyncState = { ...asyncState, data: merged.data };
+					}
+
+					// Emit field-level change events - no notifyStateChange() needed
+					// Main subscribe() should only trigger on state transitions
+					for (const change of changes) {
+						emitter.emit(
+							change.event as keyof StoreEvents<S>,
+							change.data as StoreEvents<S>[keyof StoreEvents<S>],
+						);
+					}
 				}
 			});
 		}

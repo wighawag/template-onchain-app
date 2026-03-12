@@ -11,6 +11,9 @@ import type {
 	Schema,
 	AsyncState,
 	DataOf,
+	PullResponse,
+	PushResponse,
+	SyncAdapter,
 } from '../../../../src/lib/core/sync/types';
 
 // Test schema
@@ -64,6 +67,32 @@ function createMockAccountStore() {
 			return () => {
 				subscribers.delete(callback);
 			};
+		},
+	};
+}
+
+// Helper to create a mock sync adapter with the new interface
+function createMockSyncAdapter(options?: {
+	onPull?: () => Promise<PullResponse<TestSchema>>;
+	onPush?: (account: `0x${string}`, data: InternalStorage<TestSchema>, counter: bigint) => Promise<PushResponse>;
+	pullCount?: { value: number };
+	pushCount?: { value: number };
+}): SyncAdapter<TestSchema> {
+	const {
+		onPull = async () => ({ data: null, counter: 0n }),
+		onPush = async () => ({ success: true }),
+		pullCount,
+		pushCount,
+	} = options ?? {};
+	
+	return {
+		async pull(account: `0x${string}`) {
+			if (pullCount) pullCount.value++;
+			return onPull();
+		},
+		async push(account: `0x${string}`, data: InternalStorage<TestSchema>, counter: bigint) {
+			if (pushCount) pushCount.value++;
+			return onPush(account, data, counter);
 		},
 	};
 }
@@ -760,16 +789,16 @@ describe('createSyncableStore', () => {
 			});
 
 			const mockSyncAdapter = {
-				async pull() {
-					return null;
+				async pull(): Promise<PullResponse<TestSchema>> {
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
 					// Wait a bit to simulate network delay
 					await pushPromise;
-					return changes;
+					return { success: true };
 				},
 			};
 
@@ -905,14 +934,14 @@ describe('createSyncableStore', () => {
 
 		it('handles not-ready state gracefully', async () => {
 			const mockSyncAdapter = {
-				async pull() {
-					return null;
+				async pull(): Promise<PullResponse<TestSchema>> {
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
-					return changes;
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
+					return { success: true };
 				},
 			};
 
@@ -941,18 +970,18 @@ describe('createSyncableStore', () => {
 			let pushResolve: (() => void) | undefined;
 
 			const mockSyncAdapter = {
-				async pull() {
-					return null;
+				async pull(): Promise<PullResponse<TestSchema>> {
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
 					pushCallCount++;
 					await new Promise<void>((resolve) => {
 						pushResolve = resolve;
 					});
-					return changes;
+					return { success: true };
 				},
 			};
 
@@ -999,15 +1028,15 @@ describe('createSyncableStore', () => {
 			let pushCallCount = 0;
 
 			const mockSyncAdapter = {
-				async pull() {
-					return null;
+				async pull(): Promise<PullResponse<TestSchema>> {
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
 					pushCallCount++;
-					return changes;
+					return { success: true };
 				},
 			};
 
@@ -1046,18 +1075,18 @@ describe('createSyncableStore', () => {
 			let pushResolve: (() => void) | undefined;
 
 			const mockSyncAdapter = {
-				async pull() {
-					return null;
+				async pull(): Promise<PullResponse<TestSchema>> {
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
 					pushCallCount++;
 					await new Promise<void>((resolve) => {
 						pushResolve = resolve;
 					});
-					return changes;
+					return { success: true };
 				},
 			};
 
@@ -1104,15 +1133,15 @@ describe('createSyncableStore', () => {
 			let pushCallCount = 0;
 
 			const mockSyncAdapter = {
-				async pull() {
-					return null;
+				async pull(): Promise<PullResponse<TestSchema>> {
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
 					pushCallCount++;
-					return changes;
+					return { success: true };
 				},
 			};
 
@@ -1153,13 +1182,13 @@ describe('createSyncableStore', () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
 					pullCallCount++;
-					return null;
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
-					return changes;
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
+					return { success: true };
 				},
 			};
 
@@ -1220,13 +1249,13 @@ describe('createSyncableStore', () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
 					pullCallCount++;
-					return null;
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
-					return changes;
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
+					return { success: true };
 				},
 			};
 
@@ -1292,14 +1321,14 @@ describe('createSyncableStore', () => {
 			let pushCallCount = 0;
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
-					return null;
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
 					pushCallCount++;
-					return changes;
+					return { success: true };
 				},
 			};
 
@@ -1354,13 +1383,13 @@ describe('createSyncableStore', () => {
 		it('updates syncState to offline when going offline', async () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
-					return null;
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
-					return changes;
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
+					return { success: true };
 				},
 			};
 
@@ -1411,14 +1440,14 @@ describe('createSyncableStore', () => {
 			let pushCallCount = 0;
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
-					return null;
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
 					pushCallCount++;
-					return changes;
+					return { success: true };
 				},
 			};
 
@@ -1473,13 +1502,13 @@ describe('createSyncableStore', () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
 					pullCallCount++;
-					return null;
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
-					return changes;
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
+					return { success: true };
 				},
 			};
 
@@ -1516,13 +1545,13 @@ describe('createSyncableStore', () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
 					pullCallCount++;
-					return null;
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
-					return changes;
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
+					return { success: true };
 				},
 			};
 
@@ -1559,13 +1588,13 @@ describe('createSyncableStore', () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
 					pullCallCount++;
-					return null;
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
-					return changes;
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
+					return { success: true };
 				},
 			};
 
@@ -1602,14 +1631,14 @@ describe('createSyncableStore', () => {
 	describe('hasPendingSync', () => {
 		it('is false when no changes have been made', async () => {
 			const mockSyncAdapter = {
-				async pull() {
-					return null;
+				async pull(): Promise<PullResponse<TestSchema>> {
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
-					return changes;
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
+					return { success: true };
 				},
 			};
 
@@ -1637,17 +1666,17 @@ describe('createSyncableStore', () => {
 			// Use a push that will hang to prevent auto-completion
 			let pushResolve: (() => void) | undefined;
 			const mockSyncAdapter = {
-				async pull() {
-					return null;
+				async pull(): Promise<PullResponse<TestSchema>> {
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
 					await new Promise<void>((resolve) => {
 						pushResolve = resolve;
 					});
-					return changes;
+					return { success: true };
 				},
 			};
 
@@ -1684,17 +1713,17 @@ describe('createSyncableStore', () => {
 		it('resets to false after successful sync', async () => {
 			let pushResolve: (() => void) | undefined;
 			const mockSyncAdapter = {
-				async pull() {
-					return null;
+				async pull(): Promise<PullResponse<TestSchema>> {
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
 					await new Promise<void>((resolve) => {
 						pushResolve = resolve;
 					});
-					return changes;
+					return { success: true };
 				},
 			};
 
@@ -1733,17 +1762,17 @@ describe('createSyncableStore', () => {
 		it('notifies statusStore subscribers when hasPendingSync changes', async () => {
 			let pushResolve: (() => void) | undefined;
 			const mockSyncAdapter = {
-				async pull() {
-					return null;
+				async pull(): Promise<PullResponse<TestSchema>> {
+					return { data: null, counter: 0n };
 				},
 				async push(
 					_account: `0x${string}`,
-					changes: InternalStorage<TestSchema>,
-				): Promise<InternalStorage<TestSchema>> {
+					data: InternalStorage<TestSchema>, counter: bigint,
+				): Promise<PushResponse> {
 					await new Promise<void>((resolve) => {
 						pushResolve = resolve;
 					});
-					return changes;
+					return { success: true };
 				},
 			};
 

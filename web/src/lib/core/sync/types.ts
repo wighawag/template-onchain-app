@@ -270,28 +270,69 @@ export type StoreChange =
 // ============================================================================
 
 /**
+ * Response from pull operation.
+ * Contains server data and counter for optimistic locking.
+ */
+export interface PullResponse<S extends Schema> {
+	/** Server data, or null if no data exists */
+	data: InternalStorage<S> | null;
+
+	/** Server's current counter/version for optimistic locking */
+	counter: bigint;
+}
+
+/**
+ * Response from push operation.
+ * Indicates success or failure with counter-based conflict detection.
+ */
+export interface PushResponse {
+	/** Whether the push was successful */
+	success: boolean;
+
+	/** If failed due to stale counter, the server's current counter */
+	currentCounter?: bigint;
+
+	/** Error message if failed */
+	error?: string;
+}
+
+/**
  * Server sync adapter interface.
  * Implement this to sync with your backend.
+ *
+ * The server is expected to be "dumb" - it stores and retrieves data without
+ * understanding its contents. The client handles all merging logic.
+ *
+ * Counter-based optimistic locking:
+ * - Server tracks a counter (typically timestamp in ms)
+ * - Push is rejected if provided counter <= server's current counter
+ * - This prevents concurrent writes from overwriting each other
  */
 export interface SyncAdapter<S extends Schema> {
 	/**
 	 * Pull latest state from server.
-	 * Returns null if no data exists on server.
+	 * Returns data and counter for optimistic locking.
 	 */
-	pull(account: `0x${string}`): Promise<InternalStorage<S> | null>;
+	pull(account: `0x${string}`): Promise<PullResponse<S>>;
 
 	/**
-	 * Push local changes to server.
-	 * Returns merged state from server.
+	 * Push local state to server.
+	 * Server validates counter > its current counter.
+	 *
+	 * @param account - User account
+	 * @param data - Data to store
+	 * @param counter - Counter/version for optimistic locking (must be > server's counter)
+	 * @returns Success/failure response
 	 */
-	push(account: `0x${string}`, changes: InternalStorage<S>): Promise<InternalStorage<S>>;
+	push(account: `0x${string}`, data: InternalStorage<S>, counter: bigint): Promise<PushResponse>;
 
 	/**
 	 * Subscribe to real-time updates (optional).
+	 * Callback receives data and counter when server has new data.
 	 */
 	subscribe?(
 		account: `0x${string}`,
-		callback: (data: InternalStorage<S>) => void,
+		callback: (data: InternalStorage<S>, counter: bigint) => void,
 	): () => void;
 }
 

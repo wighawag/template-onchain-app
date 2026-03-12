@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createSyncableStore } from '../../../../src/lib/core/sync/createSyncableStore';
 import { defineSchema, permanent, map } from '../../../../src/lib/core/sync/types';
 import type { AsyncStorage } from '../../../../src/lib/core/storage';
-import type { InternalStorage, Schema, SyncAdapter } from '../../../../src/lib/core/sync/types';
+import type { InternalStorage, Schema, SyncAdapter, PullResponse, PushResponse } from '../../../../src/lib/core/sync/types';
 
 // Test schema
 const testSchema = defineSchema({
@@ -74,13 +74,16 @@ describe('Server Sync', () => {
 		it('pulls from server on account load', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
 				pull: vi.fn().mockResolvedValue({
-					$version: 1,
-					data: { settings: { theme: 'server', volume: 0.7 }, operations: {} },
-					$timestamps: { settings: 100 },
-					$itemTimestamps: { operations: {} },
-					$tombstones: { operations: {} },
+					data: {
+						$version: 1,
+						data: { settings: { theme: 'server', volume: 0.7 }, operations: {} },
+						$timestamps: { settings: 100 },
+						$itemTimestamps: { operations: {} },
+						$tombstones: { operations: {} },
+					},
+					counter: 1000n,
 				}),
-				push: vi.fn().mockResolvedValue({}),
+				push: vi.fn().mockResolvedValue({ success: true }),
 			};
 
 			const store = createSyncableStore({
@@ -104,14 +107,8 @@ describe('Server Sync', () => {
 
 		it('pushes changes to server after mutation', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
-				push: vi.fn().mockResolvedValue({
-					$version: 1,
-					data: { settings: { theme: 'light', volume: 0.9 }, operations: {} },
-					$timestamps: { settings: 1000 },
-					$itemTimestamps: { operations: {} },
-					$tombstones: { operations: {} },
-				}),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				push: vi.fn().mockResolvedValue({ success: true }),
 			};
 
 			const store = createSyncableStore({
@@ -142,13 +139,16 @@ describe('Server Sync', () => {
 		it('merges server response with local state', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
 				pull: vi.fn().mockResolvedValue({
-					$version: 1,
-					data: { settings: { theme: 'server', volume: 0.7 }, operations: {} },
-					$timestamps: { settings: 5000 }, // Higher timestamp than local
-					$itemTimestamps: { operations: {} },
-					$tombstones: { operations: {} },
+					data: {
+						$version: 1,
+						data: { settings: { theme: 'server', volume: 0.7 }, operations: {} },
+						$timestamps: { settings: 5000 }, // Higher timestamp than local
+						$itemTimestamps: { operations: {} },
+						$tombstones: { operations: {} },
+					},
+					counter: 1000n,
 				}),
-				push: vi.fn().mockResolvedValue({}),
+				push: vi.fn().mockResolvedValue({ success: true }),
 			};
 
 			const store = createSyncableStore({
@@ -177,17 +177,11 @@ describe('Server Sync', () => {
 	describe('sync status', () => {
 		it('emits sync started event when sync begins', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
 				push: vi.fn().mockImplementation(async () => {
 					// Simulate network delay
 					await new Promise((r) => setTimeout(r, 20));
-					return {
-						$version: 1,
-						data: { settings: { theme: 'light', volume: 0.9 }, operations: {} },
-						$timestamps: { settings: 1000 },
-						$itemTimestamps: { operations: {} },
-						$tombstones: { operations: {} },
-					};
+					return { success: true };
 				}),
 			};
 
@@ -221,14 +215,8 @@ describe('Server Sync', () => {
 
 		it('emits sync completed event when sync succeeds', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
-				push: vi.fn().mockResolvedValue({
-					$version: 1,
-					data: { settings: { theme: 'light', volume: 0.9 }, operations: {} },
-					$timestamps: { settings: 1000 },
-					$itemTimestamps: { operations: {} },
-					$tombstones: { operations: {} },
-				}),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				push: vi.fn().mockResolvedValue({ success: true }),
 			};
 
 			const store = createSyncableStore({
@@ -263,7 +251,7 @@ describe('Server Sync', () => {
 
 		it('emits sync failed event when push fails', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
 				push: vi.fn().mockRejectedValue(new Error('Network error')),
 			};
 
@@ -301,16 +289,10 @@ describe('Server Sync', () => {
 			let syncStateWhilePushing: string | undefined;
 
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
 				push: vi.fn().mockImplementation(async function (this: unknown, ...args: unknown[]) {
 					syncStateWhilePushing = store.status.syncState;
-					return {
-						$version: 1,
-						data: { settings: { theme: 'light', volume: 0.9 }, operations: {} },
-						$timestamps: { settings: 1000 },
-						$itemTimestamps: { operations: {} },
-						$tombstones: { operations: {} },
-					};
+					return { success: true };
 				}),
 			};
 
@@ -342,7 +324,7 @@ describe('Server Sync', () => {
 
 		it('sets syncError on store status when push fails', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
 				push: vi.fn().mockRejectedValue(new Error('Network failure')),
 			};
 
@@ -373,14 +355,8 @@ describe('Server Sync', () => {
 
 		it('updates lastSyncedAt on successful sync', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
-				push: vi.fn().mockResolvedValue({
-					$version: 1,
-					data: { settings: { theme: 'light', volume: 0.9 }, operations: {} },
-					$timestamps: { settings: 1000 },
-					$itemTimestamps: { operations: {} },
-					$tombstones: { operations: {} },
-				}),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				push: vi.fn().mockResolvedValue({ success: true }),
 			};
 
 			const store = createSyncableStore({
@@ -415,14 +391,8 @@ describe('Server Sync', () => {
 	describe('sync lifecycle', () => {
 		it('debounces rapid changes into single sync', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
-				push: vi.fn().mockResolvedValue({
-					$version: 1,
-					data: { settings: { theme: 'theme-4', volume: 0.4 }, operations: {} },
-					$timestamps: { settings: 1000 },
-					$itemTimestamps: { operations: {} },
-					$tombstones: { operations: {} },
-				}),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				push: vi.fn().mockResolvedValue({ success: true }),
 			};
 
 			const store = createSyncableStore({
@@ -459,19 +429,13 @@ describe('Server Sync', () => {
 		it('retries push on failure up to maxRetries', async () => {
 			let attempts = 0;
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
 				push: vi.fn().mockImplementation(async () => {
 					attempts++;
 					if (attempts < 3) {
 						throw new Error('Network error');
 					}
-					return {
-						$version: 1,
-						data: { settings: { theme: 'light', volume: 0.9 }, operations: {} },
-						$timestamps: { settings: 1000 },
-						$itemTimestamps: { operations: {} },
-						$tombstones: { operations: {} },
-					};
+					return { success: true };
 				}),
 			};
 
@@ -503,7 +467,7 @@ describe('Server Sync', () => {
 
 		it('stops retrying after maxRetries failures', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
 				push: vi.fn().mockRejectedValue(new Error('Persistent error')),
 			};
 
@@ -544,7 +508,7 @@ describe('Server Sync', () => {
 			const callTimes: number[] = [];
 
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
 				push: vi.fn().mockImplementation(async () => {
 					callTimes.push(Date.now());
 					throw new Error('Keep failing');
@@ -587,14 +551,8 @@ describe('Server Sync', () => {
 	describe('cleanup on stop', () => {
 		it('cancels pending sync when stop is called', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue(null),
-				push: vi.fn().mockResolvedValue({
-					$version: 1,
-					data: { settings: { theme: 'light', volume: 0.9 }, operations: {} },
-					$timestamps: { settings: 1000 },
-					$itemTimestamps: { operations: {} },
-					$tombstones: { operations: {} },
-				}),
+				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				push: vi.fn().mockResolvedValue({ success: true }),
 			};
 
 			const store = createSyncableStore({
