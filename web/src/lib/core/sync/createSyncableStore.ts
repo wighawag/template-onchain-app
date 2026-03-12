@@ -277,14 +277,12 @@ export function createSyncableStore<S extends Schema>(
 	// Type-safe event emitter using radiate
 	const emitter = createEmitter<StoreEvents<S>>();
 
-	// State subscribers
-	const stateSubscribers = new Set<(state: AsyncState<DataOf<S>>) => void>();
-
-	function notifyStateChange(): void {
-		for (const callback of stateSubscribers) {
-			callback(asyncState);
-		}
-		emitter.emit('state', asyncState);
+	// Helper to emit status events (works around TypeScript generic intersection issues)
+	function emitStatus(): void {
+		(emitter.emit as (event: 'store:status', data: StoreStatus) => void)(
+			'store:status',
+			status,
+		);
 	}
 
 	// Storage watch cleanup
@@ -317,23 +315,11 @@ export function createSyncableStore<S extends Schema>(
 	// Field store cache for field-level reactivity
 	const fieldStoreCache = new Map<string, Readable<unknown>>();
 
-	// Status subscribers for reactive status store
-	const statusSubscribers = new Set<(status: StoreStatus) => void>();
-
-	function notifyStatusChange(): void {
-		for (const callback of statusSubscribers) {
-			callback(status);
-		}
-	}
-
 	// Status store for reactive binding
 	const statusStore: Readable<StoreStatus> = {
 		subscribe(callback: (status: StoreStatus) => void): () => void {
-			statusSubscribers.add(callback);
 			callback(status);
-			return () => {
-				statusSubscribers.delete(callback);
-			};
+			return emitter.on('store:status', callback);
 		},
 	};
 
@@ -342,7 +328,7 @@ export function createSyncableStore<S extends Schema>(
 		if (!syncAdapter) return;
 		syncDirty = true;
 		mutableStatus.hasPendingSync = true;
-		notifyStatusChange();
+		emitStatus();
 		scheduleSyncPush();
 	}
 
@@ -371,7 +357,7 @@ export function createSyncableStore<S extends Schema>(
 
 		try {
 			mutableStatus.syncState = 'syncing';
-			notifyStatusChange();
+			emitStatus();
 			if (retryCount === 0) {
 				emitter.emit('sync', {type: 'started'});
 			}
@@ -434,7 +420,7 @@ export function createSyncableStore<S extends Schema>(
 				mutableStatus.hasPendingSync = false;
 				emitter.emit('sync', {type: 'completed', timestamp: Date.now()});
 				mutableStatus.syncState = 'idle';
-				notifyStatusChange();
+				emitStatus();
 			} else {
 				// Push was rejected - counter was stale
 				// This means another client pushed between our pull and push
@@ -464,7 +450,7 @@ export function createSyncableStore<S extends Schema>(
 				mutableStatus.syncError = error as Error;
 				emitter.emit('sync', {type: 'failed', error: error as Error});
 				mutableStatus.syncState = 'idle';
-				notifyStatusChange();
+				emitStatus();
 			}
 		}
 	}
@@ -539,7 +525,7 @@ export function createSyncableStore<S extends Schema>(
 		try {
 			mutableStatus.storageState = 'saving';
 			mutableStatus.pendingSaves++;
-			notifyStatusChange();
+			emitStatus();
 
 			await storage.save(storageKey(account), internalStorage);
 
@@ -552,7 +538,7 @@ export function createSyncableStore<S extends Schema>(
 			if (mutableStatus.pendingSaves === 0) {
 				mutableStatus.storageState = 'idle';
 			}
-			notifyStatusChange();
+			emitStatus();
 		}
 	}
 
@@ -577,13 +563,13 @@ export function createSyncableStore<S extends Schema>(
 		if (!newAccount) {
 			asyncState = {status: 'idle', account: undefined};
 			internalStorage = null;
-			notifyStateChange();
+			emitter.emit('state', asyncState);
 			return;
 		}
 
 		// Transition to loading state
 		asyncState = {status: 'loading', account: newAccount};
-		notifyStateChange();
+		emitter.emit('state', asyncState);
 
 		// Increment generation for race condition handling
 		loadGeneration++;
@@ -614,7 +600,7 @@ export function createSyncableStore<S extends Schema>(
 				} catch (error) {
 					// Migration failed - store error and stay in loading state
 					mutableStatus.storageError = error as Error;
-					notifyStatusChange();
+					emitStatus();
 					// Don't proceed to ready state - leave in loading state
 					return;
 				}
@@ -640,7 +626,7 @@ export function createSyncableStore<S extends Schema>(
 			account: newAccount,
 			data: internalStorage.data,
 		};
-		notifyStateChange();
+		emitter.emit('state', asyncState);
 
 		// Pull from server (if sync adapter configured)
 		if (syncAdapter) {
@@ -917,11 +903,8 @@ export function createSyncableStore<S extends Schema>(
 		},
 
 		subscribe(callback: (state: AsyncState<DataOf<S>>) => void): () => void {
-			stateSubscribers.add(callback);
 			callback(asyncState);
-			return () => {
-				stateSubscribers.delete(callback);
-			};
+			return emitter.on('state', callback);
 		},
 
 		on: emitter.on.bind(emitter),
@@ -957,14 +940,16 @@ export function createSyncableStore<S extends Schema>(
 			) {
 				handleOnline = () => {
 					mutableStatus.syncState = 'idle';
-					notifyStatusChange();
+					emitStatus();
+					emitter.emit('sync', {type: 'online'});
 					if (asyncState.status === 'ready') {
 						performSyncPush();
 					}
 				};
 				handleOffline = () => {
 					mutableStatus.syncState = 'offline';
-					notifyStatusChange();
+					emitStatus();
+					emitter.emit('sync', {type: 'offline'});
 				};
 				window.addEventListener('online', handleOnline);
 				window.addEventListener('offline', handleOffline);
@@ -1208,7 +1193,7 @@ export function createSyncableStore<S extends Schema>(
 
 			// Clear the error
 			mutableStatus.storageError = null;
-			notifyStatusChange();
+			emitStatus();
 
 			// Re-trigger account load
 			const account = asyncState.account;

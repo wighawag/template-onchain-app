@@ -195,23 +195,13 @@ export type SyncEvent =
 // ============================================================================
 
 /**
- * Generate event types from schema.
- * For a schema with `settings: permanent<T>()` and `operations: map<U>()`:
- *
- * {
- *   state: AsyncState<DataOf<S>>;
- *   'settings:changed': T;
- *   'operations:added': { key: string; item: U & { deleteAt: number } };
- *   'operations:updated': { key: string; item: U & { deleteAt: number } };
- *   'operations:removed': { key: string; item: U & { deleteAt: number } };
- *   sync: SyncEvent;
- * }
+ * Base store events that are always present (not schema-derived).
  */
-export type StoreEvents<S extends Schema> = {
+type BaseStoreEvents<S extends Schema> = {
 	state: AsyncState<DataOf<S>>;
+	'store:status': StoreStatus;
 	sync: SyncEvent;
-} & PermanentEvents<S> &
-	MapEvents<S>;
+};
 
 /**
  * Helper type - events for permanent fields.
@@ -241,6 +231,31 @@ type MapEvents<S extends Schema> = {
 		item: ExtractMapItem<S[K]> & {deleteAt: number};
 	};
 };
+
+/**
+ * Schema-derived events (excludes base events to avoid intersection conflicts).
+ */
+type SchemaEvents<S extends Schema> = Omit<
+	PermanentEvents<S> & MapEvents<S>,
+	keyof BaseStoreEvents<S>
+>;
+
+/**
+ * Generate event types from schema.
+ * For a schema with `settings: permanent<T>()` and `operations: map<U>()`:
+ *
+ * {
+ *   state: AsyncState<DataOf<S>>;
+ *   'store:status': StoreStatus;
+ *   sync: SyncEvent;
+ *   'settings:changed': T;
+ *   'operations:added': { key: string; item: U & { deleteAt: number } };
+ *   'operations:updated': { key: string; item: U & { deleteAt: number } };
+ *   'operations:removed': { key: string; item: U & { deleteAt: number } };
+ * }
+ */
+export type StoreEvents<S extends Schema> = BaseStoreEvents<S> &
+	SchemaEvents<S>;
 
 // ============================================================================
 // Async State Types
