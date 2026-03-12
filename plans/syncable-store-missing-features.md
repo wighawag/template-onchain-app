@@ -302,61 +302,58 @@ async syncNow(): Promise<void> {
 
 ---
 
-## Phase 4: Status Tracking (Medium Priority)
+## Phase 4: Status Tracking (Medium Priority) ✅ IMPLEMENTED
 
-### 4.1 Implement `pendingCount` Tracking
+### 4.1 Implement `hasPendingSync` Tracking
 
-**Purpose:** Track number of changes pending sync to server.
+**Purpose:** Track whether there are changes pending sync to server.
+
+**Design Decision:** Changed from `pendingCount: number` to `hasPendingSync: boolean` for simplicity. A boolean is sufficient for most UI use cases (showing a "sync pending" indicator) and avoids complexity of tracking exact counts.
 
 **Implementation:**
 
-1. Add tracking variables:
+1. Update `StoreStatus` interface in `types.ts`:
    ```typescript
-   let lastSyncedTimestampsHash: string | null = null;
-   ```
-
-2. Create hash function:
-   ```typescript
-   function computeTimestampsHash(storage: InternalStorage<S>): string {
-     return JSON.stringify({
-       $timestamps: storage.$timestamps,
-       $itemTimestamps: storage.$itemTimestamps,
-       $tombstones: storage.$tombstones,
-     });
+   export interface StoreStatus {
+     // ...
+     /** True if there are changes pending sync to server */
+     readonly hasPendingSync: boolean;
+     // ...
    }
    ```
 
-3. Update pending count after mutations:
+2. Initialize status in `createSyncableStore`:
    ```typescript
-   function updatePendingCount(): void {
-     if (!internalStorage) {
-       (status as { pendingCount: number }).pendingCount = 0;
-       return;
-     }
-     
-     const currentHash = computeTimestampsHash(internalStorage);
-     if (lastSyncedTimestampsHash === null) {
-       // Never synced - count all fields
-       let count = Object.keys(internalStorage.$timestamps).length;
-       for (const field of Object.keys(internalStorage.$itemTimestamps)) {
-         count += Object.keys(internalStorage.$itemTimestamps[field] || {}).length;
-       }
-       (status as { pendingCount: number }).pendingCount = count;
-     } else if (currentHash !== lastSyncedTimestampsHash) {
-       (status as { pendingCount: number }).pendingCount = 1; // Simplified: just indicate dirty
-     } else {
-       (status as { pendingCount: number }).pendingCount = 0;
-     }
+   const status: StoreStatus = {
+     // ...
+     hasPendingSync: false,
+     // ...
+   };
+   ```
+
+3. Set to `true` in `markDirty()` function when mutations occur:
+   ```typescript
+   function markDirty(): void {
+     if (!syncAdapter) return;
+     syncDirty = true;
+     (status as { hasPendingSync: boolean }).hasPendingSync = true;
      notifyStatusChange();
+     scheduleSyncPush();
    }
    ```
 
-4. Reset on successful sync:
+4. Reset to `false` on successful sync in `performSyncPush()`:
    ```typescript
-   // In performSyncPush after success
-   lastSyncedTimestampsHash = computeTimestampsHash(internalStorage);
-   (status as { pendingCount: number }).pendingCount = 0;
+   // After successful push
+   (status as { hasPendingSync: boolean }).hasPendingSync = false;
+   notifyStatusChange();
    ```
+
+**Behavior:**
+- `hasPendingSync` is `false` when store is initialized
+- `hasPendingSync` becomes `true` when any mutation occurs (`set`, `patch`, `add`, `update`, `remove`)
+- `hasPendingSync` resets to `false` after successful sync to server
+- Changes are notified via `statusStore` subscribers
 
 ---
 
@@ -547,7 +544,7 @@ gantt
 | `syncOnVisible` | Triggers pull when tab becomes visible |
 | `syncOnReconnect` | Updates status offline/online, syncs on reconnect |
 | `intervalMs` | Triggers periodic sync, respects 0 value to disable |
-| `pendingCount` | Increments on mutations, resets on sync |
+| `hasPendingSync` ✅ | Is false initially, becomes true on mutations, resets to false after sync, notifies statusStore subscribers |
 | `migrations` | Runs migrations sequentially, throws on missing migration |
 | `subscribe()` enhanced ✅ | Only triggers on state transitions (idle/loading/ready), NOT on data mutations (set/patch/add/update/remove) |
 | `getFieldStore` ✅ | Returns cached store, triggers on field changes, permanent field triggers on set/patch, map field triggers on add/remove only (not update), cache cleared on account switch |
