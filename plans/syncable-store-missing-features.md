@@ -6,7 +6,7 @@ This document outlines the implementation plan for features missing from [`creat
 
 ---
 
-## Phase 1: Fine-Grained Reactivity (High Priority)
+## Phase 1: Fine-Grained Reactivity (High Priority) ✅ IMPLEMENTED
 
 ### 1.1 Add `getItemStore()` Method
 
@@ -124,7 +124,7 @@ getItemStore<K extends MapKeys<S>>(
 
 ---
 
-## Phase 2: Sync Control Methods (Medium Priority)
+## Phase 2: Sync Control Methods (Medium Priority) ✅ IMPLEMENTED
 
 ### 2.1 Add `syncNow()` Method
 
@@ -186,7 +186,7 @@ async syncNow(): Promise<void> {
 
 ---
 
-## Phase 3: Sync Lifecycle Features (Medium Priority)
+## Phase 3: Sync Lifecycle Features (Medium Priority) ✅ IMPLEMENTED
 
 ### 3.1 Implement `syncOnVisible`
 
@@ -357,7 +357,7 @@ async syncNow(): Promise<void> {
 
 ---
 
-## Phase 5: Schema Migration (Lower Priority)
+## Phase 5: Schema Migration (Lower Priority) ✅ IMPLEMENTED
 
 ### 5.1 Add Migration Support
 
