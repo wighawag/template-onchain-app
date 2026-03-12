@@ -164,6 +164,9 @@ export interface SyncableStore<S extends Schema> {
 
 	/** Resume server sync */
 	resumeSync(): void;
+
+	/** Retry loading account data after a migration failure */
+	retryLoad(): void;
 }
 
 // ============================================================================
@@ -172,6 +175,21 @@ export interface SyncableStore<S extends Schema> {
 
 /**
  * Create a syncable store.
+ *
+ * **IMPORTANT**: You must call `store.start()` after creation to begin
+ * watching account changes. This allows you to set up event listeners
+ * before the store starts reacting to account changes.
+ *
+ * @example
+ * ```typescript
+ * const store = createSyncableStore(config);
+ *
+ * // Set up event listeners first
+ * store.on('sync', (event) => console.log(event));
+ *
+ * // Then start watching account changes
+ * store.start();
+ * ```
  */
 export function createSyncableStore<S extends Schema>(
 	config: SyncableStoreConfig<S>,
@@ -255,6 +273,8 @@ export function createSyncableStore<S extends Schema>(
 	let syncPaused = false;
 
 	// Server counter for optimistic locking (timestamp-based versioning)
+	// TODO: This is currently only used for tracking server state. The actual conflict
+	// detection happens server-side. Revisit this for potential client-side validation.
 	let serverCounter: bigint = 0n;
 
 	// Item store cache for fine-grained reactivity
@@ -993,10 +1013,24 @@ export function createSyncableStore<S extends Schema>(
 				scheduleSyncPush();
 			}
 		},
-	};
 
-	// Auto-start by subscribing to account changes
-	store.start();
+		retryLoad(): void {
+			// Only retry if we're in loading state with an error (e.g., migration failure)
+			if (asyncState.status !== 'loading' || !asyncState.account) {
+				return;
+			}
+
+			// Clear the error
+			(status as { storageError: Error | null }).storageError = null;
+			notifyStatusChange();
+
+			// Re-trigger account load
+			const account = asyncState.account;
+			// Reset state to trigger fresh load
+			asyncState = { status: 'idle', account: undefined };
+			setAccount(account);
+		},
+	};
 
 	return store;
 }
@@ -1007,13 +1041,19 @@ export function createSyncableStore<S extends Schema>(
 
 /**
  * Deep merge objects (for patch operation).
+ * Arrays are replaced rather than merged by index to avoid unexpected behavior.
  */
 function deepMerge<T>(target: T, source: DeepPartial<T>): T {
 	if (typeof source !== 'object' || source === null) {
 		return source as T;
 	}
 
-	if (typeof target !== 'object' || target === null) {
+	// Arrays should be replaced, not merged by index
+	if (Array.isArray(source)) {
+		return source as T;
+	}
+
+	if (typeof target !== 'object' || target === null || Array.isArray(target)) {
 		return source as T;
 	}
 

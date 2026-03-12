@@ -1,13 +1,23 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { createSyncableStore } from '../../../../src/lib/core/sync/createSyncableStore';
-import { defineSchema, permanent, map } from '../../../../src/lib/core/sync/types';
-import type { AsyncStorage } from '../../../../src/lib/core/storage';
-import type { InternalStorage, Schema, SyncAdapter, PullResponse, PushResponse } from '../../../../src/lib/core/sync/types';
+import {describe, it, expect, beforeEach, vi, afterEach} from 'vitest';
+import {createSyncableStore} from '../../../../src/lib/core/sync/createSyncableStore';
+import {
+	defineSchema,
+	permanent,
+	map,
+} from '../../../../src/lib/core/sync/types';
+import type {AsyncStorage} from '../../../../src/lib/core/storage';
+import type {
+	InternalStorage,
+	Schema,
+	SyncAdapter,
+	PullResponse,
+	PushResponse,
+} from '../../../../src/lib/core/sync/types';
 
 // Test schema
 const testSchema = defineSchema({
-	settings: permanent<{ theme: string; volume: number }>(),
-	operations: map<{ tx: string; status: string }>(),
+	settings: permanent<{theme: string; volume: number}>(),
+	operations: map<{tx: string; status: string}>(),
 });
 
 type TestSchema = typeof testSchema;
@@ -76,14 +86,14 @@ describe('Server Sync', () => {
 				pull: vi.fn().mockResolvedValue({
 					data: {
 						$version: 1,
-						data: { settings: { theme: 'server', volume: 0.7 }, operations: {} },
-						$timestamps: { settings: 100 },
-						$itemTimestamps: { operations: {} },
-						$tombstones: { operations: {} },
+						data: {settings: {theme: 'server', volume: 0.7}, operations: {}},
+						$timestamps: {settings: 100},
+						$itemTimestamps: {operations: {}},
+						$tombstones: {operations: {}},
 					},
 					counter: 1000n,
 				}),
-				push: vi.fn().mockResolvedValue({ success: true }),
+				push: vi.fn().mockResolvedValue({success: true}),
 			};
 
 			const store = createSyncableStore({
@@ -92,23 +102,26 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			expect(mockAdapter.pull).toHaveBeenCalledWith('0x1234567890123456789012345678901234567890');
+			expect(mockAdapter.pull).toHaveBeenCalledWith(
+				'0x1234567890123456789012345678901234567890',
+			);
 		});
 
 		it('pushes changes to server after mutation', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
-				push: vi.fn().mockResolvedValue({ success: true }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
+				push: vi.fn().mockResolvedValue({success: true}),
 			};
 
 			const store = createSyncableStore({
@@ -117,18 +130,19 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 10 }, // Short debounce for testing
+				syncConfig: {debounceMs: 10}, // Short debounce for testing
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for debounce
 			await new Promise((r) => setTimeout(r, 50));
@@ -141,14 +155,14 @@ describe('Server Sync', () => {
 				pull: vi.fn().mockResolvedValue({
 					data: {
 						$version: 1,
-						data: { settings: { theme: 'server', volume: 0.7 }, operations: {} },
-						$timestamps: { settings: 5000 }, // Higher timestamp than local
-						$itemTimestamps: { operations: {} },
-						$tombstones: { operations: {} },
+						data: {settings: {theme: 'server', volume: 0.7}, operations: {}},
+						$timestamps: {settings: 5000}, // Higher timestamp than local
+						$itemTimestamps: {operations: {}},
+						$tombstones: {operations: {}},
 					},
 					counter: 1000n,
 				}),
-				push: vi.fn().mockResolvedValue({ success: true }),
+				push: vi.fn().mockResolvedValue({success: true}),
 			};
 
 			const store = createSyncableStore({
@@ -157,12 +171,13 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
@@ -177,11 +192,11 @@ describe('Server Sync', () => {
 	describe('sync status', () => {
 		it('emits sync started event when sync begins', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
 				push: vi.fn().mockImplementation(async () => {
 					// Simulate network delay
 					await new Promise((r) => setTimeout(r, 20));
-					return { success: true };
+					return {success: true};
 				}),
 			};
 
@@ -191,21 +206,22 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 10 },
+				syncConfig: {debounceMs: 10},
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			const syncEvents: { type: string }[] = [];
+			const syncEvents: {type: string}[] = [];
 			store.on('sync', (e) => syncEvents.push(e));
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for debounce to trigger and sync to start
 			await new Promise((r) => setTimeout(r, 15));
@@ -215,8 +231,8 @@ describe('Server Sync', () => {
 
 		it('emits sync completed event when sync succeeds', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
-				push: vi.fn().mockResolvedValue({ success: true }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
+				push: vi.fn().mockResolvedValue({success: true}),
 			};
 
 			const store = createSyncableStore({
@@ -225,21 +241,22 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 10 },
+				syncConfig: {debounceMs: 10},
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			const syncEvents: { type: string; timestamp?: number }[] = [];
+			const syncEvents: {type: string; timestamp?: number}[] = [];
 			store.on('sync', (e) => syncEvents.push(e));
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for debounce and sync to complete
 			await new Promise((r) => setTimeout(r, 50));
@@ -251,7 +268,7 @@ describe('Server Sync', () => {
 
 		it('emits sync failed event when push fails', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
 				push: vi.fn().mockRejectedValue(new Error('Network error')),
 			};
 
@@ -261,21 +278,22 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 10, maxRetries: 0 }, // No retries for this test
+				syncConfig: {debounceMs: 10, maxRetries: 0}, // No retries for this test
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			const syncEvents: { type: string; error?: Error }[] = [];
+			const syncEvents: {type: string; error?: Error}[] = [];
 			store.on('sync', (e) => syncEvents.push(e));
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for debounce and sync to fail
 			await new Promise((r) => setTimeout(r, 50));
@@ -289,10 +307,13 @@ describe('Server Sync', () => {
 			let syncStateWhilePushing: string | undefined;
 
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
-				push: vi.fn().mockImplementation(async function (this: unknown, ...args: unknown[]) {
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
+				push: vi.fn().mockImplementation(async function (
+					this: unknown,
+					...args: unknown[]
+				) {
 					syncStateWhilePushing = store.status.syncState;
-					return { success: true };
+					return {success: true};
 				}),
 			};
 
@@ -302,18 +323,19 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 10 },
+				syncConfig: {debounceMs: 10},
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for debounce and sync to complete
 			await new Promise((r) => setTimeout(r, 50));
@@ -324,7 +346,7 @@ describe('Server Sync', () => {
 
 		it('sets syncError on store status when push fails', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
 				push: vi.fn().mockRejectedValue(new Error('Network failure')),
 			};
 
@@ -334,18 +356,19 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 10, maxRetries: 0 }, // No retries for this test
+				syncConfig: {debounceMs: 10, maxRetries: 0}, // No retries for this test
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for debounce and sync to fail
 			await new Promise((r) => setTimeout(r, 50));
@@ -355,8 +378,8 @@ describe('Server Sync', () => {
 
 		it('updates lastSyncedAt on successful sync', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
-				push: vi.fn().mockResolvedValue({ success: true }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
+				push: vi.fn().mockResolvedValue({success: true}),
 			};
 
 			const store = createSyncableStore({
@@ -365,20 +388,21 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 10 },
+				syncConfig: {debounceMs: 10},
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
 			expect(store.status.lastSyncedAt).toBeNull();
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for debounce and sync to complete
 			await new Promise((r) => setTimeout(r, 50));
@@ -391,8 +415,8 @@ describe('Server Sync', () => {
 	describe('sync lifecycle', () => {
 		it('debounces rapid changes into single sync', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
-				push: vi.fn().mockResolvedValue({ success: true }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
+				push: vi.fn().mockResolvedValue({success: true}),
 			};
 
 			const store = createSyncableStore({
@@ -401,20 +425,21 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 50 },
+				syncConfig: {debounceMs: 50},
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
 			// Make 5 rapid changes
 			for (let i = 0; i < 5; i++) {
-				store.set('settings', { theme: `theme-${i}`, volume: i / 10 });
+				store.set('settings', {theme: `theme-${i}`, volume: i / 10});
 			}
 
 			// Wait for debounce
@@ -429,13 +454,13 @@ describe('Server Sync', () => {
 		it('retries push on failure up to maxRetries', async () => {
 			let attempts = 0;
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
 				push: vi.fn().mockImplementation(async () => {
 					attempts++;
 					if (attempts < 3) {
 						throw new Error('Network error');
 					}
-					return { success: true };
+					return {success: true};
 				}),
 			};
 
@@ -445,18 +470,19 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 10, maxRetries: 3, retryBackoffMs: 10 },
+				syncConfig: {debounceMs: 10, maxRetries: 3, retryBackoffMs: 10},
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for retries (debounce + retries with backoff)
 			await new Promise((r) => setTimeout(r, 200));
@@ -467,7 +493,7 @@ describe('Server Sync', () => {
 
 		it('stops retrying after maxRetries failures', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
 				push: vi.fn().mockRejectedValue(new Error('Persistent error')),
 			};
 
@@ -477,21 +503,22 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 10, maxRetries: 2, retryBackoffMs: 10 },
+				syncConfig: {debounceMs: 10, maxRetries: 2, retryBackoffMs: 10},
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			const syncEvents: { type: string; error?: Error }[] = [];
+			const syncEvents: {type: string; error?: Error}[] = [];
 			store.on('sync', (e) => syncEvents.push(e));
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for all retries
 			await new Promise((r) => setTimeout(r, 200));
@@ -508,7 +535,7 @@ describe('Server Sync', () => {
 			const callTimes: number[] = [];
 
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
 				push: vi.fn().mockImplementation(async () => {
 					callTimes.push(Date.now());
 					throw new Error('Keep failing');
@@ -521,18 +548,19 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 10, maxRetries: 3, retryBackoffMs: 20 },
+				syncConfig: {debounceMs: 10, maxRetries: 3, retryBackoffMs: 20},
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for all retries (debounce + 3 retries with increasing backoff)
 			await new Promise((r) => setTimeout(r, 500));
@@ -551,8 +579,8 @@ describe('Server Sync', () => {
 	describe('cleanup on stop', () => {
 		it('cancels pending sync when stop is called', async () => {
 			const mockAdapter: SyncAdapter<TestSchema> = {
-				pull: vi.fn().mockResolvedValue({ data: null, counter: 0n }),
-				push: vi.fn().mockResolvedValue({ success: true }),
+				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
+				push: vi.fn().mockResolvedValue({success: true}),
 			};
 
 			const store = createSyncableStore({
@@ -561,18 +589,19 @@ describe('Server Sync', () => {
 				storage,
 				storageKey: (addr) => `test-${addr}`,
 				defaultData: () => ({
-					settings: { theme: 'dark', volume: 0.5 },
+					settings: {theme: 'dark', volume: 0.5},
 					operations: {},
 				}),
 				sync: mockAdapter,
-				syncConfig: { debounceMs: 100 }, // Long debounce
+				syncConfig: {debounceMs: 100}, // Long debounce
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			store.set('settings', { theme: 'light', volume: 0.9 });
+			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Stop before debounce fires
 			store.stop();

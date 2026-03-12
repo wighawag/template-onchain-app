@@ -74,23 +74,31 @@ function createMockAccountStore() {
 // Helper to create a mock sync adapter with the new interface
 function createMockSyncAdapter(options?: {
 	onPull?: () => Promise<PullResponse<TestSchema>>;
-	onPush?: (account: `0x${string}`, data: InternalStorage<TestSchema>, counter: bigint) => Promise<PushResponse>;
-	pullCount?: { value: number };
-	pushCount?: { value: number };
+	onPush?: (
+		account: `0x${string}`,
+		data: InternalStorage<TestSchema>,
+		counter: bigint,
+	) => Promise<PushResponse>;
+	pullCount?: {value: number};
+	pushCount?: {value: number};
 }): SyncAdapter<TestSchema> {
 	const {
-		onPull = async () => ({ data: null, counter: 0n }),
-		onPush = async () => ({ success: true }),
+		onPull = async () => ({data: null, counter: 0n}),
+		onPush = async () => ({success: true}),
 		pullCount,
 		pushCount,
 	} = options ?? {};
-	
+
 	return {
 		async pull(account: `0x${string}`) {
 			if (pullCount) pullCount.value++;
 			return onPull();
 		},
-		async push(account: `0x${string}`, data: InternalStorage<TestSchema>, counter: bigint) {
+		async push(
+			account: `0x${string}`,
+			data: InternalStorage<TestSchema>,
+			counter: bigint,
+		) {
 			if (pushCount) pushCount.value++;
 			return onPush(account, data, counter);
 		},
@@ -120,6 +128,7 @@ describe('createSyncableStore', () => {
 			}),
 			clock: () => clock,
 		});
+		store.start();
 
 		expect(store.state.status).toBe('idle');
 	});
@@ -136,6 +145,7 @@ describe('createSyncableStore', () => {
 			}),
 			clock: () => clock,
 		});
+		store.start();
 
 		// Set an account
 		accountStore.set('0x1234567890123456789012345678901234567890');
@@ -161,6 +171,7 @@ describe('createSyncableStore', () => {
 			}),
 			clock: () => clock,
 		});
+		store.start();
 
 		accountStore.set('0x1234567890123456789012345678901234567890');
 		await new Promise((r) => setTimeout(r, 10));
@@ -187,6 +198,7 @@ describe('createSyncableStore', () => {
 			}),
 			clock: () => clock,
 		});
+		store.start();
 
 		accountStore.set('0x1234567890123456789012345678901234567890');
 		await new Promise((r) => setTimeout(r, 10));
@@ -220,6 +232,7 @@ describe('createSyncableStore', () => {
 			}),
 			clock: () => clock,
 		});
+		store.start();
 
 		accountStore.set('0x1234567890123456789012345678901234567890');
 		await new Promise((r) => setTimeout(r, 10));
@@ -252,6 +265,7 @@ describe('createSyncableStore', () => {
 			}),
 			clock: () => clock,
 		});
+		store.start();
 
 		accountStore.set('0x1234567890123456789012345678901234567890');
 		await new Promise((r) => setTimeout(r, 10));
@@ -283,6 +297,7 @@ describe('createSyncableStore', () => {
 			}),
 			clock: () => clock,
 		});
+		store.start();
 
 		accountStore.set('0x1234567890123456789012345678901234567890');
 		await new Promise((r) => setTimeout(r, 10));
@@ -326,6 +341,7 @@ describe('createSyncableStore', () => {
 			}),
 			clock: () => clock,
 		});
+		store.start();
 
 		accountStore.set('0x1234567890123456789012345678901234567890');
 		await new Promise((r) => setTimeout(r, 10));
@@ -351,6 +367,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -377,6 +394,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -412,6 +430,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -448,6 +467,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -483,6 +503,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			const events: AsyncState<DataOf<TestSchema>>[] = [];
 			store.on('state', (state) => events.push(state));
@@ -506,6 +527,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -535,6 +557,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			// Store is idle - no account set
 			let itemValue: unknown;
@@ -556,6 +579,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -591,6 +615,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -628,6 +653,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -667,6 +693,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -705,6 +732,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -733,6 +761,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			// First account
 			accountStore.set('0x1234567890123456789012345678901234567890');
@@ -764,6 +793,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			let receivedStatus:
 				| {
@@ -790,15 +820,16 @@ describe('createSyncableStore', () => {
 
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
 					// Wait a bit to simulate network delay
 					await pushPromise;
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -815,6 +846,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {debounceMs: 10},
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -881,6 +913,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -924,6 +957,7 @@ describe('createSyncableStore', () => {
 				clock: () => clock,
 				// No sync adapter configured
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -935,13 +969,14 @@ describe('createSyncableStore', () => {
 		it('handles not-ready state gracefully', async () => {
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -957,6 +992,7 @@ describe('createSyncableStore', () => {
 				clock: () => clock,
 				sync: mockSyncAdapter,
 			});
+			store.start();
 
 			// Store is still idle (no account set)
 			expect(store.state.status).toBe('idle');
@@ -971,17 +1007,18 @@ describe('createSyncableStore', () => {
 
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
 					pushCallCount++;
 					await new Promise<void>((resolve) => {
 						pushResolve = resolve;
 					});
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -998,6 +1035,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {debounceMs: 5000}, // Long debounce
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1029,14 +1067,15 @@ describe('createSyncableStore', () => {
 
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
 					pushCallCount++;
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1053,6 +1092,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {debounceMs: 20}, // Short debounce
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1076,17 +1116,18 @@ describe('createSyncableStore', () => {
 
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
 					pushCallCount++;
 					await new Promise<void>((resolve) => {
 						pushResolve = resolve;
 					});
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1103,6 +1144,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {debounceMs: 10},
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1134,14 +1176,15 @@ describe('createSyncableStore', () => {
 
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
 					pushCallCount++;
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1158,6 +1201,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {debounceMs: 50}, // Longer debounce
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1182,13 +1226,14 @@ describe('createSyncableStore', () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
 					pullCallCount++;
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1223,6 +1268,7 @@ describe('createSyncableStore', () => {
 					sync: mockSyncAdapter,
 					syncConfig: {syncOnVisible: false}, // Disable syncOnVisible
 				});
+				store.start();
 
 				accountStore.set('0x1234567890123456789012345678901234567890');
 				await new Promise((r) => setTimeout(r, 20));
@@ -1249,13 +1295,14 @@ describe('createSyncableStore', () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
 					pullCallCount++;
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1291,6 +1338,7 @@ describe('createSyncableStore', () => {
 					clock: () => clock,
 					sync: mockSyncAdapter,
 				});
+				store.start();
 
 				accountStore.set('0x1234567890123456789012345678901234567890');
 				await new Promise((r) => setTimeout(r, 20));
@@ -1321,14 +1369,15 @@ describe('createSyncableStore', () => {
 			let pushCallCount = 0;
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
 					pushCallCount++;
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1359,6 +1408,7 @@ describe('createSyncableStore', () => {
 					sync: mockSyncAdapter,
 					syncConfig: {debounceMs: 10},
 				});
+				store.start();
 
 				accountStore.set('0x1234567890123456789012345678901234567890');
 				await new Promise((r) => setTimeout(r, 20));
@@ -1383,13 +1433,14 @@ describe('createSyncableStore', () => {
 		it('updates syncState to offline when going offline', async () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1417,6 +1468,7 @@ describe('createSyncableStore', () => {
 					clock: () => clock,
 					sync: mockSyncAdapter,
 				});
+				store.start();
 
 				accountStore.set('0x1234567890123456789012345678901234567890');
 				await new Promise((r) => setTimeout(r, 20));
@@ -1440,14 +1492,15 @@ describe('createSyncableStore', () => {
 			let pushCallCount = 0;
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
 					pushCallCount++;
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1476,6 +1529,7 @@ describe('createSyncableStore', () => {
 					sync: mockSyncAdapter,
 					syncConfig: {syncOnReconnect: false}, // Disable
 				});
+				store.start();
 
 				accountStore.set('0x1234567890123456789012345678901234567890');
 				await new Promise((r) => setTimeout(r, 20));
@@ -1502,13 +1556,14 @@ describe('createSyncableStore', () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
 					pullCallCount++;
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1525,6 +1580,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {intervalMs: 50}, // Very short interval for testing
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1545,13 +1601,14 @@ describe('createSyncableStore', () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
 					pullCallCount++;
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1568,6 +1625,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {intervalMs: 0}, // Disabled
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1588,13 +1646,14 @@ describe('createSyncableStore', () => {
 			const mockSyncAdapter = {
 				async pull(_account: `0x${string}`) {
 					pullCallCount++;
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1611,6 +1670,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {intervalMs: 50},
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1632,13 +1692,14 @@ describe('createSyncableStore', () => {
 		it('is false when no changes have been made', async () => {
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1654,6 +1715,7 @@ describe('createSyncableStore', () => {
 				clock: () => clock,
 				sync: mockSyncAdapter,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1667,16 +1729,17 @@ describe('createSyncableStore', () => {
 			let pushResolve: (() => void) | undefined;
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
 					await new Promise<void>((resolve) => {
 						pushResolve = resolve;
 					});
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1693,6 +1756,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {debounceMs: 5000}, // Long debounce so sync doesn't complete
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1714,16 +1778,17 @@ describe('createSyncableStore', () => {
 			let pushResolve: (() => void) | undefined;
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
 					await new Promise<void>((resolve) => {
 						pushResolve = resolve;
 					});
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1740,6 +1805,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {debounceMs: 10}, // Short debounce
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1763,16 +1829,17 @@ describe('createSyncableStore', () => {
 			let pushResolve: (() => void) | undefined;
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
-					return { data: null, counter: 0n };
+					return {data: null, counter: 0n};
 				},
 				async push(
 					_account: `0x${string}`,
-					data: InternalStorage<TestSchema>, counter: bigint,
+					data: InternalStorage<TestSchema>,
+					counter: bigint,
 				): Promise<PushResponse> {
 					await new Promise<void>((resolve) => {
 						pushResolve = resolve;
 					});
-					return { success: true };
+					return {success: true};
 				},
 			};
 
@@ -1789,6 +1856,7 @@ describe('createSyncableStore', () => {
 				sync: mockSyncAdapter,
 				syncConfig: {debounceMs: 10},
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -1834,6 +1902,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			store.on('state', (state) => events.push(state));
 
@@ -1859,6 +1928,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -1884,6 +1954,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
@@ -1965,6 +2036,7 @@ describe('createSyncableStore', () => {
 					},
 				},
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2022,6 +2094,7 @@ describe('createSyncableStore', () => {
 					},
 				},
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
@@ -2073,6 +2146,7 @@ describe('createSyncableStore', () => {
 					},
 				},
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2114,6 +2188,7 @@ describe('createSyncableStore', () => {
 					},
 				},
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2143,6 +2218,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			const states: AsyncState<DataOf<TestSchema>>[] = [];
 			store.subscribe((state) => states.push(state));
@@ -2172,6 +2248,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2204,6 +2281,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2250,6 +2328,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			// Store is idle - no account set
 			let fieldValue: unknown;
@@ -2271,6 +2350,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2296,6 +2376,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2323,6 +2404,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2350,6 +2432,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2362,7 +2445,9 @@ describe('createSyncableStore', () => {
 				{deleteAt: 9999},
 			);
 
-			let fieldValue: Record<string, {tx: string; status: string; deleteAt: number}> | undefined;
+			let fieldValue:
+				| Record<string, {tx: string; status: string; deleteAt: number}>
+				| undefined;
 			const fieldStore = store.getFieldStore('operations');
 			fieldStore.subscribe((v) => (fieldValue = v as any));
 
@@ -2383,11 +2468,14 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
 
-			let fieldValue: Record<string, {tx: string; status: string; deleteAt: number}> | undefined;
+			let fieldValue:
+				| Record<string, {tx: string; status: string; deleteAt: number}>
+				| undefined;
 			const fieldStore = store.getFieldStore('operations');
 			fieldStore.subscribe((v) => (fieldValue = v as any));
 
@@ -2419,6 +2507,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2431,7 +2520,9 @@ describe('createSyncableStore', () => {
 				{deleteAt: 9999},
 			);
 
-			let fieldValue: Record<string, {tx: string; status: string; deleteAt: number}> | undefined;
+			let fieldValue:
+				| Record<string, {tx: string; status: string; deleteAt: number}>
+				| undefined;
 			const fieldStore = store.getFieldStore('operations');
 			fieldStore.subscribe((v) => (fieldValue = v as any));
 
@@ -2457,6 +2548,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2498,6 +2590,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
@@ -2526,6 +2619,7 @@ describe('createSyncableStore', () => {
 				}),
 				clock: () => clock,
 			});
+			store.start();
 
 			// First account
 			accountStore.set('0x1234567890123456789012345678901234567890');
