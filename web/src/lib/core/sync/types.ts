@@ -173,8 +173,15 @@ export interface SyncStatus {
 
 /**
  * Sync lifecycle events - point-in-time notifications.
+ *
+ * Event flow:
+ * - 'pending': Changes queued for sync (debounce timer started)
+ * - 'started': Actual network sync operation began
+ * - 'completed': Sync finished successfully
+ * - 'failed': Sync failed after all retries
  */
 export type SyncEvent =
+	| {type: 'pending'}
 	| {type: 'started'}
 	| {type: 'completed'; timestamp: number}
 	| {type: 'failed'; error: Error}

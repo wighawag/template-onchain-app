@@ -293,6 +293,7 @@ export function createSyncableStore<S extends Schema>(
 
 	// Type definitions for event helper functions
 	type SyncEventData =
+		| {type: 'pending'}
 		| {type: 'started'}
 		| {type: 'completed'; timestamp: number}
 		| {type: 'failed'; error: Error}
@@ -385,7 +386,7 @@ export function createSyncableStore<S extends Schema>(
 		if (!syncAdapter) return;
 		syncDirty = true;
 		mutableSyncStatus.hasPendingSync = true;
-		emitSyncEvent({type: 'started'});
+		emitSyncEvent({type: 'pending'});
 		scheduleSyncPush();
 	}
 
