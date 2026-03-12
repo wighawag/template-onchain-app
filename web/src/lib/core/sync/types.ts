@@ -133,26 +133,29 @@ export type InternalStorage<S extends Schema> = {
 };
 
 // ============================================================================
-// Store Status Types
+// State Events
 // ============================================================================
 
 /**
- * Unified status for sync and storage operations.
- *
- * Uses orthogonal boolean flags instead of a single enum to properly
- * represent independent dimensions:
- * - Activity: is an operation in progress?
- * - Connectivity: is network available?
- * - Control: is sync intentionally paused?
- * - Health: did the last operation succeed?
+ * State lifecycle events - emitted on async state transitions.
  */
-export interface StoreStatus {
-	// === Sync - Orthogonal Dimensions ===
+export type StateEvent =
+	| {type: 'idle'}
+	| {type: 'loading'}
+	| {type: 'ready'};
 
+// ============================================================================
+// Sync Status and Events
+// ============================================================================
+
+/**
+ * Sync status - server synchronization state.
+ */
+export interface SyncStatus {
 	/** True when a sync operation is currently in progress */
 	readonly isSyncing: boolean;
 
-	/** True when network is available (false = offline) */
+	/** True when network is available */
 	readonly isOnline: boolean;
 
 	/** True when sync is intentionally paused */
@@ -164,54 +167,15 @@ export interface StoreStatus {
 	/** Last successful sync timestamp */
 	readonly lastSyncedAt: number | null;
 
-	/** Last sync error, null if healthy or never synced */
+	/** Last sync error, null if healthy */
 	readonly syncError: Error | null;
 
-	// === Storage - Orthogonal Dimensions ===
-
-	/** Number of pending saves in queue (0 = idle, >0 = saving) */
-	readonly pendingSaves: number;
-
-	/** Last successful save timestamp */
-	readonly lastSavedAt: number | null;
-
-	/** Last storage error (e.g., QuotaExceededError), null if healthy */
-	readonly storageError: Error | null;
-
-	// === Computed Display States (for simple UI) ===
-
-	/**
-	 * Primary sync state for simple UI display.
-	 * Priority: syncing > offline > paused > error > idle
-	 */
-	readonly syncDisplayState:
-		| 'syncing'
-		| 'offline'
-		| 'paused'
-		| 'error'
-		| 'idle';
-
-	/**
-	 * Primary storage state for simple UI display.
-	 * Priority: saving > error > idle
-	 */
-	readonly storageDisplayState: 'saving' | 'error' | 'idle';
-
-	// === Convenience Getters ===
-
-	/** True if any error (sync or storage) */
-	readonly hasError: boolean;
-
-	/** True if there are unsaved local changes */
-	readonly hasUnsavedChanges: boolean;
-
-	/** True if currently syncing or saving */
-	readonly isBusy: boolean;
+	/** Display state for simple UI: syncing > offline > paused > error > idle */
+	readonly displayState: 'syncing' | 'offline' | 'paused' | 'error' | 'idle';
 }
 
 /**
- * Sync events for detailed tracking.
- * These are point-in-time notifications about sync lifecycle events.
+ * Sync lifecycle events - point-in-time notifications.
  */
 export type SyncEvent =
 	| {type: 'started'}
@@ -223,17 +187,71 @@ export type SyncEvent =
 	| {type: 'resumed'};
 
 // ============================================================================
+// Storage Status and Events
+// ============================================================================
+
+/**
+ * Storage status - local persistence state.
+ */
+export interface StorageStatus {
+	/** Number of pending saves in queue */
+	readonly pendingSaves: number;
+
+	/** Last successful save timestamp */
+	readonly lastSavedAt: number | null;
+
+	/** Last storage error, null if healthy */
+	readonly storageError: Error | null;
+
+	/** Display state for simple UI: saving > error > idle */
+	readonly displayState: 'saving' | 'error' | 'idle';
+}
+
+/**
+ * Storage lifecycle events - point-in-time notifications.
+ */
+export type StorageEvent =
+	| {type: 'saving'}
+	| {type: 'saved'; timestamp: number}
+	| {type: 'failed'; error: Error};
+
+// ============================================================================
+// Combined Status Utility
+// ============================================================================
+
+/**
+ * Combine sync and storage status for UI convenience.
+ */
+export function combineStatus(
+	sync: SyncStatus,
+	storage: StorageStatus,
+): {
+	hasError: boolean;
+	hasUnsavedChanges: boolean;
+	isBusy: boolean;
+} {
+	return {
+		hasError: sync.syncError !== null || storage.storageError !== null,
+		hasUnsavedChanges: storage.pendingSaves > 0,
+		isBusy: sync.isSyncing || storage.pendingSaves > 0,
+	};
+}
+
+// ============================================================================
 // Type-Safe Event Map
 // ============================================================================
 
 /**
  * Base store events that are always present (not schema-derived).
  * All use '$store:' prefix to avoid collision with schema-derived events.
+ *
+ * Events are pure signals (discriminated unions with {type: ...}).
+ * Stores fetch current state when notified (not from event payload).
  */
 type BaseStoreEvents<S extends Schema> = {
-	'$store:state': AsyncState<DataOf<S>>;
-	'$store:status': StoreStatus;
+	'$store:state': StateEvent;
 	'$store:sync': SyncEvent;
+	'$store:storage': StorageEvent;
 };
 
 /**

@@ -14,6 +14,9 @@ import type {
 	PullResponse,
 	PushResponse,
 	SyncAdapter,
+	StateEvent,
+	SyncStatus,
+	StorageStatus,
 } from '../../../../src/lib/core/sync/types';
 
 // Test schema
@@ -513,7 +516,7 @@ describe('createSyncableStore', () => {
 			expect(receivedEvent?.key).toBe('op-1');
 		});
 
-		it('emits state event with AsyncState payload', async () => {
+		it('emits state event with StateEvent (lifecycle signal)', async () => {
 			const store = createSyncableStore({
 				schema: testSchema,
 				account: accountStore,
@@ -527,14 +530,14 @@ describe('createSyncableStore', () => {
 			});
 			store.start();
 
-			const events: AsyncState<DataOf<TestSchema>>[] = [];
-			store.on('$store:state', (state) => events.push(state));
+			const events: StateEvent[] = [];
+			store.on('$store:state', (event) => events.push(event));
 
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
 
 			expect(events.length).toBeGreaterThan(0);
-			expect(events[events.length - 1].status).toBe('ready');
+			expect(events[events.length - 1].type).toBe('ready');
 		});
 
 		it('emits settings:changed event on patch()', async () => {
@@ -802,8 +805,8 @@ describe('createSyncableStore', () => {
 		});
 	});
 
-	describe('statusStore', () => {
-		it('provides current status on subscribe', () => {
+	describe('syncStatusStore and storageStatusStore', () => {
+		it('syncStatusStore provides current sync status on subscribe', () => {
 			const store = createSyncableStore({
 				schema: testSchema,
 				account: accountStore,
@@ -817,24 +820,41 @@ describe('createSyncableStore', () => {
 			});
 			store.start();
 
-			let receivedStatus:
-				| {
-						syncDisplayState: string;
-						hasPendingSync: boolean;
-						storageDisplayState: string;
-				  }
-				| undefined;
-			store.statusStore.subscribe((status) => {
+			let receivedStatus: SyncStatus | undefined;
+			store.syncStatusStore.subscribe((status) => {
 				receivedStatus = status;
 			});
 
 			expect(receivedStatus).toBeDefined();
-			expect(receivedStatus?.syncDisplayState).toBe('idle');
-			expect(receivedStatus?.storageDisplayState).toBe('idle');
+			expect(receivedStatus?.displayState).toBe('idle');
 			expect(receivedStatus?.hasPendingSync).toBe(false);
 		});
 
-		it('notifies when syncState changes', async () => {
+		it('storageStatusStore provides current storage status on subscribe', () => {
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+			});
+			store.start();
+
+			let receivedStatus: StorageStatus | undefined;
+			store.storageStatusStore.subscribe((status) => {
+				receivedStatus = status;
+			});
+
+			expect(receivedStatus).toBeDefined();
+			expect(receivedStatus?.displayState).toBe('idle');
+			expect(receivedStatus?.pendingSaves).toBe(0);
+		});
+
+		it('syncStatusStore notifies when syncState changes', async () => {
 			let pushResolve: (() => void) | undefined;
 			const pushPromise = new Promise<void>((resolve) => {
 				pushResolve = resolve;
@@ -875,8 +895,8 @@ describe('createSyncableStore', () => {
 
 			// Track status changes
 			const statusHistory: string[] = [];
-			store.statusStore.subscribe((status) => {
-				statusHistory.push(status.syncDisplayState);
+			store.syncStatusStore.subscribe((status) => {
+				statusHistory.push(status.displayState);
 			});
 
 			// Trigger sync by making a change
@@ -896,7 +916,7 @@ describe('createSyncableStore', () => {
 			expect(statusHistory[statusHistory.length - 1]).toBe('idle');
 		});
 
-		it('notifies when storageState changes', async () => {
+		it('storageStatusStore notifies when storageState changes', async () => {
 			// Create a slow storage that we can control
 			let saveResolve: (() => void) | undefined;
 			const savePromise = new Promise<void>((resolve) => {
@@ -942,8 +962,8 @@ describe('createSyncableStore', () => {
 
 			// Track status changes
 			const statusHistory: string[] = [];
-			store.statusStore.subscribe((status) => {
-				statusHistory.push(status.storageDisplayState);
+			store.storageStatusStore.subscribe((status) => {
+				statusHistory.push(status.displayState);
 			});
 
 			// Trigger storage save by making a change
@@ -957,7 +977,7 @@ describe('createSyncableStore', () => {
 
 			// Complete the save
 			saveResolve!();
-			await new Promise((r) => setTimeout(r, 10));
+			await new Promise((r) => setTimeout(r, 30));
 
 			// Should be back to idle
 			expect(statusHistory[statusHistory.length - 1]).toBe('idle');
@@ -983,7 +1003,9 @@ describe('createSyncableStore', () => {
 			await new Promise((r) => setTimeout(r, 20));
 
 			// No pending saves - should resolve immediately
-			expect(store.status.pendingSaves).toBe(0);
+			let storageStatus: StorageStatus | undefined;
+			store.storageStatusStore.subscribe((s) => (storageStatus = s));
+			expect(storageStatus?.pendingSaves).toBe(0);
 			await expect(store.flush()).resolves.toBeUndefined();
 		});
 
@@ -1037,7 +1059,9 @@ describe('createSyncableStore', () => {
 			await new Promise((r) => setTimeout(r, 10));
 
 			// Should have pending saves
-			expect(store.status.pendingSaves).toBeGreaterThan(0);
+			let storageStatus: StorageStatus | undefined;
+			store.storageStatusStore.subscribe((s) => (storageStatus = s));
+			expect(storageStatus?.pendingSaves).toBeGreaterThan(0);
 
 			// Start flush - it should wait
 			let flushComplete = false;
@@ -1055,7 +1079,7 @@ describe('createSyncableStore', () => {
 			// Now flush should complete
 			await flushPromise;
 			expect(flushComplete).toBe(true);
-			expect(store.status.pendingSaves).toBe(0);
+			expect(storageStatus?.pendingSaves).toBe(0);
 		});
 	});
 
@@ -1590,16 +1614,20 @@ describe('createSyncableStore', () => {
 				accountStore.set('0x1234567890123456789012345678901234567890');
 				await new Promise((r) => setTimeout(r, 20));
 
+				// Track sync status
+				let syncStatus: SyncStatus | undefined;
+				store.syncStatusStore.subscribe((s) => (syncStatus = s));
+
 				// Initial state should be online and idle
-				expect(store.status.isOnline).toBe(true);
-				expect(store.status.syncDisplayState).toBe('idle');
+				expect(syncStatus?.isOnline).toBe(true);
+				expect(syncStatus?.displayState).toBe('idle');
 
 				// Simulate going offline
 				offlineHandler?.();
 
 				// Status should be offline
-				expect(store.status.isOnline).toBe(false);
-				expect(store.status.syncDisplayState).toBe('offline');
+				expect(syncStatus?.isOnline).toBe(false);
+				expect(syncStatus?.displayState).toBe('offline');
 
 				store.stop();
 			} finally {
@@ -1840,7 +1868,9 @@ describe('createSyncableStore', () => {
 			await new Promise((r) => setTimeout(r, 20));
 
 			// No changes made - should be false
-			expect(store.status.hasPendingSync).toBe(false);
+			let syncStatus: SyncStatus | undefined;
+			store.syncStatusStore.subscribe((s) => (syncStatus = s));
+			expect(syncStatus?.hasPendingSync).toBe(false);
 		});
 
 		it('becomes true after a mutation is made', async () => {
@@ -1880,14 +1910,18 @@ describe('createSyncableStore', () => {
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
 
+			// Track sync status
+			let syncStatus: SyncStatus | undefined;
+			store.syncStatusStore.subscribe((s) => (syncStatus = s));
+
 			// Initially false
-			expect(store.status.hasPendingSync).toBe(false);
+			expect(syncStatus?.hasPendingSync).toBe(false);
 
 			// Make a change
 			store.set('settings', {theme: 'light', volume: 0.8});
 
 			// Should now be true - we have pending changes
-			expect(store.status.hasPendingSync).toBe(true);
+			expect(syncStatus?.hasPendingSync).toBe(true);
 
 			// Cleanup: resolve the push if it was called
 			pushResolve?.();
@@ -1929,9 +1963,13 @@ describe('createSyncableStore', () => {
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
 
+			// Track sync status
+			let syncStatus: SyncStatus | undefined;
+			store.syncStatusStore.subscribe((s) => (syncStatus = s));
+
 			// Make a change
 			store.set('settings', {theme: 'light', volume: 0.8});
-			expect(store.status.hasPendingSync).toBe(true);
+			expect(syncStatus?.hasPendingSync).toBe(true);
 
 			// Wait for sync to start
 			await new Promise((r) => setTimeout(r, 30));
@@ -1941,10 +1979,10 @@ describe('createSyncableStore', () => {
 			await new Promise((r) => setTimeout(r, 20));
 
 			// Should be false after successful sync
-			expect(store.status.hasPendingSync).toBe(false);
+			expect(syncStatus?.hasPendingSync).toBe(false);
 		});
 
-		it('notifies statusStore subscribers when hasPendingSync changes', async () => {
+		it('notifies syncStatusStore subscribers when hasPendingSync changes', async () => {
 			let pushResolve: (() => void) | undefined;
 			const mockSyncAdapter = {
 				async pull(): Promise<PullResponse<TestSchema>> {
@@ -1980,9 +2018,9 @@ describe('createSyncableStore', () => {
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 20));
 
-			// Track hasPendingSync changes via statusStore
+			// Track hasPendingSync changes via syncStatusStore
 			const pendingHistory: boolean[] = [];
-			store.statusStore.subscribe((status) => {
+			store.syncStatusStore.subscribe((status) => {
 				pendingHistory.push(status.hasPendingSync);
 			});
 
@@ -2008,7 +2046,7 @@ describe('createSyncableStore', () => {
 	describe('state transition events', () => {
 		it('emits state events during account load: loading -> ready', async () => {
 			// Register listener BEFORE creating store to capture all events
-			const events: AsyncState<DataOf<TestSchema>>[] = [];
+			const events: StateEvent[] = [];
 
 			const store = createSyncableStore({
 				schema: testSchema,
@@ -2023,16 +2061,16 @@ describe('createSyncableStore', () => {
 			});
 			store.start();
 
-			store.on('$store:state', (state) => events.push(state));
+			store.on('$store:state', (event) => events.push(event));
 
 			// Set account to trigger loading -> ready
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
 
 			// Should have: loading -> ready
-			const statuses = events.map((e) => e.status);
-			expect(statuses).toContain('loading');
-			expect(statuses[statuses.length - 1]).toBe('ready');
+			const types = events.map((e) => e.type);
+			expect(types).toContain('loading');
+			expect(types[types.length - 1]).toBe('ready');
 		});
 
 		it('emits state event on account clear: ready -> idle', async () => {
@@ -2052,13 +2090,13 @@ describe('createSyncableStore', () => {
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
 
-			const events: AsyncState<DataOf<TestSchema>>[] = [];
-			store.on('$store:state', (state) => events.push(state));
+			const events: StateEvent[] = [];
+			store.on('$store:state', (event) => events.push(event));
 
 			accountStore.set(undefined);
 			await new Promise((r) => setTimeout(r, 10));
 
-			expect(events[events.length - 1].status).toBe('idle');
+			expect(events[events.length - 1].type).toBe('idle');
 		});
 
 		it('does NOT emit state event when data is modified (use field events instead)', async () => {
@@ -2078,8 +2116,8 @@ describe('createSyncableStore', () => {
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 10));
 
-			const events: AsyncState<DataOf<TestSchema>>[] = [];
-			store.on('$store:state', (state) => events.push(state));
+			const events: StateEvent[] = [];
+			store.on('$store:state', (event) => events.push(event));
 
 			// Clear any events from the initial setup
 			events.length = 0;
@@ -2221,9 +2259,11 @@ describe('createSyncableStore', () => {
 			// Store should remain in loading state since migration failed
 			expect(store.state.status).toBe('loading');
 
-			// Error should be captured in status
-			expect(store.status.storageError).toBeDefined();
-			expect(store.status.storageError?.message).toBe(
+			// Error should be captured in storageStatus
+			let storageStatus: StorageStatus | undefined;
+			store.storageStatusStore.subscribe((s) => (storageStatus = s));
+			expect(storageStatus?.storageError).toBeDefined();
+			expect(storageStatus?.storageError?.message).toBe(
 				'Missing migration for version 2',
 			);
 		});

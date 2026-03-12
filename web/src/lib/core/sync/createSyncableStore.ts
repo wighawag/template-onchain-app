@@ -10,7 +10,8 @@ import type {
 	InternalStorage,
 	DataOf,
 	AsyncState,
-	StoreStatus,
+	SyncStatus,
+	StorageStatus,
 	PermanentKeys,
 	MapKeys,
 	ExtractPermanent,
@@ -100,9 +101,6 @@ export interface SyncableStore<S extends Schema> {
 	/** Current async state */
 	readonly state: AsyncState<DataOf<S>>;
 
-	/** Store status */
-	readonly status: StoreStatus;
-
 	/** Set a permanent field value */
 	set<K extends PermanentKeys<S>>(
 		field: K,
@@ -165,8 +163,11 @@ export interface SyncableStore<S extends Schema> {
 		field: K,
 	): Readable<DataOf<S>[K] | undefined>;
 
-	/** Subscribe to status changes (Svelte store contract) */
-	readonly statusStore: Readable<StoreStatus>;
+	/** Subscribe to sync status changes */
+	readonly syncStatusStore: Readable<SyncStatus>;
+
+	/** Subscribe to storage status changes */
+	readonly storageStatusStore: Readable<StorageStatus>;
 
 	/** Force sync to server now, bypassing debounce */
 	syncNow(): Promise<void>;
@@ -235,86 +236,100 @@ export function createSyncableStore<S extends Schema>(
 	let internalStorage: InternalStorage<S> | null = null;
 	let loadGeneration = 0;
 
-	// Internal mutable status type (avoids type assertions)
-	// Uses orthogonal boolean flags for independent state dimensions
-	interface MutableStoreStatus {
-		// Sync - Orthogonal Dimensions
+	// Internal mutable sync status type
+	interface MutableSyncStatus {
 		isSyncing: boolean;
 		isOnline: boolean;
 		isPaused: boolean;
 		hasPendingSync: boolean;
 		lastSyncedAt: number | null;
 		syncError: Error | null;
+		readonly displayState: 'syncing' | 'offline' | 'paused' | 'error' | 'idle';
+	}
 
-		// Storage - Orthogonal Dimensions
+	// Internal mutable storage status type
+	interface MutableStorageStatus {
 		pendingSaves: number;
 		lastSavedAt: number | null;
 		storageError: Error | null;
-
-		// Computed (readonly)
-		readonly syncDisplayState:
-			| 'syncing'
-			| 'offline'
-			| 'paused'
-			| 'error'
-			| 'idle';
-		readonly storageDisplayState: 'saving' | 'error' | 'idle';
-		readonly hasError: boolean;
-		readonly hasUnsavedChanges: boolean;
-		readonly isBusy: boolean;
+		readonly displayState: 'saving' | 'error' | 'idle';
 	}
 
-	// Status (mutable internally, readonly externally via StoreStatus type)
-	const mutableStatus: MutableStoreStatus = {
-		// Sync - initial state
+	// Mutable sync status (readonly externally via SyncStatus type)
+	const mutableSyncStatus: MutableSyncStatus = {
 		isSyncing: false,
 		isOnline: true, // Assume online until proven otherwise
 		isPaused: false,
 		hasPendingSync: false,
 		lastSyncedAt: null,
 		syncError: null,
-
-		// Storage - initial state
-		pendingSaves: 0,
-		lastSavedAt: null,
-		storageError: null,
-
-		// Computed getters
-		get syncDisplayState() {
+		get displayState() {
 			if (this.isSyncing) return 'syncing';
 			if (!this.isOnline) return 'offline';
 			if (this.isPaused) return 'paused';
 			if (this.syncError) return 'error';
 			return 'idle';
 		},
-		get storageDisplayState() {
+	};
+
+	// Mutable storage status (readonly externally via StorageStatus type)
+	const mutableStorageStatus: MutableStorageStatus = {
+		pendingSaves: 0,
+		lastSavedAt: null,
+		storageError: null,
+		get displayState() {
 			if (this.pendingSaves > 0) return 'saving';
 			if (this.storageError) return 'error';
 			return 'idle';
 		},
-		get hasError() {
-			return this.syncError !== null || this.storageError !== null;
-		},
-		get hasUnsavedChanges() {
-			return this.pendingSaves > 0;
-		},
-		get isBusy() {
-			return this.isSyncing || this.pendingSaves > 0;
-		},
 	};
 
-	// Public readonly view
-	const status: StoreStatus = mutableStatus;
+	// Public readonly views
+	const syncStatus: SyncStatus = mutableSyncStatus;
+	const storageStatus: StorageStatus = mutableStorageStatus;
 
 	// Type-safe event emitter using radiate
 	const emitter = createEmitter<StoreEvents<S>>();
 
-	// Helper to emit status events (works around TypeScript generic intersection issues)
-	function emitStatus(): void {
-		(emitter.emit as (event: '$store:status', data: StoreStatus) => void)(
-			'$store:status',
-			status,
-		);
+	// Type definitions for event helper functions
+	type SyncEventData =
+		| {type: 'started'}
+		| {type: 'completed'; timestamp: number}
+		| {type: 'failed'; error: Error}
+		| {type: 'offline'}
+		| {type: 'online'}
+		| {type: 'paused'}
+		| {type: 'resumed'};
+
+	type StorageEventData =
+		| {type: 'saving'}
+		| {type: 'saved'; timestamp: number}
+		| {type: 'failed'; error: Error};
+
+	type StateEventData = {type: 'idle'} | {type: 'loading'} | {type: 'ready'};
+
+	// Helper to emit sync events (works around TypeScript generic intersection issues)
+	function emitSyncEvent(event: SyncEventData): void {
+		(
+			emitter.emit as (eventName: '$store:sync', data: SyncEventData) => void
+		)('$store:sync', event);
+	}
+
+	// Helper to emit storage events (works around TypeScript generic intersection issues)
+	function emitStorageEvent(event: StorageEventData): void {
+		(
+			emitter.emit as (
+				eventName: '$store:storage',
+				data: StorageEventData,
+			) => void
+		)('$store:storage', event);
+	}
+
+	// Helper to emit state events (works around TypeScript generic intersection issues)
+	function emitStateEvent(event: StateEventData): void {
+		(
+			emitter.emit as (eventName: '$store:state', data: StateEventData) => void
+		)('$store:state', event);
 	}
 
 	// Storage watch cleanup
@@ -347,11 +362,19 @@ export function createSyncableStore<S extends Schema>(
 	// Field store cache for field-level reactivity
 	const fieldStoreCache = new Map<string, Readable<unknown>>();
 
-	// Status store for reactive binding
-	const statusStore: Readable<StoreStatus> = {
-		subscribe(callback: (status: StoreStatus) => void): () => void {
-			callback(status);
-			return emitter.on('$store:status', callback);
+	// Sync status store for reactive binding
+	const syncStatusStore: Readable<SyncStatus> = {
+		subscribe(callback: (status: SyncStatus) => void): () => void {
+			callback(syncStatus);
+			return emitter.on('$store:sync', () => callback(syncStatus));
+		},
+	};
+
+	// Storage status store for reactive binding
+	const storageStatusStore: Readable<StorageStatus> = {
+		subscribe(callback: (status: StorageStatus) => void): () => void {
+			callback(storageStatus);
+			return emitter.on('$store:storage', () => callback(storageStatus));
 		},
 	};
 
@@ -359,8 +382,8 @@ export function createSyncableStore<S extends Schema>(
 	function markDirty(): void {
 		if (!syncAdapter) return;
 		syncDirty = true;
-		mutableStatus.hasPendingSync = true;
-		emitStatus();
+		mutableSyncStatus.hasPendingSync = true;
+		emitSyncEvent({type: 'started'});
 		scheduleSyncPush();
 	}
 
@@ -388,11 +411,10 @@ export function createSyncableStore<S extends Schema>(
 		// mutations that occur during retry attempts
 
 		try {
-			mutableStatus.isSyncing = true;
-			mutableStatus.syncError = null; // Clear previous error when starting new sync
-			emitStatus();
+			mutableSyncStatus.isSyncing = true;
+			mutableSyncStatus.syncError = null; // Clear previous error when starting new sync
 			if (retryCount === 0) {
-				emitter.emit('$store:sync', {type: 'started'});
+				emitSyncEvent({type: 'started'});
 			}
 
 			// Step 1: Pull latest from server
@@ -448,12 +470,11 @@ export function createSyncableStore<S extends Schema>(
 
 			if (pushResponse.success) {
 				syncDirty = false; // Clear dirty flag only on successful sync
-				mutableStatus.lastSyncedAt = Date.now();
-				mutableStatus.syncError = null;
-				mutableStatus.hasPendingSync = false;
-				mutableStatus.isSyncing = false;
-				emitter.emit('$store:sync', {type: 'completed', timestamp: Date.now()});
-				emitStatus();
+				mutableSyncStatus.lastSyncedAt = Date.now();
+				mutableSyncStatus.syncError = null;
+				mutableSyncStatus.hasPendingSync = false;
+				mutableSyncStatus.isSyncing = false;
+				emitSyncEvent({type: 'completed', timestamp: Date.now()});
 			} else {
 				// Push was rejected - counter was stale
 				// This means another client pushed between our pull and push
@@ -480,10 +501,9 @@ export function createSyncableStore<S extends Schema>(
 				}, backoffDelay);
 			} else {
 				// Max retries reached, emit failure
-				mutableStatus.syncError = error as Error;
-				mutableStatus.isSyncing = false;
-				emitter.emit('$store:sync', {type: 'failed', error: error as Error});
-				emitStatus();
+				mutableSyncStatus.syncError = error as Error;
+				mutableSyncStatus.isSyncing = false;
+				emitSyncEvent({type: 'failed', error: error as Error});
 			}
 		}
 	}
@@ -555,19 +575,20 @@ export function createSyncableStore<S extends Schema>(
 	async function saveToStorage(account: `0x${string}`): Promise<void> {
 		if (!internalStorage) return;
 
-		try {
-			mutableStatus.pendingSaves++;
-			mutableStatus.storageError = null; // Clear previous error when starting new save
-			emitStatus();
+		mutableStorageStatus.pendingSaves++;
+		mutableStorageStatus.storageError = null; // Clear previous error when starting new save
+		emitStorageEvent({type: 'saving'});
 
+		try {
 			await storage.save(storageKey(account), internalStorage);
 
-			mutableStatus.lastSavedAt = Date.now();
+			mutableStorageStatus.pendingSaves--;
+			mutableStorageStatus.lastSavedAt = Date.now();
+			emitStorageEvent({type: 'saved', timestamp: Date.now()});
 		} catch (error) {
-			mutableStatus.storageError = error as Error;
-		} finally {
-			mutableStatus.pendingSaves--;
-			emitStatus();
+			mutableStorageStatus.pendingSaves--;
+			mutableStorageStatus.storageError = error as Error;
+			emitStorageEvent({type: 'failed', error: error as Error});
 		}
 	}
 
@@ -592,13 +613,13 @@ export function createSyncableStore<S extends Schema>(
 		if (!newAccount) {
 			asyncState = {status: 'idle', account: undefined};
 			internalStorage = null;
-			emitter.emit('$store:state', asyncState);
+			emitStateEvent({type: 'idle'});
 			return;
 		}
 
 		// Transition to loading state
 		asyncState = {status: 'loading', account: newAccount};
-		emitter.emit('$store:state', asyncState);
+		emitStateEvent({type: 'loading'});
 
 		// Increment generation for race condition handling
 		loadGeneration++;
@@ -628,8 +649,8 @@ export function createSyncableStore<S extends Schema>(
 					internalStorage = migrated as InternalStorage<S>;
 				} catch (error) {
 					// Migration failed - store error and stay in loading state
-					mutableStatus.storageError = error as Error;
-					emitStatus();
+					mutableStorageStatus.storageError = error as Error;
+					emitStorageEvent({type: 'failed', error: error as Error});
 					// Don't proceed to ready state - leave in loading state
 					return;
 				}
@@ -655,7 +676,7 @@ export function createSyncableStore<S extends Schema>(
 			account: newAccount,
 			data: internalStorage.data,
 		};
-		emitter.emit('$store:state', asyncState);
+		emitStateEvent({type: 'ready'});
 
 		// Pull from server (if sync adapter configured)
 		if (syncAdapter) {
@@ -705,10 +726,6 @@ export function createSyncableStore<S extends Schema>(
 	const store: SyncableStore<S> = {
 		get state() {
 			return asyncState;
-		},
-
-		get status() {
-			return status;
 		},
 
 		set<K extends PermanentKeys<S>>(
@@ -933,13 +950,14 @@ export function createSyncableStore<S extends Schema>(
 
 		subscribe(callback: (state: AsyncState<DataOf<S>>) => void): () => void {
 			callback(asyncState);
-			return emitter.on('$store:state', callback);
+			return emitter.on('$store:state', () => callback(asyncState));
 		},
 
 		on: emitter.on.bind(emitter),
 		off: emitter.off.bind(emitter),
 
-		statusStore,
+		syncStatusStore,
+		storageStatusStore,
 
 		start(): () => void {
 			unsubscribeAccount = accountStore.subscribe((account) => {
@@ -968,17 +986,15 @@ export function createSyncableStore<S extends Schema>(
 				typeof window !== 'undefined'
 			) {
 				handleOnline = () => {
-					mutableStatus.isOnline = true;
-					emitStatus();
-					emitter.emit('$store:sync', {type: 'online'});
+					mutableSyncStatus.isOnline = true;
+					emitSyncEvent({type: 'online'});
 					if (asyncState.status === 'ready') {
 						performSyncPush();
 					}
 				};
 				handleOffline = () => {
-					mutableStatus.isOnline = false;
-					emitStatus();
-					emitter.emit('$store:sync', {type: 'offline'});
+					mutableSyncStatus.isOnline = false;
+					emitSyncEvent({type: 'offline'});
 				};
 				window.addEventListener('online', handleOnline);
 				window.addEventListener('offline', handleOffline);
@@ -997,7 +1013,10 @@ export function createSyncableStore<S extends Schema>(
 			// Set up beforeunload listener to warn about pending saves or unsynced changes
 			if (typeof window !== 'undefined') {
 				handleBeforeUnload = (e: BeforeUnloadEvent) => {
-					if (mutableStatus.pendingSaves > 0 || mutableStatus.hasPendingSync) {
+					if (
+						mutableStorageStatus.pendingSaves > 0 ||
+						mutableSyncStatus.hasPendingSync
+					) {
 						// Attempt to prevent close and warn user about pending saves or unsynced changes
 						e.preventDefault();
 						// Note: Most modern browsers ignore custom messages and show a generic one
@@ -1201,20 +1220,18 @@ export function createSyncableStore<S extends Schema>(
 
 		pauseSync(): void {
 			syncPaused = true;
-			mutableStatus.isPaused = true;
+			mutableSyncStatus.isPaused = true;
 			if (syncDebounceTimer) {
 				clearTimeout(syncDebounceTimer);
 				syncDebounceTimer = undefined;
 			}
-			emitStatus();
-			emitter.emit('$store:sync', {type: 'paused'});
+			emitSyncEvent({type: 'paused'});
 		},
 
 		resumeSync(): void {
 			syncPaused = false;
-			mutableStatus.isPaused = false;
-			emitStatus();
-			emitter.emit('$store:sync', {type: 'resumed'});
+			mutableSyncStatus.isPaused = false;
+			emitSyncEvent({type: 'resumed'});
 			if (syncDirty) {
 				scheduleSyncPush();
 			}
@@ -1227,8 +1244,8 @@ export function createSyncableStore<S extends Schema>(
 			}
 
 			// Clear the error
-			mutableStatus.storageError = null;
-			emitStatus();
+			mutableStorageStatus.storageError = null;
+			emitStorageEvent({type: 'saved', timestamp: Date.now()});
 
 			// Re-trigger account load
 			const account = asyncState.account;
@@ -1240,10 +1257,10 @@ export function createSyncableStore<S extends Schema>(
 		async flush(timeoutMs = 30000): Promise<void> {
 			// Wait for all pending storage saves to complete with timeout
 			const startTime = Date.now();
-			while (mutableStatus.pendingSaves > 0) {
+			while (mutableStorageStatus.pendingSaves > 0) {
 				if (Date.now() - startTime > timeoutMs) {
 					throw new Error(
-						`flush() timed out after ${timeoutMs}ms waiting for ${mutableStatus.pendingSaves} pending saves`,
+						`flush() timed out after ${timeoutMs}ms waiting for ${mutableStorageStatus.pendingSaves} pending saves`,
 					);
 				}
 				await new Promise((r) => setTimeout(r, 10));

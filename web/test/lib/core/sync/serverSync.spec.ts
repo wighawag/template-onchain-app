@@ -12,6 +12,7 @@ import type {
 	SyncAdapter,
 	PullResponse,
 	PushResponse,
+	SyncStatus,
 } from '../../../../src/lib/core/sync/types';
 
 // Test schema
@@ -307,19 +308,25 @@ describe('Server Sync', () => {
 			let isSyncingWhilePushing: boolean | undefined;
 			let syncDisplayStateWhilePushing: string | undefined;
 
+			// We need to declare store first to reference it in the mock
+			let store: ReturnType<typeof createSyncableStore<TestSchema>>;
+
 			const mockAdapter: SyncAdapter<TestSchema> = {
 				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
 				push: vi.fn().mockImplementation(async function (
 					this: unknown,
 					...args: unknown[]
 				) {
-					isSyncingWhilePushing = store.status.isSyncing;
-					syncDisplayStateWhilePushing = store.status.syncDisplayState;
+					// Capture sync status during push
+					let syncStatus: SyncStatus | undefined;
+					store.syncStatusStore.subscribe((s) => (syncStatus = s))();
+					isSyncingWhilePushing = syncStatus?.isSyncing;
+					syncDisplayStateWhilePushing = syncStatus?.displayState;
 					return {success: true};
 				}),
 			};
 
-			const store = createSyncableStore({
+			store = createSyncableStore({
 				schema: testSchema,
 				account: accountStore,
 				storage,
@@ -344,8 +351,12 @@ describe('Server Sync', () => {
 
 			expect(isSyncingWhilePushing).toBe(true);
 			expect(syncDisplayStateWhilePushing).toBe('syncing');
-			expect(store.status.isSyncing).toBe(false);
-			expect(store.status.syncDisplayState).toBe('idle');
+
+			// Check final sync status
+			let finalSyncStatus: SyncStatus | undefined;
+			store.syncStatusStore.subscribe((s) => (finalSyncStatus = s));
+			expect(finalSyncStatus?.isSyncing).toBe(false);
+			expect(finalSyncStatus?.displayState).toBe('idle');
 		});
 
 		it('sets syncError on store status when push fails', async () => {
@@ -377,7 +388,9 @@ describe('Server Sync', () => {
 			// Wait for debounce and sync to fail
 			await new Promise((r) => setTimeout(r, 50));
 
-			expect(store.status.syncError?.message).toBe('Network failure');
+			let syncStatus: SyncStatus | undefined;
+			store.syncStatusStore.subscribe((s) => (syncStatus = s));
+			expect(syncStatus?.syncError?.message).toBe('Network failure');
 		});
 
 		it('updates lastSyncedAt on successful sync', async () => {
@@ -404,15 +417,17 @@ describe('Server Sync', () => {
 			accountStore.set('0x1234567890123456789012345678901234567890');
 			await new Promise((r) => setTimeout(r, 50));
 
-			expect(store.status.lastSyncedAt).toBeNull();
+			let syncStatus: SyncStatus | undefined;
+			store.syncStatusStore.subscribe((s) => (syncStatus = s));
+			expect(syncStatus?.lastSyncedAt).toBeNull();
 
 			store.set('settings', {theme: 'light', volume: 0.9});
 
 			// Wait for debounce and sync to complete
 			await new Promise((r) => setTimeout(r, 50));
 
-			expect(store.status.lastSyncedAt).not.toBeNull();
-			expect(typeof store.status.lastSyncedAt).toBe('number');
+			expect(syncStatus?.lastSyncedAt).not.toBeNull();
+			expect(typeof syncStatus?.lastSyncedAt).toBe('number');
 		});
 	});
 
@@ -532,7 +547,10 @@ describe('Server Sync', () => {
 
 			// Should have failed event
 			expect(syncEvents.some((e) => e.type === 'failed')).toBe(true);
-			expect(store.status.syncError?.message).toBe('Persistent error');
+
+			let syncStatus: SyncStatus | undefined;
+			store.syncStatusStore.subscribe((s) => (syncStatus = s));
+			expect(syncStatus?.syncError?.message).toBe('Persistent error');
 		});
 
 		it('uses exponential backoff between retries', async () => {
