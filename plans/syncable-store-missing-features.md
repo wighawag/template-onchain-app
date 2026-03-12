@@ -554,7 +554,7 @@ gantt
 | Test | Description |
 |------|-------------|
 | Fine-grained reactivity | Verify only item store subscribers notified on item update |
-| Cross-tab + pending | Verify pending count accurate across tabs |
+| Cross-tab + pending | Verify hasPendingSync accurate across tabs |
 | Offline → Online | Verify sync resumes with correct state after reconnect |
 
 ---
