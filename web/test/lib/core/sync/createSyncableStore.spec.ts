@@ -880,6 +880,273 @@ describe('createSyncableStore', () => {
 		});
 	});
 
+	describe('syncNow', () => {
+		it('handles no sync adapter gracefully', async () => {
+			// Create store WITHOUT sync adapter
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				// No sync adapter configured
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Should not throw - just returns without error
+			await expect(store.syncNow()).resolves.toBeUndefined();
+		});
+
+		it('handles not-ready state gracefully', async () => {
+			const mockSyncAdapter = {
+				async pull() {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+			});
+
+			// Store is still idle (no account set)
+			expect(store.state.status).toBe('idle');
+
+			// Should not throw - just returns without error
+			await expect(store.syncNow()).resolves.toBeUndefined();
+		});
+
+		it('bypasses debounce and syncs immediately', async () => {
+			let pushCallCount = 0;
+			let pushResolve: (() => void) | undefined;
+			
+			const mockSyncAdapter = {
+				async pull() {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					pushCallCount++;
+					await new Promise<void>((resolve) => {
+						pushResolve = resolve;
+					});
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {debounceMs: 5000}, // Long debounce
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Make a change (this would normally start a 5 second debounce)
+			store.set('settings', {theme: 'light', volume: 0.8});
+
+			// Sync hasn't started yet (debounce not elapsed)
+			expect(pushCallCount).toBe(0);
+
+			// Call syncNow - should bypass debounce
+			const syncPromise = store.syncNow();
+
+			// Give it a moment to start
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Sync should have started immediately
+			expect(pushCallCount).toBe(1);
+
+			// Complete the sync
+			pushResolve!();
+			await syncPromise;
+		});
+	});
+
+	describe('pauseSync and resumeSync', () => {
+		it('pauseSync prevents scheduled syncs from running', async () => {
+			let pushCallCount = 0;
+
+			const mockSyncAdapter = {
+				async pull() {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					pushCallCount++;
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {debounceMs: 20}, // Short debounce
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Pause sync before making changes
+			store.pauseSync();
+
+			// Make a change (this would normally trigger sync after debounce)
+			store.set('settings', {theme: 'light', volume: 0.8});
+
+			// Wait for longer than debounce
+			await new Promise((r) => setTimeout(r, 50));
+
+			// Sync should NOT have happened because it's paused
+			expect(pushCallCount).toBe(0);
+		});
+
+		it('resumeSync triggers sync if dirty', async () => {
+			let pushCallCount = 0;
+			let pushResolve: (() => void) | undefined;
+
+			const mockSyncAdapter = {
+				async pull() {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					pushCallCount++;
+					await new Promise<void>((resolve) => {
+						pushResolve = resolve;
+					});
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {debounceMs: 10},
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Pause sync before making changes
+			store.pauseSync();
+
+			// Make a change
+			store.set('settings', {theme: 'light', volume: 0.8});
+
+			// No sync yet
+			expect(pushCallCount).toBe(0);
+
+			// Resume sync
+			store.resumeSync();
+
+			// Wait for debounce to trigger
+			await new Promise((r) => setTimeout(r, 30));
+
+			// Sync should now have started
+			expect(pushCallCount).toBe(1);
+
+			// Complete sync
+			pushResolve!();
+		});
+
+		it('pauseSync clears pending debounce timer', async () => {
+			let pushCallCount = 0;
+
+			const mockSyncAdapter = {
+				async pull() {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					pushCallCount++;
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {debounceMs: 50}, // Longer debounce
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Make a change (starts debounce timer)
+			store.set('settings', {theme: 'light', volume: 0.8});
+
+			// Pause sync immediately (should clear the pending timer)
+			store.pauseSync();
+
+			// Wait for longer than debounce
+			await new Promise((r) => setTimeout(r, 80));
+
+			// Sync should NOT have happened because timer was cleared
+			expect(pushCallCount).toBe(0);
+		});
+	});
+
 	describe('state transition events', () => {
 		it('emits state events during account load: loading -> ready', async () => {
 			// Register listener BEFORE creating store to capture all events

@@ -149,6 +149,15 @@ export interface SyncableStore<S extends Schema> {
 
 	/** Subscribe to status changes (Svelte store contract) */
 	readonly statusStore: Readable<StoreStatus>;
+
+	/** Force sync to server now, bypassing debounce */
+	syncNow(): Promise<void>;
+
+	/** Pause server sync */
+	pauseSync(): void;
+
+	/** Resume server sync */
+	resumeSync(): void;
 }
 
 // ============================================================================
@@ -226,6 +235,7 @@ export function createSyncableStore<S extends Schema>(
 	// Sync debounce timer
 	let syncDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 	let syncDirty = false;
+	let syncPaused = false;
 
 	// Item store cache for fine-grained reactivity
 	const itemStoreCache = new Map<string, Readable<unknown>>();
@@ -259,7 +269,7 @@ export function createSyncableStore<S extends Schema>(
 
 	// Schedule a debounced push to server
 	function scheduleSyncPush(): void {
-		if (!syncAdapter || !asyncState.account) return;
+		if (!syncAdapter || !asyncState.account || syncPaused) return;
 
 		if (syncDebounceTimer) {
 			clearTimeout(syncDebounceTimer);
@@ -744,6 +754,33 @@ export function createSyncableStore<S extends Schema>(
 			// Cache the store
 			itemStoreCache.set(cacheKey, itemStore);
 			return itemStore;
+		},
+
+		async syncNow(): Promise<void> {
+			if (!syncAdapter || asyncState.status !== 'ready') return;
+
+			// Clear any pending debounce
+			if (syncDebounceTimer) {
+				clearTimeout(syncDebounceTimer);
+				syncDebounceTimer = undefined;
+			}
+
+			await performSyncPush();
+		},
+
+		pauseSync(): void {
+			syncPaused = true;
+			if (syncDebounceTimer) {
+				clearTimeout(syncDebounceTimer);
+				syncDebounceTimer = undefined;
+			}
+		},
+
+		resumeSync(): void {
+			syncPaused = false;
+			if (syncDirty) {
+				scheduleSyncPush();
+			}
 		},
 	};
 
