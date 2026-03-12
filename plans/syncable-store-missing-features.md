@@ -521,7 +521,7 @@ gantt
     syncOnReconnect        :p3b, after p3a, 0.5d
     intervalMs             :p3c, after p3b, 0.5d
     section Phase 4
-    pendingCount           :p4, after p3c, 1d
+    hasPendingSync         :done, p4, after p3c, 1d
     section Phase 5
     migrations             :p5, after p4, 1d
     section Phase 6
