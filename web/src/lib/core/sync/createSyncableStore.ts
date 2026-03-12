@@ -236,15 +236,29 @@ export function createSyncableStore<S extends Schema>(
 	let loadGeneration = 0;
 
 	// Internal mutable status type (avoids type assertions)
+	// Uses orthogonal boolean flags for independent state dimensions
 	interface MutableStoreStatus {
-		syncState: 'idle' | 'syncing' | 'error' | 'offline';
+		// Sync - Orthogonal Dimensions
+		isSyncing: boolean;
+		isOnline: boolean;
+		isPaused: boolean;
 		hasPendingSync: boolean;
 		lastSyncedAt: number | null;
 		syncError: Error | null;
-		storageState: 'idle' | 'saving' | 'error';
+
+		// Storage - Orthogonal Dimensions
+		pendingSaves: number;
 		lastSavedAt: number | null;
 		storageError: Error | null;
-		pendingSaves: number;
+
+		// Computed (readonly)
+		readonly syncDisplayState:
+			| 'syncing'
+			| 'offline'
+			| 'paused'
+			| 'error'
+			| 'idle';
+		readonly storageDisplayState: 'saving' | 'error' | 'idle';
 		readonly hasError: boolean;
 		readonly hasUnsavedChanges: boolean;
 		readonly isBusy: boolean;
@@ -252,14 +266,32 @@ export function createSyncableStore<S extends Schema>(
 
 	// Status (mutable internally, readonly externally via StoreStatus type)
 	const mutableStatus: MutableStoreStatus = {
-		syncState: 'idle',
+		// Sync - initial state
+		isSyncing: false,
+		isOnline: true, // Assume online until proven otherwise
+		isPaused: false,
 		hasPendingSync: false,
 		lastSyncedAt: null,
 		syncError: null,
-		storageState: 'idle',
+
+		// Storage - initial state
+		pendingSaves: 0,
 		lastSavedAt: null,
 		storageError: null,
-		pendingSaves: 0,
+
+		// Computed getters
+		get syncDisplayState() {
+			if (this.isSyncing) return 'syncing';
+			if (!this.isOnline) return 'offline';
+			if (this.isPaused) return 'paused';
+			if (this.syncError) return 'error';
+			return 'idle';
+		},
+		get storageDisplayState() {
+			if (this.pendingSaves > 0) return 'saving';
+			if (this.storageError) return 'error';
+			return 'idle';
+		},
 		get hasError() {
 			return this.syncError !== null || this.storageError !== null;
 		},
@@ -267,7 +299,7 @@ export function createSyncableStore<S extends Schema>(
 			return this.pendingSaves > 0;
 		},
 		get isBusy() {
-			return this.syncState === 'syncing' || this.storageState === 'saving';
+			return this.isSyncing || this.pendingSaves > 0;
 		},
 	};
 
@@ -356,7 +388,8 @@ export function createSyncableStore<S extends Schema>(
 		// mutations that occur during retry attempts
 
 		try {
-			mutableStatus.syncState = 'syncing';
+			mutableStatus.isSyncing = true;
+			mutableStatus.syncError = null; // Clear previous error when starting new sync
 			emitStatus();
 			if (retryCount === 0) {
 				emitter.emit('sync', {type: 'started'});
@@ -418,8 +451,8 @@ export function createSyncableStore<S extends Schema>(
 				mutableStatus.lastSyncedAt = Date.now();
 				mutableStatus.syncError = null;
 				mutableStatus.hasPendingSync = false;
+				mutableStatus.isSyncing = false;
 				emitter.emit('sync', {type: 'completed', timestamp: Date.now()});
-				mutableStatus.syncState = 'idle';
 				emitStatus();
 			} else {
 				// Push was rejected - counter was stale
@@ -448,8 +481,8 @@ export function createSyncableStore<S extends Schema>(
 			} else {
 				// Max retries reached, emit failure
 				mutableStatus.syncError = error as Error;
+				mutableStatus.isSyncing = false;
 				emitter.emit('sync', {type: 'failed', error: error as Error});
-				mutableStatus.syncState = 'idle';
 				emitStatus();
 			}
 		}
@@ -523,21 +556,17 @@ export function createSyncableStore<S extends Schema>(
 		if (!internalStorage) return;
 
 		try {
-			mutableStatus.storageState = 'saving';
 			mutableStatus.pendingSaves++;
+			mutableStatus.storageError = null; // Clear previous error when starting new save
 			emitStatus();
 
 			await storage.save(storageKey(account), internalStorage);
 
 			mutableStatus.lastSavedAt = Date.now();
-			mutableStatus.storageError = null;
 		} catch (error) {
 			mutableStatus.storageError = error as Error;
 		} finally {
 			mutableStatus.pendingSaves--;
-			if (mutableStatus.pendingSaves === 0) {
-				mutableStatus.storageState = 'idle';
-			}
 			emitStatus();
 		}
 	}
@@ -939,7 +968,7 @@ export function createSyncableStore<S extends Schema>(
 				typeof window !== 'undefined'
 			) {
 				handleOnline = () => {
-					mutableStatus.syncState = 'idle';
+					mutableStatus.isOnline = true;
 					emitStatus();
 					emitter.emit('sync', {type: 'online'});
 					if (asyncState.status === 'ready') {
@@ -947,7 +976,7 @@ export function createSyncableStore<S extends Schema>(
 					}
 				};
 				handleOffline = () => {
-					mutableStatus.syncState = 'offline';
+					mutableStatus.isOnline = false;
 					emitStatus();
 					emitter.emit('sync', {type: 'offline'});
 				};
@@ -1172,14 +1201,20 @@ export function createSyncableStore<S extends Schema>(
 
 		pauseSync(): void {
 			syncPaused = true;
+			mutableStatus.isPaused = true;
 			if (syncDebounceTimer) {
 				clearTimeout(syncDebounceTimer);
 				syncDebounceTimer = undefined;
 			}
+			emitStatus();
+			emitter.emit('sync', {type: 'paused'});
 		},
 
 		resumeSync(): void {
 			syncPaused = false;
+			mutableStatus.isPaused = false;
+			emitStatus();
+			emitter.emit('sync', {type: 'resumed'});
 			if (syncDirty) {
 				scheduleSyncPush();
 			}

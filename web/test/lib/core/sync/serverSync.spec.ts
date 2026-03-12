@@ -303,8 +303,9 @@ describe('Server Sync', () => {
 			expect((failedEvent?.error as Error)?.message).toBe('Network error');
 		});
 
-		it('updates store status syncState during sync', async () => {
-			let syncStateWhilePushing: string | undefined;
+		it('updates store status isSyncing during sync', async () => {
+			let isSyncingWhilePushing: boolean | undefined;
+			let syncDisplayStateWhilePushing: string | undefined;
 
 			const mockAdapter: SyncAdapter<TestSchema> = {
 				pull: vi.fn().mockResolvedValue({data: null, counter: 0n}),
@@ -312,7 +313,8 @@ describe('Server Sync', () => {
 					this: unknown,
 					...args: unknown[]
 				) {
-					syncStateWhilePushing = store.status.syncState;
+					isSyncingWhilePushing = store.status.isSyncing;
+					syncDisplayStateWhilePushing = store.status.syncDisplayState;
 					return {success: true};
 				}),
 			};
@@ -340,8 +342,10 @@ describe('Server Sync', () => {
 			// Wait for debounce and sync to complete
 			await new Promise((r) => setTimeout(r, 50));
 
-			expect(syncStateWhilePushing).toBe('syncing');
-			expect(store.status.syncState).toBe('idle');
+			expect(isSyncingWhilePushing).toBe(true);
+			expect(syncDisplayStateWhilePushing).toBe('syncing');
+			expect(store.status.isSyncing).toBe(false);
+			expect(store.status.syncDisplayState).toBe('idle');
 		});
 
 		it('sets syncError on store status when push fails', async () => {

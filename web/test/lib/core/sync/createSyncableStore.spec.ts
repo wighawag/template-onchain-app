@@ -819,9 +819,9 @@ describe('createSyncableStore', () => {
 
 			let receivedStatus:
 				| {
-						syncState: string;
+						syncDisplayState: string;
 						hasPendingSync: boolean;
-						storageState: string;
+						storageDisplayState: string;
 				  }
 				| undefined;
 			store.statusStore.subscribe((status) => {
@@ -829,8 +829,8 @@ describe('createSyncableStore', () => {
 			});
 
 			expect(receivedStatus).toBeDefined();
-			expect(receivedStatus?.syncState).toBe('idle');
-			expect(receivedStatus?.storageState).toBe('idle');
+			expect(receivedStatus?.syncDisplayState).toBe('idle');
+			expect(receivedStatus?.storageDisplayState).toBe('idle');
 			expect(receivedStatus?.hasPendingSync).toBe(false);
 		});
 
@@ -876,7 +876,7 @@ describe('createSyncableStore', () => {
 			// Track status changes
 			const statusHistory: string[] = [];
 			store.statusStore.subscribe((status) => {
-				statusHistory.push(status.syncState);
+				statusHistory.push(status.syncDisplayState);
 			});
 
 			// Trigger sync by making a change
@@ -943,7 +943,7 @@ describe('createSyncableStore', () => {
 			// Track status changes
 			const statusHistory: string[] = [];
 			store.statusStore.subscribe((status) => {
-				statusHistory.push(status.storageState);
+				statusHistory.push(status.storageDisplayState);
 			});
 
 			// Trigger storage save by making a change
@@ -1590,14 +1590,16 @@ describe('createSyncableStore', () => {
 				accountStore.set('0x1234567890123456789012345678901234567890');
 				await new Promise((r) => setTimeout(r, 20));
 
-				// Initial state should be idle
-				expect(store.status.syncState).toBe('idle');
+				// Initial state should be online and idle
+				expect(store.status.isOnline).toBe(true);
+				expect(store.status.syncDisplayState).toBe('idle');
 
 				// Simulate going offline
 				offlineHandler?.();
 
 				// Status should be offline
-				expect(store.status.syncState).toBe('offline');
+				expect(store.status.isOnline).toBe(false);
+				expect(store.status.syncDisplayState).toBe('offline');
 
 				store.stop();
 			} finally {

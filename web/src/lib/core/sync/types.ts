@@ -138,12 +138,25 @@ export type InternalStorage<S extends Schema> = {
 
 /**
  * Unified status for sync and storage operations.
+ *
+ * Uses orthogonal boolean flags instead of a single enum to properly
+ * represent independent dimensions:
+ * - Activity: is an operation in progress?
+ * - Connectivity: is network available?
+ * - Control: is sync intentionally paused?
+ * - Health: did the last operation succeed?
  */
 export interface StoreStatus {
-	// === Sync State ===
+	// === Sync - Orthogonal Dimensions ===
 
-	/** Current sync state with server */
-	readonly syncState: 'idle' | 'syncing' | 'error' | 'offline';
+	/** True when a sync operation is currently in progress */
+	readonly isSyncing: boolean;
+
+	/** True when network is available (false = offline) */
+	readonly isOnline: boolean;
+
+	/** True when sync is intentionally paused */
+	readonly isPaused: boolean;
 
 	/** True if there are changes pending sync to server */
 	readonly hasPendingSync: boolean;
@@ -151,22 +164,38 @@ export interface StoreStatus {
 	/** Last successful sync timestamp */
 	readonly lastSyncedAt: number | null;
 
-	/** Last sync error, if any */
+	/** Last sync error, null if healthy or never synced */
 	readonly syncError: Error | null;
 
-	// === Storage State ===
+	// === Storage - Orthogonal Dimensions ===
 
-	/** Current local storage state */
-	readonly storageState: 'idle' | 'saving' | 'error';
+	/** Number of pending saves in queue (0 = idle, >0 = saving) */
+	readonly pendingSaves: number;
 
 	/** Last successful save timestamp */
 	readonly lastSavedAt: number | null;
 
-	/** Last storage error (e.g., QuotaExceededError) */
+	/** Last storage error (e.g., QuotaExceededError), null if healthy */
 	readonly storageError: Error | null;
 
-	/** Number of pending saves in queue */
-	readonly pendingSaves: number;
+	// === Computed Display States (for simple UI) ===
+
+	/**
+	 * Primary sync state for simple UI display.
+	 * Priority: syncing > offline > paused > error > idle
+	 */
+	readonly syncDisplayState:
+		| 'syncing'
+		| 'offline'
+		| 'paused'
+		| 'error'
+		| 'idle';
+
+	/**
+	 * Primary storage state for simple UI display.
+	 * Priority: saving > error > idle
+	 */
+	readonly storageDisplayState: 'saving' | 'error' | 'idle';
 
 	// === Convenience Getters ===
 
@@ -182,13 +211,16 @@ export interface StoreStatus {
 
 /**
  * Sync events for detailed tracking.
+ * These are point-in-time notifications about sync lifecycle events.
  */
 export type SyncEvent =
 	| {type: 'started'}
 	| {type: 'completed'; timestamp: number}
 	| {type: 'failed'; error: Error}
 	| {type: 'offline'}
-	| {type: 'online'};
+	| {type: 'online'}
+	| {type: 'paused'}
+	| {type: 'resumed'};
 
 // ============================================================================
 // Type-Safe Event Map
