@@ -470,11 +470,11 @@ export function createSyncableStore<S extends Schema>(
 
 			if (pushResponse.success) {
 				syncDirty = false; // Clear dirty flag only on successful sync
-				mutableSyncStatus.lastSyncedAt = Date.now();
+				mutableSyncStatus.lastSyncedAt = clock();
 				mutableSyncStatus.syncError = null;
 				mutableSyncStatus.hasPendingSync = false;
 				mutableSyncStatus.isSyncing = false;
-				emitSyncEvent({type: 'completed', timestamp: Date.now()});
+				emitSyncEvent({type: 'completed', timestamp: clock()});
 			} else {
 				// Push was rejected - counter was stale
 				// This means another client pushed between our pull and push
@@ -581,8 +581,8 @@ export function createSyncableStore<S extends Schema>(
 			await storage.save(storageKey(account), internalStorage);
 
 			mutableStorageStatus.pendingSaves--;
-			mutableStorageStatus.lastSavedAt = Date.now();
-			emitStorageEvent({type: 'saved', timestamp: Date.now()});
+			mutableStorageStatus.lastSavedAt = clock();
+			emitStorageEvent({type: 'saved', timestamp: clock()});
 		} catch (error) {
 			mutableStorageStatus.pendingSaves--;
 			mutableStorageStatus.storageError = error as Error;
@@ -1244,7 +1244,7 @@ export function createSyncableStore<S extends Schema>(
 
 			// Clear the error
 			mutableStorageStatus.storageError = null;
-			emitStorageEvent({type: 'saved', timestamp: Date.now()});
+			emitStorageEvent({type: 'saved', timestamp: clock()});
 
 			// Re-trigger account load
 			const account = asyncState.account;
@@ -1255,9 +1255,9 @@ export function createSyncableStore<S extends Schema>(
 
 		async flush(timeoutMs = 30000): Promise<void> {
 			// Wait for all pending storage saves to complete with timeout
-			const startTime = Date.now();
+			const startTime = clock();
 			while (mutableStorageStatus.pendingSaves > 0) {
-				if (Date.now() - startTime > timeoutMs) {
+				if (clock() - startTime > timeoutMs) {
 					throw new Error(
 						`flush() timed out after ${timeoutMs}ms waiting for ${mutableStorageStatus.pendingSaves} pending saves`,
 					);
