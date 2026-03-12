@@ -739,7 +739,7 @@ describe('createSyncableStore', () => {
 			let receivedStatus:
 				| {
 						syncState: string;
-						pendingCount: number;
+						hasPendingSync: boolean;
 						storageState: string;
 				  }
 				| undefined;
@@ -750,7 +750,7 @@ describe('createSyncableStore', () => {
 			expect(receivedStatus).toBeDefined();
 			expect(receivedStatus?.syncState).toBe('idle');
 			expect(receivedStatus?.storageState).toBe('idle');
-			expect(receivedStatus?.pendingCount).toBe(0);
+			expect(receivedStatus?.hasPendingSync).toBe(false);
 		});
 
 		it('notifies when syncState changes', async () => {
@@ -939,7 +939,7 @@ describe('createSyncableStore', () => {
 		it('bypasses debounce and syncs immediately', async () => {
 			let pushCallCount = 0;
 			let pushResolve: (() => void) | undefined;
-			
+
 			const mockSyncAdapter = {
 				async pull() {
 					return null;
@@ -1168,7 +1168,7 @@ describe('createSyncableStore', () => {
 			let visibilityHandler: (() => void) | undefined;
 			const originalDocument = globalThis.document;
 
-			(globalThis as unknown as { document: unknown }).document = {
+			(globalThis as unknown as {document: unknown}).document = {
 				get visibilityState() {
 					return visibilityState;
 				},
@@ -1234,12 +1234,13 @@ describe('createSyncableStore', () => {
 			let visibilityState = 'visible';
 			let visibilityHandler: (() => void) | undefined;
 			const originalDocument = globalThis.document;
-			
-			// @ts-expect-error - mocking document
+
 			globalThis.document = {
+				// @ts-expect-error - mocking document
 				get visibilityState() {
 					return visibilityState;
 				},
+				// @ts-expect-error - mocking document
 				addEventListener(event: string, handler: () => void) {
 					if (event === 'visibilitychange') {
 						visibilityHandler = handler;
@@ -1307,7 +1308,7 @@ describe('createSyncableStore', () => {
 			let offlineHandler: (() => void) | undefined;
 			const originalWindow = globalThis.window;
 
-			(globalThis as unknown as { window: unknown }).window = {
+			(globalThis as unknown as {window: unknown}).window = {
 				addEventListener(event: string, handler: () => void) {
 					if (event === 'online') onlineHandler = handler;
 					if (event === 'offline') offlineHandler = handler;
@@ -1367,7 +1368,7 @@ describe('createSyncableStore', () => {
 			let offlineHandler: (() => void) | undefined;
 			const originalWindow = globalThis.window;
 
-			(globalThis as unknown as { window: unknown }).window = {
+			(globalThis as unknown as {window: unknown}).window = {
 				addEventListener(event: string, handler: () => void) {
 					if (event === 'offline') offlineHandler = handler;
 				},
@@ -1425,7 +1426,7 @@ describe('createSyncableStore', () => {
 			let onlineHandler: (() => void) | undefined;
 			const originalWindow = globalThis.window;
 
-			(globalThis as unknown as { window: unknown }).window = {
+			(globalThis as unknown as {window: unknown}).window = {
 				addEventListener(event: string, handler: () => void) {
 					if (event === 'online') onlineHandler = handler;
 				},
@@ -1595,6 +1596,196 @@ describe('createSyncableStore', () => {
 
 			// Should NOT have triggered additional pulls after stop
 			expect(pullCallCount).toBe(countAfterStop);
+		});
+	});
+
+	describe('hasPendingSync', () => {
+		it('is false when no changes have been made', async () => {
+			const mockSyncAdapter = {
+				async pull() {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// No changes made - should be false
+			expect(store.status.hasPendingSync).toBe(false);
+		});
+
+		it('becomes true after a mutation is made', async () => {
+			// Use a push that will hang to prevent auto-completion
+			let pushResolve: (() => void) | undefined;
+			const mockSyncAdapter = {
+				async pull() {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					await new Promise<void>((resolve) => {
+						pushResolve = resolve;
+					});
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {debounceMs: 5000}, // Long debounce so sync doesn't complete
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Initially false
+			expect(store.status.hasPendingSync).toBe(false);
+
+			// Make a change
+			store.set('settings', {theme: 'light', volume: 0.8});
+
+			// Should now be true - we have pending changes
+			expect(store.status.hasPendingSync).toBe(true);
+
+			// Cleanup: resolve the push if it was called
+			pushResolve?.();
+		});
+
+		it('resets to false after successful sync', async () => {
+			let pushResolve: (() => void) | undefined;
+			const mockSyncAdapter = {
+				async pull() {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					await new Promise<void>((resolve) => {
+						pushResolve = resolve;
+					});
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {debounceMs: 10}, // Short debounce
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Make a change
+			store.set('settings', {theme: 'light', volume: 0.8});
+			expect(store.status.hasPendingSync).toBe(true);
+
+			// Wait for sync to start
+			await new Promise((r) => setTimeout(r, 30));
+
+			// Complete the sync
+			pushResolve!();
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Should be false after successful sync
+			expect(store.status.hasPendingSync).toBe(false);
+		});
+
+		it('notifies statusStore subscribers when hasPendingSync changes', async () => {
+			let pushResolve: (() => void) | undefined;
+			const mockSyncAdapter = {
+				async pull() {
+					return null;
+				},
+				async push(
+					_account: `0x${string}`,
+					changes: InternalStorage<TestSchema>,
+				): Promise<InternalStorage<TestSchema>> {
+					await new Promise<void>((resolve) => {
+						pushResolve = resolve;
+					});
+					return changes;
+				},
+			};
+
+			const store = createSyncableStore({
+				schema: testSchema,
+				account: accountStore,
+				storage,
+				storageKey: (addr) => `test-${addr}`,
+				defaultData: () => ({
+					settings: {theme: 'dark', volume: 0.5},
+					operations: {},
+				}),
+				clock: () => clock,
+				sync: mockSyncAdapter,
+				syncConfig: {debounceMs: 10},
+			});
+
+			accountStore.set('0x1234567890123456789012345678901234567890');
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Track hasPendingSync changes via statusStore
+			const pendingHistory: boolean[] = [];
+			store.statusStore.subscribe((status) => {
+				pendingHistory.push(status.hasPendingSync);
+			});
+
+			// Clear initial subscription value
+			pendingHistory.length = 0;
+
+			// Make a change - should notify with true
+			store.set('settings', {theme: 'light', volume: 0.8});
+
+			// Should have notified with true
+			expect(pendingHistory).toContain(true);
+
+			// Wait for sync to start and complete
+			await new Promise((r) => setTimeout(r, 30));
+			pushResolve!();
+			await new Promise((r) => setTimeout(r, 20));
+
+			// Should have notified with false
+			expect(pendingHistory).toContain(false);
 		});
 	});
 

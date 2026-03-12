@@ -142,8 +142,8 @@ export interface StoreStatus {
 	/** Current sync state with server */
 	readonly syncState: 'idle' | 'syncing' | 'error' | 'offline';
 
-	/** Number of changes pending sync to server */
-	readonly pendingCount: number;
+	/** True if there are changes pending sync to server */
+	readonly hasPendingSync: boolean;
 
 	/** Last successful sync timestamp */
 	readonly lastSyncedAt: number | null;

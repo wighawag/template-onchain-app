@@ -195,7 +195,7 @@ export function createSyncableStore<S extends Schema>(
 	// Status
 	const status: StoreStatus = {
 		syncState: 'idle',
-		pendingCount: 0,
+		hasPendingSync: false,
 		lastSyncedAt: null,
 		syncError: null,
 		storageState: 'idle',
@@ -274,6 +274,8 @@ export function createSyncableStore<S extends Schema>(
 	function markDirty(): void {
 		if (!syncAdapter) return;
 		syncDirty = true;
+		(status as { hasPendingSync: boolean }).hasPendingSync = true;
+		notifyStatusChange();
 		scheduleSyncPush();
 	}
 
@@ -323,6 +325,7 @@ export function createSyncableStore<S extends Schema>(
 
 			(status as { lastSyncedAt: number | null }).lastSyncedAt = Date.now();
 			(status as { syncError: Error | null }).syncError = null;
+			(status as { hasPendingSync: boolean }).hasPendingSync = false;
 			emitter.emit('sync', { type: 'completed', timestamp: Date.now() });
 			(status as { syncState: string }).syncState = 'idle';
 			notifyStatusChange();
