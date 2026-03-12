@@ -205,9 +205,7 @@ export function createAccountData(params: {
 		 * Does NOT subscribe to 'operation:updated' - use getOperationStore for that.
 		 */
 		subscribe(
-			callback: (
-				state: Readonly<AsyncState<AccountData>>,
-			) => void,
+			callback: (state: Readonly<AsyncState<AccountData>>) => void,
 		): () => void {
 			// Call with current state immediately (Svelte store contract)
 			callback(store.state);
@@ -225,9 +223,7 @@ export function createAccountData(params: {
 			const unsubCleared = store.on('operations:cleared', () =>
 				callback(store.state),
 			);
-			const unsubSet = store.on('operations:set', () =>
-				callback(store.state),
-			);
+			const unsubSet = store.on('operations:set', () => callback(store.state));
 
 			// NOTE: We intentionally do NOT subscribe to 'operation:updated'
 			// Individual operation updates are handled by getOperationStore

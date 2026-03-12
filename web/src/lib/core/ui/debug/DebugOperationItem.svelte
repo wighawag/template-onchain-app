@@ -80,10 +80,7 @@
 		</div>
 		<div class="flex items-center gap-1">
 			{#if state?.final !== undefined}
-				<Badge
-					variant="outline"
-					class="h-4 shrink-0 px-1.5 py-0 text-[10px]"
-				>
+				<Badge variant="outline" class="h-4 shrink-0 px-1.5 py-0 text-[10px]">
 					Final
 				</Badge>
 			{/if}

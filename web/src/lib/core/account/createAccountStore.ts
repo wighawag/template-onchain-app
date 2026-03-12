@@ -170,13 +170,13 @@ export function createAccountStore<
 		if (currentState.status === 'ready' && currentState.account === acc) {
 			const {result, event, eventData} = mutation(currentState.data);
 			_save(acc, currentState.data).catch(() => {});
-		// Emit domain-specific event for fine-grained subscriptions
-		if (event)
-			emitter.emit(
-				event as keyof (E & {state: AsyncState<D>}),
-				(eventData ?? currentState.data) as any,
-			);
-		return result;
+			// Emit domain-specific event for fine-grained subscriptions
+			if (event)
+				emitter.emit(
+					event as keyof (E & {state: AsyncState<D>}),
+					(eventData ?? currentState.data) as any,
+				);
+			return result;
 		}
 
 		// Cross-account path (unchanged logic, just D instead of S)
@@ -251,7 +251,10 @@ export function createAccountStore<
 			const key = storageKey(newAccount);
 			unwatchStorage = storage.watch(key, async (_, newValue) => {
 				// Ensure still on same account
-				if (asyncState.status !== 'ready' || asyncState.account !== newAccount) {
+				if (
+					asyncState.status !== 'ready' ||
+					asyncState.account !== newAccount
+				) {
 					return;
 				}
 

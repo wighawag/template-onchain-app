@@ -53,4 +53,4 @@ export {
 } from './merge';
 
 // Cleanup function
-export { cleanup } from './cleanup';
+export {cleanup} from './cleanup';

@@ -19,9 +19,9 @@ import stableStringify from 'json-stable-stringify';
  * deterministic property order across all JavaScript engines.
  */
 export function tiebreaker<T>(a: T, b: T): T {
- const aStr = stableStringify(a) ?? '';
- const bStr = stableStringify(b) ?? '';
- return aStr <= bStr ? a : b;
+	const aStr = stableStringify(a) ?? '';
+	const bStr = stableStringify(b) ?? '';
+	return aStr <= bStr ? a : b;
 }
 
 // ============================================================================
@@ -62,7 +62,7 @@ export function mergePermanent<T>(
 			incomingWon: true,
 		};
 	}
-	
+
 	if (current.timestamp > incoming.timestamp) {
 		return {
 			value: current.value,
@@ -70,11 +70,11 @@ export function mergePermanent<T>(
 			incomingWon: false,
 		};
 	}
-	
+
 	// Same timestamp - use deterministic tiebreaker
 	const winner = tiebreaker(current.value, incoming.value);
 	const incomingWon = winner === incoming.value;
-	
+
 	return {
 		value: winner,
 		timestamp: current.timestamp,
@@ -87,8 +87,8 @@ export function mergePermanent<T>(
 // ============================================================================
 
 /**
-	* Map state for merge input.
-	*/
+ * Map state for merge input.
+ */
 export interface MapState<T> {
 	items: Record<string, T>;
 	timestamps: Record<string, number>;
@@ -96,16 +96,16 @@ export interface MapState<T> {
 }
 
 /**
-	* Change event emitted during merge.
-	*/
+ * Change event emitted during merge.
+ */
 export interface MapChange<T> {
 	event: `${string}:added` | `${string}:updated` | `${string}:removed`;
-	data: { key: string; item: T };
+	data: {key: string; item: T};
 }
 
 /**
-	* Result of map merge.
-	*/
+ * Result of map merge.
+ */
 export interface MapMergeResult<T> {
 	items: Record<string, T>;
 	timestamps: Record<string, number>;
@@ -114,10 +114,10 @@ export interface MapMergeResult<T> {
 }
 
 /**
-	* Merge two map field states.
-	* Items are merged by key using timestamps.
-	* Tombstones indicate deleted items.
-	*/
+ * Merge two map field states.
+ * Items are merged by key using timestamps.
+ * Tombstones indicate deleted items.
+ */
 export function mergeMap<T>(
 	current: MapState<T>,
 	incoming: MapState<T>,
@@ -157,7 +157,7 @@ export function mergeMap<T>(
 			if (hadItem) {
 				changes.push({
 					event: `${fieldName}:removed`,
-					data: { key, item: current.items[key] },
+					data: {key, item: current.items[key]},
 				});
 			}
 			continue;
@@ -177,7 +177,7 @@ export function mergeMap<T>(
 			winnerTs = iTs;
 			changes.push({
 				event: `${fieldName}:added`,
-				data: { key, item: iItem },
+				data: {key, item: iItem},
 			});
 		} else if (cItem && !iItem) {
 			// Only in current - keep it
@@ -192,7 +192,7 @@ export function mergeMap<T>(
 				winnerTs = iTs;
 				changes.push({
 					event: `${fieldName}:updated`,
-					data: { key, item: iItem },
+					data: {key, item: iItem},
 				});
 			} else if (cTs > iTs) {
 				// Current has higher timestamp - no change
@@ -201,8 +201,8 @@ export function mergeMap<T>(
 			} else {
 				// Same timestamp - deterministic tiebreaker
 				const picked = tiebreaker(
-					{ item: cItem, ts: cTs },
-					{ item: iItem, ts: iTs },
+					{item: cItem, ts: cTs},
+					{item: iItem, ts: iTs},
 				);
 				winner = picked.item;
 				winnerTs = picked.ts;
@@ -210,7 +210,7 @@ export function mergeMap<T>(
 				if (winner === iItem) {
 					changes.push({
 						event: `${fieldName}:updated`,
-						data: { key, item: iItem },
+						data: {key, item: iItem},
 					});
 				}
 			}
@@ -220,27 +220,34 @@ export function mergeMap<T>(
 		timestamps[key] = winnerTs;
 	}
 
-	return { items, timestamps, tombstones, changes };
+	return {items, timestamps, tombstones, changes};
 }
 
 // ============================================================================
 // Full Store Merge
 // ============================================================================
 
-import type { Schema, InternalStorage, StoreChange, DataOf, PermanentKeys, MapKeys } from './types';
+import type {
+	Schema,
+	InternalStorage,
+	StoreChange,
+	DataOf,
+	PermanentKeys,
+	MapKeys,
+} from './types';
 
 /**
-	* Result of full store merge.
-	*/
+ * Result of full store merge.
+ */
 export interface StoreMergeResult<S extends Schema> {
 	merged: InternalStorage<S>;
 	changes: StoreChange[];
 }
 
 /**
-	* Merge two complete store states.
-	* Combines permanent and map field merges.
-	*/
+ * Merge two complete store states.
+ * Combines permanent and map field merges.
+ */
 export function mergeStore<S extends Schema>(
 	current: InternalStorage<S>,
 	incoming: InternalStorage<S>,
@@ -260,31 +267,49 @@ export function mergeStore<S extends Schema>(
 
 		if (fieldDef.__type === 'permanent') {
 			// Merge permanent field
-			const currentTs = (current.$timestamps as Record<string, number>)[field] ?? 0;
-			const incomingTs = (incoming.$timestamps as Record<string, number>)[field] ?? 0;
+			const currentTs =
+				(current.$timestamps as Record<string, number>)[field] ?? 0;
+			const incomingTs =
+				(incoming.$timestamps as Record<string, number>)[field] ?? 0;
 			const currentValue = (current.data as Record<string, unknown>)[field];
 			const incomingValue = (incoming.data as Record<string, unknown>)[field];
 
 			const mergeResult = mergePermanent(
-				{ value: currentValue, timestamp: currentTs },
-				{ value: incomingValue, timestamp: incomingTs },
+				{value: currentValue, timestamp: currentTs},
+				{value: incomingValue, timestamp: incomingTs},
 			);
 
 			(result.data as Record<string, unknown>)[field] = mergeResult.value;
-			(result.$timestamps as Record<string, number>)[field] = mergeResult.timestamp;
+			(result.$timestamps as Record<string, number>)[field] =
+				mergeResult.timestamp;
 
 			// Track change if incoming won
 			if (mergeResult.incomingWon) {
-				changes.push({ event: `${field}:changed`, data: mergeResult.value });
+				changes.push({event: `${field}:changed`, data: mergeResult.value});
 			}
 		} else if (fieldDef.__type === 'map') {
 			// Merge map field
-			const currentItems = ((current.data as Record<string, unknown>)[field] ?? {}) as Record<string, unknown>;
-			const incomingItems = ((incoming.data as Record<string, unknown>)[field] ?? {}) as Record<string, unknown>;
-			const currentTimestamps = ((current.$itemTimestamps as Record<string, Record<string, number>>)[field] ?? {});
-			const incomingTimestamps = ((incoming.$itemTimestamps as Record<string, Record<string, number>>)[field] ?? {});
-			const currentTombstones = ((current.$tombstones as Record<string, Record<string, number>>)[field] ?? {});
-			const incomingTombstones = ((incoming.$tombstones as Record<string, Record<string, number>>)[field] ?? {});
+			const currentItems = ((current.data as Record<string, unknown>)[field] ??
+				{}) as Record<string, unknown>;
+			const incomingItems = ((incoming.data as Record<string, unknown>)[
+				field
+			] ?? {}) as Record<string, unknown>;
+			const currentTimestamps =
+				(current.$itemTimestamps as Record<string, Record<string, number>>)[
+					field
+				] ?? {};
+			const incomingTimestamps =
+				(incoming.$itemTimestamps as Record<string, Record<string, number>>)[
+					field
+				] ?? {};
+			const currentTombstones =
+				(current.$tombstones as Record<string, Record<string, number>>)[
+					field
+				] ?? {};
+			const incomingTombstones =
+				(incoming.$tombstones as Record<string, Record<string, number>>)[
+					field
+				] ?? {};
 
 			const mapResult = mergeMap(
 				{
@@ -301,13 +326,16 @@ export function mergeStore<S extends Schema>(
 			);
 
 			(result.data as Record<string, unknown>)[field] = mapResult.items;
-			(result.$itemTimestamps as Record<string, Record<string, number>>)[field] = mapResult.timestamps;
-			(result.$tombstones as Record<string, Record<string, number>>)[field] = mapResult.tombstones;
+			(result.$itemTimestamps as Record<string, Record<string, number>>)[
+				field
+			] = mapResult.timestamps;
+			(result.$tombstones as Record<string, Record<string, number>>)[field] =
+				mapResult.tombstones;
 
 			// Add map changes
 			changes.push(...(mapResult.changes as StoreChange[]));
 		}
 	}
 
-	return { merged: result, changes };
+	return {merged: result, changes};
 }

@@ -13,12 +13,12 @@
 /**
  * Marker type for permanent fields - updated as a whole unit.
  */
-export type PermanentField<T> = { __type: 'permanent'; __value?: T };
+export type PermanentField<T> = {__type: 'permanent'; __value?: T};
 
 /**
  * Marker type for map fields - items merged individually.
  */
-export type MapField<T> = { __type: 'map'; __item?: T };
+export type MapField<T> = {__type: 'map'; __item?: T};
 
 // ============================================================================
 // Schema Definition Helpers
@@ -29,7 +29,7 @@ export type MapField<T> = { __type: 'map'; __item?: T };
  * Permanent fields are updated as a whole and never deleted.
  */
 export function permanent<T>(): PermanentField<T> {
-	return { __type: 'permanent' } as PermanentField<T>;
+	return {__type: 'permanent'} as PermanentField<T>;
 }
 
 /**
@@ -37,13 +37,16 @@ export function permanent<T>(): PermanentField<T> {
  * Map fields contain items that are individually tracked with timestamps and deleteAt.
  */
 export function map<T>(): MapField<T> {
-	return { __type: 'map' } as MapField<T>;
+	return {__type: 'map'} as MapField<T>;
 }
 
 /**
  * Schema type - maps field names to field types.
  */
-export type Schema = Record<string, PermanentField<unknown> | MapField<unknown>>;
+export type Schema = Record<
+	string,
+	PermanentField<unknown> | MapField<unknown>
+>;
 
 /**
  * Define a schema with type inference.
@@ -88,7 +91,7 @@ export type DataOf<S extends Schema> = {
 	[K in keyof S]: S[K] extends PermanentField<infer T>
 		? T
 		: S[K] extends MapField<infer T>
-			? Record<string, T & { deleteAt: number }>
+			? Record<string, T & {deleteAt: number}>
 			: never;
 };
 
@@ -96,7 +99,7 @@ export type DataOf<S extends Schema> = {
  * Deep partial type for patch operations.
  */
 export type DeepPartial<T> = T extends object
-	? { [K in keyof T]?: DeepPartial<T[K]> }
+	? {[K in keyof T]?: DeepPartial<T[K]>}
 	: T;
 
 // ============================================================================
@@ -181,11 +184,11 @@ export interface StoreStatus {
  * Sync events for detailed tracking.
  */
 export type SyncEvent =
-	| { type: 'started' }
-	| { type: 'completed'; timestamp: number }
-	| { type: 'failed'; error: Error }
-	| { type: 'offline' }
-	| { type: 'online' };
+	| {type: 'started'}
+	| {type: 'completed'; timestamp: number}
+	| {type: 'failed'; error: Error}
+	| {type: 'offline'}
+	| {type: 'online'};
 
 // ============================================================================
 // Type-Safe Event Map
@@ -225,17 +228,17 @@ type PermanentEvents<S extends Schema> = {
 type MapEvents<S extends Schema> = {
 	[K in MapKeys<S> as `${K & string}:added`]: {
 		key: string;
-		item: ExtractMapItem<S[K]> & { deleteAt: number };
+		item: ExtractMapItem<S[K]> & {deleteAt: number};
 	};
 } & {
 	[K in MapKeys<S> as `${K & string}:updated`]: {
 		key: string;
-		item: ExtractMapItem<S[K]> & { deleteAt: number };
+		item: ExtractMapItem<S[K]> & {deleteAt: number};
 	};
 } & {
 	[K in MapKeys<S> as `${K & string}:removed`]: {
 		key: string;
-		item: ExtractMapItem<S[K]> & { deleteAt: number };
+		item: ExtractMapItem<S[K]> & {deleteAt: number};
 	};
 };
 
@@ -247,9 +250,9 @@ type MapEvents<S extends Schema> = {
  * Async state for store data - matches pattern from existing AccountData.
  */
 export type AsyncState<T> =
-	| { status: 'idle'; account: undefined }
-	| { status: 'loading'; account: `0x${string}` }
-	| { status: 'ready'; account: `0x${string}`; data: T };
+	| {status: 'idle'; account: undefined}
+	| {status: 'loading'; account: `0x${string}`}
+	| {status: 'ready'; account: `0x${string}`; data: T};
 
 // ============================================================================
 // Change Tracking Types
@@ -260,10 +263,10 @@ export type AsyncState<T> =
  * Event names are field-specific like "settings:changed" or "operations:added".
  */
 export type StoreChange =
-	| { event: `${string}:changed`; data: unknown }
-	| { event: `${string}:added`; data: { key: string; item: unknown } }
-	| { event: `${string}:updated`; data: { key: string; item: unknown } }
-	| { event: `${string}:removed`; data: { key: string; item: unknown } };
+	| {event: `${string}:changed`; data: unknown}
+	| {event: `${string}:added`; data: {key: string; item: unknown}}
+	| {event: `${string}:updated`; data: {key: string; item: unknown}}
+	| {event: `${string}:removed`; data: {key: string; item: unknown}};
 
 // ============================================================================
 // Server Sync Types
@@ -324,7 +327,11 @@ export interface SyncAdapter<S extends Schema> {
 	 * @param counter - Counter/version for optimistic locking (must be > server's counter)
 	 * @returns Success/failure response
 	 */
-	push(account: `0x${string}`, data: InternalStorage<S>, counter: bigint): Promise<PushResponse>;
+	push(
+		account: `0x${string}`,
+		data: InternalStorage<S>,
+		counter: bigint,
+	): Promise<PushResponse>;
 
 	/**
 	 * Subscribe to real-time updates (optional).

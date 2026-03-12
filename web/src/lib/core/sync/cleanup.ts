@@ -5,7 +5,7 @@
  * Runs on store initialization and after every merge.
  */
 
-import type { Schema, InternalStorage, DataOf } from './types';
+import type {Schema, InternalStorage, DataOf} from './types';
 
 /**
  * Clean up expired items and tombstones from storage.
@@ -23,8 +23,8 @@ export function cleanup<S extends Schema>(
 ): InternalStorage<S> {
 	const result: InternalStorage<S> = {
 		$version: storage.$version,
-		data: { ...storage.data } as DataOf<S>,
-		$timestamps: { ...storage.$timestamps },
+		data: {...storage.data} as DataOf<S>,
+		$timestamps: {...storage.$timestamps},
 		$itemTimestamps: {} as InternalStorage<S>['$itemTimestamps'],
 		$tombstones: {} as InternalStorage<S>['$tombstones'],
 	};
@@ -34,7 +34,10 @@ export function cleanup<S extends Schema>(
 
 		if (fieldDef.__type === 'map') {
 			// Copy and filter tombstones
-			const tombstones = (storage.$tombstones as Record<string, Record<string, number>>)[field] ?? {};
+			const tombstones =
+				(storage.$tombstones as Record<string, Record<string, number>>)[
+					field
+				] ?? {};
 			const cleanedTombstones: Record<string, number> = {};
 
 			for (const [key, deleteAt] of Object.entries(tombstones)) {
@@ -43,11 +46,16 @@ export function cleanup<S extends Schema>(
 				}
 			}
 
-			(result.$tombstones as Record<string, Record<string, number>>)[field] = cleanedTombstones;
+			(result.$tombstones as Record<string, Record<string, number>>)[field] =
+				cleanedTombstones;
 
 			// Copy and filter items
-			const items = ((storage.data as Record<string, unknown>)[field] ?? {}) as Record<string, { deleteAt: number }>;
-			const timestamps = ((storage.$itemTimestamps as Record<string, Record<string, number>>)[field] ?? {});
+			const items = ((storage.data as Record<string, unknown>)[field] ??
+				{}) as Record<string, {deleteAt: number}>;
+			const timestamps =
+				(storage.$itemTimestamps as Record<string, Record<string, number>>)[
+					field
+				] ?? {};
 			const cleanedItems: Record<string, unknown> = {};
 			const cleanedTimestamps: Record<string, number> = {};
 
@@ -61,7 +69,9 @@ export function cleanup<S extends Schema>(
 			}
 
 			(result.data as Record<string, unknown>)[field] = cleanedItems;
-			(result.$itemTimestamps as Record<string, Record<string, number>>)[field] = cleanedTimestamps;
+			(result.$itemTimestamps as Record<string, Record<string, number>>)[
+				field
+			] = cleanedTimestamps;
 		} else if (fieldDef.__type === 'permanent') {
 			// Permanent fields are never cleaned up
 			// They're already copied above

@@ -32,11 +32,11 @@ import type {
 export interface Readable<T> {
 	subscribe(callback: (value: T) => void): () => void;
 }
-import type { AsyncStorage } from '../storage';
-import { cleanup } from './cleanup';
-import { mergeStore } from './merge';
-import { isWatchable } from '../storage';
-import { createEmitter } from 'radiate';
+import type {AsyncStorage} from '../storage';
+import {cleanup} from './cleanup';
+import {mergeStore} from './merge';
+import {isWatchable} from '../storage';
+import {createEmitter} from 'radiate';
 
 // ============================================================================
 // Account Store Interface (minimal interface for dependency injection)
@@ -104,21 +104,31 @@ export interface SyncableStore<S extends Schema> {
 	readonly status: StoreStatus;
 
 	/** Set a permanent field value */
-	set<K extends PermanentKeys<S>>(field: K, value: ExtractPermanent<S[K]>): void;
+	set<K extends PermanentKeys<S>>(
+		field: K,
+		value: ExtractPermanent<S[K]>,
+	): void;
 
 	/** Patch a permanent field with partial updates */
-	patch<K extends PermanentKeys<S>>(field: K, value: DeepPartial<ExtractPermanent<S[K]>>): void;
+	patch<K extends PermanentKeys<S>>(
+		field: K,
+		value: DeepPartial<ExtractPermanent<S[K]>>,
+	): void;
 
 	/** Add an item to a map field */
 	add<K extends MapKeys<S>>(
 		field: K,
 		key: string,
 		value: ExtractMapItem<S[K]>,
-		options: { deleteAt: number },
+		options: {deleteAt: number},
 	): void;
 
 	/** Update an existing map item. Throws if item does not exist. */
-	update<K extends MapKeys<S>>(field: K, key: string, value: ExtractMapItem<S[K]>): void;
+	update<K extends MapKeys<S>>(
+		field: K,
+		key: string,
+		value: ExtractMapItem<S[K]>,
+	): void;
 
 	/** Remove an item from a map field. Throws if item does not exist. */
 	remove<K extends MapKeys<S>>(field: K, key: string): void;
@@ -148,10 +158,12 @@ export interface SyncableStore<S extends Schema> {
 	getItemStore<K extends MapKeys<S>>(
 		field: K,
 		key: string,
-	): Readable<(ExtractMapItem<S[K]> & { deleteAt: number }) | undefined>;
+	): Readable<(ExtractMapItem<S[K]> & {deleteAt: number}) | undefined>;
 
 	/** Get a reactive store for a top-level field */
-	getFieldStore<K extends keyof S>(field: K): Readable<DataOf<S>[K] | undefined>;
+	getFieldStore<K extends keyof S>(
+		field: K,
+	): Readable<DataOf<S>[K] | undefined>;
 
 	/** Subscribe to status changes (Svelte store contract) */
 	readonly statusStore: Readable<StoreStatus>;
@@ -219,7 +231,7 @@ export function createSyncableStore<S extends Schema>(
 	const retryBackoffMs = syncConfig?.retryBackoffMs ?? 1000;
 
 	// State
-	let asyncState: AsyncState<DataOf<S>> = { status: 'idle', account: undefined };
+	let asyncState: AsyncState<DataOf<S>> = {status: 'idle', account: undefined};
 	let internalStorage: InternalStorage<S> | null = null;
 	let loadGeneration = 0;
 
@@ -350,7 +362,8 @@ export function createSyncableStore<S extends Schema>(
 	// Perform the actual sync: pull → merge → save → push
 	// This implements client-side merging for a "dumb" server that only stores/retrieves data
 	async function performSyncPush(retryCount = 0): Promise<void> {
-		if (!syncAdapter || !internalStorage || asyncState.status !== 'ready') return;
+		if (!syncAdapter || !internalStorage || asyncState.status !== 'ready')
+			return;
 
 		const account = asyncState.account;
 		// Note: syncDirty is cleared only on successful completion to avoid losing
@@ -360,7 +373,7 @@ export function createSyncableStore<S extends Schema>(
 			mutableStatus.syncState = 'syncing';
 			notifyStatusChange();
 			if (retryCount === 0) {
-				emitter.emit('sync', { type: 'started' });
+				emitter.emit('sync', {type: 'started'});
 			}
 
 			// Step 1: Pull latest from server
@@ -369,13 +382,17 @@ export function createSyncableStore<S extends Schema>(
 			// Step 2: Merge server data with local data (if server has data)
 			let dataToSync = internalStorage;
 			if (pullResponse.data) {
-				const { merged, changes } = mergeStore(internalStorage, pullResponse.data, schema);
+				const {merged, changes} = mergeStore(
+					internalStorage,
+					pullResponse.data,
+					schema,
+				);
 				dataToSync = merged;
 
 				// Update local state if server had newer data
 				if (changes.length > 0) {
 					internalStorage = merged;
-					asyncState = { ...asyncState, data: merged.data };
+					asyncState = {...asyncState, data: merged.data};
 
 					// Emit change events for any server-side updates
 					// NOTE: We do NOT call notifyStateChange() here - field-level events are sufficient
@@ -397,15 +414,22 @@ export function createSyncableStore<S extends Schema>(
 			// even for sub-millisecond operations
 			// Use BigInt arithmetic throughout to avoid precision loss for large counters
 			const clockBigInt = BigInt(clock());
-			const newCounter = clockBigInt > pullResponse.counter ? clockBigInt : pullResponse.counter + 1n;
-			const pushResponse = await syncAdapter.push(account, dataToSync, newCounter);
+			const newCounter =
+				clockBigInt > pullResponse.counter
+					? clockBigInt
+					: pullResponse.counter + 1n;
+			const pushResponse = await syncAdapter.push(
+				account,
+				dataToSync,
+				newCounter,
+			);
 
 			if (pushResponse.success) {
 				syncDirty = false; // Clear dirty flag only on successful sync
 				mutableStatus.lastSyncedAt = Date.now();
 				mutableStatus.syncError = null;
 				mutableStatus.hasPendingSync = false;
-				emitter.emit('sync', { type: 'completed', timestamp: Date.now() });
+				emitter.emit('sync', {type: 'completed', timestamp: Date.now()});
 				mutableStatus.syncState = 'idle';
 				notifyStatusChange();
 			} else {
@@ -418,7 +442,10 @@ export function createSyncableStore<S extends Schema>(
 						performSyncPush(retryCount + 1);
 					}, backoffDelay);
 				} else {
-					throw new Error(pushResponse.error || 'Push rejected: counter stale after max retries');
+					throw new Error(
+						pushResponse.error ||
+							'Push rejected: counter stale after max retries',
+					);
 				}
 			}
 		} catch (error) {
@@ -432,7 +459,7 @@ export function createSyncableStore<S extends Schema>(
 			} else {
 				// Max retries reached, emit failure
 				mutableStatus.syncError = error as Error;
-				emitter.emit('sync', { type: 'failed', error: error as Error });
+				emitter.emit('sync', {type: 'failed', error: error as Error});
 				mutableStatus.syncState = 'idle';
 				notifyStatusChange();
 			}
@@ -448,14 +475,18 @@ export function createSyncableStore<S extends Schema>(
 
 			if (pullResponse.data) {
 				// Merge server data with local state
-				const { merged, changes } = mergeStore(internalStorage, pullResponse.data, schema);
+				const {merged, changes} = mergeStore(
+					internalStorage,
+					pullResponse.data,
+					schema,
+				);
 
 				if (changes.length > 0) {
 					internalStorage = merged;
 
 					// Update async state data
 					if (asyncState.status === 'ready') {
-						asyncState = { ...asyncState, data: merged.data };
+						asyncState = {...asyncState, data: merged.data};
 					}
 
 					// Emit field-level change events - no notifyStateChange() needed
@@ -466,7 +497,7 @@ export function createSyncableStore<S extends Schema>(
 							change.data as StoreEvents<S>[keyof StoreEvents<S>],
 						);
 					}
-	
+
 					// Save merged state to local storage
 					try {
 						await storage.save(storageKey(account), merged);
@@ -518,7 +549,9 @@ export function createSyncableStore<S extends Schema>(
 	}
 
 	// Set account (internal)
-	async function setAccount(newAccount: `0x${string}` | undefined): Promise<void> {
+	async function setAccount(
+		newAccount: `0x${string}` | undefined,
+	): Promise<void> {
 		// Same account - no change
 		if (newAccount === asyncState.account) return;
 
@@ -531,17 +564,17 @@ export function createSyncableStore<S extends Schema>(
 
 		// Clear field store cache on account switch
 		fieldStoreCache.clear();
-	
+
 		// No account - transition to idle
 		if (!newAccount) {
-			asyncState = { status: 'idle', account: undefined };
+			asyncState = {status: 'idle', account: undefined};
 			internalStorage = null;
 			notifyStateChange();
 			return;
 		}
 
 		// Transition to loading state
-		asyncState = { status: 'loading', account: newAccount };
+		asyncState = {status: 'loading', account: newAccount};
 		notifyStateChange();
 
 		// Increment generation for race condition handling
@@ -567,7 +600,7 @@ export function createSyncableStore<S extends Schema>(
 							throw new Error(`Missing migration for version ${v}`);
 						}
 						migrated = migration(migrated);
-						(migrated as { $version: number }).$version = v;
+						(migrated as {$version: number}).$version = v;
 					}
 					internalStorage = migrated as InternalStorage<S>;
 				} catch (error) {
@@ -608,30 +641,37 @@ export function createSyncableStore<S extends Schema>(
 
 		// Set up storage watch for cross-tab sync
 		if (isWatchable(storage)) {
-			unwatchStorage = storage.watch(storageKey(newAccount), async (_, newValue) => {
-				if (!newValue || !internalStorage) return;
+			unwatchStorage = storage.watch(
+				storageKey(newAccount),
+				async (_, newValue) => {
+					if (!newValue || !internalStorage) return;
 
-				// Merge with current state
-				const { merged, changes } = mergeStore(internalStorage, newValue, schema);
+					// Merge with current state
+					const {merged, changes} = mergeStore(
+						internalStorage,
+						newValue,
+						schema,
+					);
 
-				if (changes.length > 0) {
-					internalStorage = merged;
+					if (changes.length > 0) {
+						internalStorage = merged;
 
-					// Update async state data
-					if (asyncState.status === 'ready') {
-						asyncState = { ...asyncState, data: merged.data };
+						// Update async state data
+						if (asyncState.status === 'ready') {
+							asyncState = {...asyncState, data: merged.data};
+						}
+
+						// Emit field-level change events - no notifyStateChange() needed
+						// Main subscribe() should only trigger on state transitions
+						for (const change of changes) {
+							emitter.emit(
+								change.event as keyof StoreEvents<S>,
+								change.data as StoreEvents<S>[keyof StoreEvents<S>],
+							);
+						}
 					}
-
-					// Emit field-level change events - no notifyStateChange() needed
-					// Main subscribe() should only trigger on state transitions
-					for (const change of changes) {
-						emitter.emit(
-							change.event as keyof StoreEvents<S>,
-							change.data as StoreEvents<S>[keyof StoreEvents<S>],
-						);
-					}
-				}
-			});
+				},
+			);
 		}
 	}
 
@@ -645,20 +685,28 @@ export function createSyncableStore<S extends Schema>(
 			return status;
 		},
 
-		set<K extends PermanentKeys<S>>(field: K, value: ExtractPermanent<S[K]>): void {
+		set<K extends PermanentKeys<S>>(
+			field: K,
+			value: ExtractPermanent<S[K]>,
+		): void {
 			if (asyncState.status !== 'ready' || !internalStorage) {
 				throw new Error('Store is not ready');
 			}
 
 			const now = clock();
-			(internalStorage.data as Record<string, unknown>)[field as string] = value;
-			(internalStorage.$timestamps as Record<string, number>)[field as string] = now;
+			(internalStorage.data as Record<string, unknown>)[field as string] =
+				value;
+			(internalStorage.$timestamps as Record<string, number>)[field as string] =
+				now;
 
 			// Update state
-			asyncState = { ...asyncState, data: { ...internalStorage.data } };
+			asyncState = {...asyncState, data: {...internalStorage.data}};
 
 			// Emit event (for field-level subscribers, NOT main subscribe)
-			emitter.emit(`${String(field)}:changed` as keyof StoreEvents<S>, value as StoreEvents<S>[keyof StoreEvents<S>]);
+			emitter.emit(
+				`${String(field)}:changed` as keyof StoreEvents<S>,
+				value as StoreEvents<S>[keyof StoreEvents<S>],
+			);
 
 			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
@@ -674,17 +722,24 @@ export function createSyncableStore<S extends Schema>(
 			}
 
 			const now = clock();
-			const current = (internalStorage.data as Record<string, unknown>)[field as string];
+			const current = (internalStorage.data as Record<string, unknown>)[
+				field as string
+			];
 			const merged = deepMerge(current, value);
 
-			(internalStorage.data as Record<string, unknown>)[field as string] = merged;
-			(internalStorage.$timestamps as Record<string, number>)[field as string] = now;
+			(internalStorage.data as Record<string, unknown>)[field as string] =
+				merged;
+			(internalStorage.$timestamps as Record<string, number>)[field as string] =
+				now;
 
 			// Update state
-			asyncState = { ...asyncState, data: { ...internalStorage.data } };
+			asyncState = {...asyncState, data: {...internalStorage.data}};
 
 			// Emit event (for field-level subscribers, NOT main subscribe)
-			emitter.emit(`${String(field)}:changed` as keyof StoreEvents<S>, merged as StoreEvents<S>[keyof StoreEvents<S>]);
+			emitter.emit(
+				`${String(field)}:changed` as keyof StoreEvents<S>,
+				merged as StoreEvents<S>[keyof StoreEvents<S>],
+			);
 
 			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
@@ -695,48 +750,67 @@ export function createSyncableStore<S extends Schema>(
 			field: K,
 			key: string,
 			value: ExtractMapItem<S[K]>,
-			options: { deleteAt: number },
+			options: {deleteAt: number},
 		): void {
 			if (asyncState.status !== 'ready' || !internalStorage) {
 				throw new Error('Store is not ready');
 			}
 
 			const now = clock();
-			const items = ((internalStorage.data as Record<string, unknown>)[field as string] ?? {}) as Record<
-				string,
-				unknown
-			>;
+			const items = ((internalStorage.data as Record<string, unknown>)[
+				field as string
+			] ?? {}) as Record<string, unknown>;
 			const timestamps =
-				((internalStorage.$itemTimestamps as Record<string, Record<string, number>>)[field as string] ?? {});
+				(
+					internalStorage.$itemTimestamps as Record<
+						string,
+						Record<string, number>
+					>
+				)[field as string] ?? {};
 
 			// Create item with deleteAt
-			const itemWithDeleteAt = { ...(value as object), deleteAt: options.deleteAt };
+			const itemWithDeleteAt = {
+				...(value as object),
+				deleteAt: options.deleteAt,
+			};
 			items[key] = itemWithDeleteAt;
 			timestamps[key] = now;
 
-			(internalStorage.data as Record<string, unknown>)[field as string] = items;
-			(internalStorage.$itemTimestamps as Record<string, Record<string, number>>)[field as string] = timestamps;
+			(internalStorage.data as Record<string, unknown>)[field as string] =
+				items;
+			(
+				internalStorage.$itemTimestamps as Record<
+					string,
+					Record<string, number>
+				>
+			)[field as string] = timestamps;
 
 			// Update state
-			asyncState = { ...asyncState, data: { ...internalStorage.data } };
+			asyncState = {...asyncState, data: {...internalStorage.data}};
 
 			// Emit event (for field-level subscribers, NOT main subscribe)
-			emitter.emit(`${String(field)}:added` as keyof StoreEvents<S>, { key, item: itemWithDeleteAt } as StoreEvents<S>[keyof StoreEvents<S>]);
+			emitter.emit(
+				`${String(field)}:added` as keyof StoreEvents<S>,
+				{key, item: itemWithDeleteAt} as StoreEvents<S>[keyof StoreEvents<S>],
+			);
 
 			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
 			markDirty();
 		},
 
-		update<K extends MapKeys<S>>(field: K, key: string, value: ExtractMapItem<S[K]>): void {
+		update<K extends MapKeys<S>>(
+			field: K,
+			key: string,
+			value: ExtractMapItem<S[K]>,
+		): void {
 			if (asyncState.status !== 'ready' || !internalStorage) {
 				throw new Error('Store is not ready');
 			}
 
-			const items = ((internalStorage.data as Record<string, unknown>)[field as string] ?? {}) as Record<
-				string,
-				{ deleteAt: number }
-			>;
+			const items = ((internalStorage.data as Record<string, unknown>)[
+				field as string
+			] ?? {}) as Record<string, {deleteAt: number}>;
 			const existing = items[key];
 
 			if (!existing) {
@@ -745,21 +819,35 @@ export function createSyncableStore<S extends Schema>(
 
 			const now = clock();
 			const timestamps =
-				((internalStorage.$itemTimestamps as Record<string, Record<string, number>>)[field as string] ?? {});
+				(
+					internalStorage.$itemTimestamps as Record<
+						string,
+						Record<string, number>
+					>
+				)[field as string] ?? {};
 
 			// Keep existing deleteAt
-			const updatedItem = { ...(value as object), deleteAt: existing.deleteAt };
+			const updatedItem = {...(value as object), deleteAt: existing.deleteAt};
 			items[key] = updatedItem;
 			timestamps[key] = now;
 
-			(internalStorage.data as Record<string, unknown>)[field as string] = items;
-			(internalStorage.$itemTimestamps as Record<string, Record<string, number>>)[field as string] = timestamps;
+			(internalStorage.data as Record<string, unknown>)[field as string] =
+				items;
+			(
+				internalStorage.$itemTimestamps as Record<
+					string,
+					Record<string, number>
+				>
+			)[field as string] = timestamps;
 
 			// Update state
-			asyncState = { ...asyncState, data: { ...internalStorage.data } };
+			asyncState = {...asyncState, data: {...internalStorage.data}};
 
 			// Emit event (for item-level subscribers, NOT main subscribe)
-			emitter.emit(`${String(field)}:updated` as keyof StoreEvents<S>, { key, item: updatedItem } as StoreEvents<S>[keyof StoreEvents<S>]);
+			emitter.emit(
+				`${String(field)}:updated` as keyof StoreEvents<S>,
+				{key, item: updatedItem} as StoreEvents<S>[keyof StoreEvents<S>],
+			);
 
 			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
@@ -771,10 +859,9 @@ export function createSyncableStore<S extends Schema>(
 				throw new Error('Store is not ready');
 			}
 
-			const items = ((internalStorage.data as Record<string, unknown>)[field as string] ?? {}) as Record<
-				string,
-				{ deleteAt: number }
-			>;
+			const items = ((internalStorage.data as Record<string, unknown>)[
+				field as string
+			] ?? {}) as Record<string, {deleteAt: number}>;
 			const existing = items[key];
 
 			if (!existing) {
@@ -783,23 +870,35 @@ export function createSyncableStore<S extends Schema>(
 
 			// Create tombstone with item's deleteAt
 			const tombstones =
-				((internalStorage.$tombstones as Record<string, Record<string, number>>)[field as string] ?? {});
+				(internalStorage.$tombstones as Record<string, Record<string, number>>)[
+					field as string
+				] ?? {};
 			tombstones[key] = existing.deleteAt;
-			(internalStorage.$tombstones as Record<string, Record<string, number>>)[field as string] = tombstones;
+			(internalStorage.$tombstones as Record<string, Record<string, number>>)[
+				field as string
+			] = tombstones;
 
 			// Remove from items
 			delete items[key];
 
 			// Remove timestamp
 			const timestamps =
-				((internalStorage.$itemTimestamps as Record<string, Record<string, number>>)[field as string] ?? {});
+				(
+					internalStorage.$itemTimestamps as Record<
+						string,
+						Record<string, number>
+					>
+				)[field as string] ?? {};
 			delete timestamps[key];
 
 			// Update state
-			asyncState = { ...asyncState, data: { ...internalStorage.data } };
+			asyncState = {...asyncState, data: {...internalStorage.data}};
 
 			// Emit event (for field-level subscribers, NOT main subscribe)
-			emitter.emit(`${String(field)}:removed` as keyof StoreEvents<S>, { key, item: existing } as StoreEvents<S>[keyof StoreEvents<S>]);
+			emitter.emit(
+				`${String(field)}:removed` as keyof StoreEvents<S>,
+				{key, item: existing} as StoreEvents<S>[keyof StoreEvents<S>],
+			);
 
 			// Save to storage and mark for sync
 			saveToStorage(asyncState.account);
@@ -825,9 +924,15 @@ export function createSyncableStore<S extends Schema>(
 			});
 
 			// Set up visibility change listener for syncOnVisible
-			if (syncConfig?.syncOnVisible !== false && typeof document !== 'undefined') {
+			if (
+				syncConfig?.syncOnVisible !== false &&
+				typeof document !== 'undefined'
+			) {
 				handleVisibilityChange = () => {
-					if (document.visibilityState === 'visible' && asyncState.status === 'ready') {
+					if (
+						document.visibilityState === 'visible' &&
+						asyncState.status === 'ready'
+					) {
 						performSyncPull(asyncState.account);
 					}
 				};
@@ -835,7 +940,10 @@ export function createSyncableStore<S extends Schema>(
 			}
 
 			// Set up online/offline listeners for syncOnReconnect
-			if (syncConfig?.syncOnReconnect !== false && typeof window !== 'undefined') {
+			if (
+				syncConfig?.syncOnReconnect !== false &&
+				typeof window !== 'undefined'
+			) {
 				handleOnline = () => {
 					mutableStatus.syncState = 'idle';
 					notifyStatusChange();
@@ -868,7 +976,8 @@ export function createSyncableStore<S extends Schema>(
 						// Attempt to prevent close and warn user about pending saves
 						e.preventDefault();
 						// Note: Most modern browsers ignore custom messages and show a generic one
-						e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+						e.returnValue =
+							'You have unsaved changes. Are you sure you want to leave?';
 					}
 				};
 				window.addEventListener('beforeunload', handleBeforeUnload);
@@ -889,7 +998,10 @@ export function createSyncableStore<S extends Schema>(
 			}
 			// Clean up visibility change listener
 			if (handleVisibilityChange) {
-				document.removeEventListener('visibilitychange', handleVisibilityChange);
+				document.removeEventListener(
+					'visibilitychange',
+					handleVisibilityChange,
+				);
 				handleVisibilityChange = undefined;
 			}
 			// Clean up online/offline listeners
@@ -916,8 +1028,8 @@ export function createSyncableStore<S extends Schema>(
 		getItemStore<K extends MapKeys<S>>(
 			field: K,
 			key: string,
-		): Readable<(ExtractMapItem<S[K]> & { deleteAt: number }) | undefined> {
-			type ItemType = (ExtractMapItem<S[K]> & { deleteAt: number }) | undefined;
+		): Readable<(ExtractMapItem<S[K]> & {deleteAt: number}) | undefined> {
+			type ItemType = (ExtractMapItem<S[K]> & {deleteAt: number}) | undefined;
 
 			// Check cache first
 			const cacheKey = `${String(field)}:${key}`;
@@ -935,21 +1047,32 @@ export function createSyncableStore<S extends Schema>(
 					callback(getCurrentValue());
 
 					// Subscribe to state changes for initial load
-					const unsubState = emitter.on('state', () => callback(getCurrentValue()));
+					const unsubState = emitter.on('state', () =>
+						callback(getCurrentValue()),
+					);
 
 					// Subscribe to field-specific events
-					const unsubAdded = emitter.on(`${String(field)}:added` as keyof StoreEvents<S>, (e) => {
-						const event = e as { key: string; item: unknown };
-						if (event.key === key) callback(event.item as ItemType);
-					});
-					const unsubUpdated = emitter.on(`${String(field)}:updated` as keyof StoreEvents<S>, (e) => {
-						const event = e as { key: string; item: unknown };
-						if (event.key === key) callback(event.item as ItemType);
-					});
-					const unsubRemoved = emitter.on(`${String(field)}:removed` as keyof StoreEvents<S>, (e) => {
-						const event = e as { key: string };
-						if (event.key === key) callback(undefined);
-					});
+					const unsubAdded = emitter.on(
+						`${String(field)}:added` as keyof StoreEvents<S>,
+						(e) => {
+							const event = e as {key: string; item: unknown};
+							if (event.key === key) callback(event.item as ItemType);
+						},
+					);
+					const unsubUpdated = emitter.on(
+						`${String(field)}:updated` as keyof StoreEvents<S>,
+						(e) => {
+							const event = e as {key: string; item: unknown};
+							if (event.key === key) callback(event.item as ItemType);
+						},
+					);
+					const unsubRemoved = emitter.on(
+						`${String(field)}:removed` as keyof StoreEvents<S>,
+						(e) => {
+							const event = e as {key: string};
+							if (event.key === key) callback(undefined);
+						},
+					);
 
 					return () => {
 						unsubState();
@@ -965,7 +1088,9 @@ export function createSyncableStore<S extends Schema>(
 			return itemStore;
 		},
 
-		getFieldStore<K extends keyof S>(field: K): Readable<DataOf<S>[K] | undefined> {
+		getFieldStore<K extends keyof S>(
+			field: K,
+		): Readable<DataOf<S>[K] | undefined> {
 			type FieldType = DataOf<S>[K] | undefined;
 
 			// Check cache first
@@ -987,7 +1112,9 @@ export function createSyncableStore<S extends Schema>(
 					callback(getCurrentValue());
 
 					// Subscribe to state changes for initial load
-					const unsubState = emitter.on('state', () => callback(getCurrentValue()));
+					const unsubState = emitter.on('state', () =>
+						callback(getCurrentValue()),
+					);
 
 					// For permanent fields: listen to :changed events
 					// For map fields: listen to :added and :removed events (NOT :updated)
@@ -995,21 +1122,30 @@ export function createSyncableStore<S extends Schema>(
 
 					if (isMap) {
 						unsubs.push(
-							emitter.on(`${String(field)}:added` as keyof StoreEvents<S>, () => {
-								callback(getCurrentValue());
-							}),
+							emitter.on(
+								`${String(field)}:added` as keyof StoreEvents<S>,
+								() => {
+									callback(getCurrentValue());
+								},
+							),
 						);
 						unsubs.push(
-							emitter.on(`${String(field)}:removed` as keyof StoreEvents<S>, () => {
-								callback(getCurrentValue());
-							}),
+							emitter.on(
+								`${String(field)}:removed` as keyof StoreEvents<S>,
+								() => {
+									callback(getCurrentValue());
+								},
+							),
 						);
 						// Intentionally NOT listening to :updated - use getItemStore for that
 					} else {
 						unsubs.push(
-							emitter.on(`${String(field)}:changed` as keyof StoreEvents<S>, () => {
-								callback(getCurrentValue());
-							}),
+							emitter.on(
+								`${String(field)}:changed` as keyof StoreEvents<S>,
+								() => {
+									callback(getCurrentValue());
+								},
+							),
 						);
 					}
 
@@ -1066,7 +1202,7 @@ export function createSyncableStore<S extends Schema>(
 			// Re-trigger account load
 			const account = asyncState.account;
 			// Reset state to trigger fresh load
-			asyncState = { status: 'idle', account: undefined };
+			asyncState = {status: 'idle', account: undefined};
 			setAccount(account);
 		},
 
@@ -1075,7 +1211,9 @@ export function createSyncableStore<S extends Schema>(
 			const startTime = Date.now();
 			while (mutableStatus.pendingSaves > 0) {
 				if (Date.now() - startTime > timeoutMs) {
-					throw new Error(`flush() timed out after ${timeoutMs}ms waiting for ${mutableStatus.pendingSaves} pending saves`);
+					throw new Error(
+						`flush() timed out after ${timeoutMs}ms waiting for ${mutableStatus.pendingSaves} pending saves`,
+					);
 				}
 				await new Promise((r) => setTimeout(r, 10));
 			}
@@ -1107,7 +1245,7 @@ function deepMerge<T>(target: T, source: DeepPartial<T>): T {
 		return source as T;
 	}
 
-	const result = { ...target };
+	const result = {...target};
 
 	for (const key of Object.keys(source) as (keyof T)[]) {
 		const sourceValue = source[key];
