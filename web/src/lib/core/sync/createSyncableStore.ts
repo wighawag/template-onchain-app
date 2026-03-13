@@ -438,13 +438,12 @@ export function createSyncableStore<S extends Schema>(
 			// When server has no data, create synthetic default storage for comparison
 			// This lets the merge algorithm determine if local has real data worth pushing
 			const serverData = pullResponse.data ?? createDefaultInternalStorage();
-			
-			const {storage: cleanedMerged, changes, serverNeedsUpdate} = mergeAndCleanup(
-				internalStorage,
-				serverData,
-				schema,
-				clock(),
-			);
+
+			const {
+				storage: cleanedMerged,
+				changes,
+				serverNeedsUpdate,
+			} = mergeAndCleanup(internalStorage, serverData, schema, clock());
 			dataToSync = cleanedMerged;
 			shouldPush = serverNeedsUpdate;
 
@@ -593,7 +592,10 @@ export function createSyncableStore<S extends Schema>(
 			// No more saves pending - queue drained
 			mutableStorageStatus.isSaving = false;
 			// Emit 'saved' AFTER setting isSaving = false so displayState is 'idle'
-			emitStorageEvent({type: 'saved', timestamp: mutableStorageStatus.lastSavedAt ?? clock()});
+			emitStorageEvent({
+				type: 'saved',
+				timestamp: mutableStorageStatus.lastSavedAt ?? clock(),
+			});
 		}
 	}
 
@@ -1012,14 +1014,14 @@ export function createSyncableStore<S extends Schema>(
 				syncConfig?.syncOnVisible !== false &&
 				typeof document !== 'undefined'
 			) {
-			handleVisibilityChange = () => {
-				if (
-					document.visibilityState === 'visible' &&
-					asyncState.status === 'ready'
-				) {
-					performSync();
-				}
-			};
+				handleVisibilityChange = () => {
+					if (
+						document.visibilityState === 'visible' &&
+						asyncState.status === 'ready'
+					) {
+						performSync();
+					}
+				};
 				document.addEventListener('visibilitychange', handleVisibilityChange);
 			}
 
@@ -1028,13 +1030,13 @@ export function createSyncableStore<S extends Schema>(
 				syncConfig?.syncOnReconnect !== false &&
 				typeof window !== 'undefined'
 			) {
-			handleOnline = () => {
-				mutableSyncStatus.isOnline = true;
-				emitSyncEvent({type: 'online'});
-				if (asyncState.status === 'ready') {
-					performSync();
-				}
-			};
+				handleOnline = () => {
+					mutableSyncStatus.isOnline = true;
+					emitSyncEvent({type: 'online'});
+					if (asyncState.status === 'ready') {
+						performSync();
+					}
+				};
 				handleOffline = () => {
 					mutableSyncStatus.isOnline = false;
 					emitSyncEvent({type: 'offline'});
@@ -1058,7 +1060,7 @@ export function createSyncableStore<S extends Schema>(
 				handleBeforeUnload = (e: BeforeUnloadEvent) => {
 					if (
 						mutableStorageStatus.isSaving ||
-						mutableSyncStatus.hasPendingSync
+						(mutableSyncStatus.hasPendingSync && !mutableSyncStatus.syncError)
 					) {
 						// Attempt to prevent close and warn user about pending saves or unsynced changes
 						e.preventDefault();
