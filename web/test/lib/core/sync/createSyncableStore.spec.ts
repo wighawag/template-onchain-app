@@ -1554,6 +1554,10 @@ describe('createSyncableStore', () => {
 				accountStore.set('0x1234567890123456789012345678901234567890');
 				await new Promise((r) => setTimeout(r, 20));
 
+				// Make a local change so there's data to push
+				// (With serverNeedsUpdate logic, we only push when local has winning data)
+				store.set('settings', {theme: 'custom', volume: 0.9});
+
 				const initialPushCount = pushCallCount;
 
 				// Simulate going offline then online
@@ -1562,7 +1566,7 @@ describe('createSyncableStore', () => {
 				onlineHandler?.();
 				await new Promise((r) => setTimeout(r, 20));
 
-				// Should have triggered a push sync
+				// Should have triggered a push sync (local has changes)
 				expect(pushCallCount).toBeGreaterThan(initialPushCount);
 
 				store.stop();

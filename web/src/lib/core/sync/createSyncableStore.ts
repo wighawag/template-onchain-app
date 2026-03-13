@@ -387,11 +387,11 @@ export function createSyncableStore<S extends Schema>(
 		syncDirty = true;
 		mutableSyncStatus.hasPendingSync = true;
 		emitSyncEvent({type: 'pending'});
-		scheduleSyncPush();
+		scheduleSync();
 	}
 
-	// Schedule a debounced push to server
-	function scheduleSyncPush(): void {
+	// Schedule a debounced sync to server
+	function scheduleSync(): void {
 		if (!syncAdapter || !asyncState.account || syncPaused) return;
 
 		if (syncDebounceTimer) {
@@ -399,13 +399,14 @@ export function createSyncableStore<S extends Schema>(
 		}
 
 		syncDebounceTimer = setTimeout(() => {
-			performSyncPush();
+			performSync();
 		}, debounceMs);
 	}
 
-	// Perform the actual sync: pull → merge → save → push
+	// Perform unified sync: pull → merge → conditionally push
 	// This implements client-side merging for a "dumb" server that only stores/retrieves data
-	async function performSyncPush(retryCount = 0): Promise<void> {
+	// Only pushes to server if local data won during merge (serverNeedsUpdate)
+	async function performSync(retryCount = 0): Promise<void> {
 		if (!syncAdapter || !internalStorage || asyncState.status !== 'ready')
 			return;
 
@@ -423,74 +424,88 @@ export function createSyncableStore<S extends Schema>(
 			// Step 1: Pull latest from server
 			const pullResponse = await syncAdapter.pull(account);
 
-			// Step 2: Merge server data with local data (if server has data)
+			// Step 2: Merge server data with local data
 			let dataToSync = internalStorage;
-			if (pullResponse.data) {
-				const {storage: cleanedMerged, changes} = mergeAndCleanup(
-					internalStorage,
-					pullResponse.data,
-					schema,
-					clock(),
-				);
-				dataToSync = cleanedMerged;
+			let shouldPush = false;
 
-				// Update local state if there were any changes (from merge or cleanup)
-				if (changes.length > 0) {
-					internalStorage = cleanedMerged;
-					asyncState = {...asyncState, data: cleanedMerged.data};
+			// When server has no data, create synthetic default storage for comparison
+			// This lets the merge algorithm determine if local has real data worth pushing
+			const serverData = pullResponse.data ?? createDefaultInternalStorage();
+			
+			const {storage: cleanedMerged, changes, serverNeedsUpdate} = mergeAndCleanup(
+				internalStorage,
+				serverData,
+				schema,
+				clock(),
+			);
+			dataToSync = cleanedMerged;
+			shouldPush = serverNeedsUpdate;
 
-					// Emit change events for any server-side updates
-					// NOTE: We do NOT call notifyStateChange() here - field-level events are sufficient
-					// Main subscribe() should only trigger on state transitions (idle/loading/ready)
-					for (const change of changes) {
-						emitter.emit(
-							change.event as keyof StoreEvents<S>,
-							change.data as StoreEvents<S>[keyof StoreEvents<S>],
-						);
-					}
+			// Update local state if there were any changes (from merge or cleanup)
+			if (changes.length > 0) {
+				internalStorage = cleanedMerged;
+				asyncState = {...asyncState, data: cleanedMerged.data};
 
-					// Step 3: Save merged state to local storage
-					await storage.save(storageKey(account), cleanedMerged);
+				// Emit change events for any server-side updates
+				// NOTE: We do NOT call notifyStateChange() here - field-level events are sufficient
+				// Main subscribe() should only trigger on state transitions (idle/loading/ready)
+				for (const change of changes) {
+					emitter.emit(
+						change.event as keyof StoreEvents<S>,
+						change.data as StoreEvents<S>[keyof StoreEvents<S>],
+					);
 				}
+
+				// Step 3: Save merged state to local storage
+				await storage.save(storageKey(account), cleanedMerged);
 			}
 
-			// Step 4: Push merged data to server with new counter
-			// Use max(clock, pullCounter + 1) to ensure monotonically increasing counters
-			// even for sub-millisecond operations
-			// Use BigInt arithmetic throughout to avoid precision loss for large counters
-			const clockBigInt = BigInt(clock());
-			const newCounter =
-				clockBigInt > pullResponse.counter
-					? clockBigInt
-					: pullResponse.counter + 1n;
-			const pushResponse = await syncAdapter.push(
-				account,
-				dataToSync,
-				newCounter,
-			);
+			// Step 4: Push if needed (local had winning data or server was empty)
+			if (shouldPush) {
+				// Use max(clock, pullCounter + 1) to ensure monotonically increasing counters
+				// even for sub-millisecond operations
+				// Use BigInt arithmetic throughout to avoid precision loss for large counters
+				const clockBigInt = BigInt(clock());
+				const newCounter =
+					clockBigInt > pullResponse.counter
+						? clockBigInt
+						: pullResponse.counter + 1n;
+				const pushResponse = await syncAdapter.push(
+					account,
+					dataToSync,
+					newCounter,
+				);
 
-			if (pushResponse.success) {
-				syncDirty = false; // Clear dirty flag only on successful sync
+				if (!pushResponse.success) {
+					// Push was rejected - counter was stale
+					// This means another client pushed between our pull and push
+					// Retry the entire flow
+					if (retryCount < maxRetries) {
+						const backoffDelay = retryBackoffMs * Math.pow(2, retryCount);
+						setTimeout(() => {
+							performSync(retryCount + 1);
+						}, backoffDelay);
+						return; // Exit early, retry will handle completion
+					} else {
+						throw new Error(
+							pushResponse.error ||
+								'Push rejected: counter stale after max retries',
+						);
+					}
+				}
+
+				// Push succeeded - update sync status
+				syncDirty = false;
 				mutableSyncStatus.lastSyncedAt = clock();
-				mutableSyncStatus.syncError = null;
 				mutableSyncStatus.hasPendingSync = false;
+				// Clear syncing state BEFORE emitting completed so displayState is 'idle'
+				mutableSyncStatus.syncError = null;
 				mutableSyncStatus.isSyncing = false;
 				emitSyncEvent({type: 'completed', timestamp: clock()});
 			} else {
-				// Push was rejected - counter was stale
-				// This means another client pushed between our pull and push
-				// Retry the entire flow
-				if (retryCount < maxRetries) {
-					const backoffDelay = retryBackoffMs * Math.pow(2, retryCount);
-					setTimeout(() => {
-						performSyncPush(retryCount + 1);
-					}, backoffDelay);
-				} else {
-					throw new Error(
-						pushResponse.error ||
-							'Push rejected: counter stale after max retries',
-					);
-				}
+				// Pull-only - just clear syncing state
+				mutableSyncStatus.syncError = null;
+				mutableSyncStatus.isSyncing = false;
 			}
 		} catch (error) {
 			// Check if we should retry
@@ -498,7 +513,7 @@ export function createSyncableStore<S extends Schema>(
 				// Schedule retry with exponential backoff
 				const backoffDelay = retryBackoffMs * Math.pow(2, retryCount);
 				setTimeout(() => {
-					performSyncPush(retryCount + 1);
+					performSync(retryCount + 1);
 				}, backoffDelay);
 			} else {
 				// Max retries reached, emit failure
@@ -506,56 +521,6 @@ export function createSyncableStore<S extends Schema>(
 				mutableSyncStatus.isSyncing = false;
 				emitSyncEvent({type: 'failed', error: error as Error});
 			}
-		}
-	}
-
-	// Pull from server and merge with local state
-	async function performSyncPull(account: `0x${string}`): Promise<void> {
-		if (!syncAdapter || !internalStorage) return;
-
-		try {
-			const pullResponse = await syncAdapter.pull(account);
-
-			if (pullResponse.data) {
-				// Merge server data with local state and cleanup expired items
-				const {storage: cleanedMerged, changes} = mergeAndCleanup(
-					internalStorage,
-					pullResponse.data,
-					schema,
-					clock(),
-				);
-
-				if (changes.length > 0) {
-					internalStorage = cleanedMerged;
-
-					// Update async state data
-					if (asyncState.status === 'ready') {
-						asyncState = {...asyncState, data: cleanedMerged.data};
-					}
-
-					// Emit field-level change events - no notifyStateChange() needed
-					// Main subscribe() should only trigger on state transitions
-					for (const change of changes) {
-						emitter.emit(
-							change.event as keyof StoreEvents<S>,
-							change.data as StoreEvents<S>[keyof StoreEvents<S>],
-						);
-					}
-
-					// Save merged state to local storage
-					try {
-						await storage.save(storageKey(account), cleanedMerged);
-					} catch (saveError) {
-						// Storage save errors during pull are non-fatal but should be logged
-						console.warn('Failed to save merged state to storage:', saveError);
-					}
-				}
-			}
-		} catch (error) {
-			// Pull errors are non-fatal - we continue with local data
-			// Emit sync failed event so consumers can react to repeated failures
-			console.warn('Failed to pull from server:', error);
-			emitter.emit('$store:sync', {type: 'failed', error: error as Error});
 		}
 	}
 
@@ -680,9 +645,9 @@ export function createSyncableStore<S extends Schema>(
 		};
 		emitStateEvent({type: 'ready'});
 
-		// Pull from server (if sync adapter configured)
+		// Sync with server (if sync adapter configured)
 		if (syncAdapter) {
-			performSyncPull(newAccount);
+			performSync();
 		}
 
 		// Set up storage watch for cross-tab sync
@@ -969,14 +934,14 @@ export function createSyncableStore<S extends Schema>(
 				syncConfig?.syncOnVisible !== false &&
 				typeof document !== 'undefined'
 			) {
-				handleVisibilityChange = () => {
-					if (
-						document.visibilityState === 'visible' &&
-						asyncState.status === 'ready'
-					) {
-						performSyncPull(asyncState.account);
-					}
-				};
+			handleVisibilityChange = () => {
+				if (
+					document.visibilityState === 'visible' &&
+					asyncState.status === 'ready'
+				) {
+					performSync();
+				}
+			};
 				document.addEventListener('visibilitychange', handleVisibilityChange);
 			}
 
@@ -985,13 +950,13 @@ export function createSyncableStore<S extends Schema>(
 				syncConfig?.syncOnReconnect !== false &&
 				typeof window !== 'undefined'
 			) {
-				handleOnline = () => {
-					mutableSyncStatus.isOnline = true;
-					emitSyncEvent({type: 'online'});
-					if (asyncState.status === 'ready') {
-						performSyncPush();
-					}
-				};
+			handleOnline = () => {
+				mutableSyncStatus.isOnline = true;
+				emitSyncEvent({type: 'online'});
+				if (asyncState.status === 'ready') {
+					performSync();
+				}
+			};
 				handleOffline = () => {
 					mutableSyncStatus.isOnline = false;
 					emitSyncEvent({type: 'offline'});
@@ -1005,7 +970,7 @@ export function createSyncableStore<S extends Schema>(
 			if (syncAdapter && intervalMs && intervalMs > 0) {
 				syncIntervalTimer = setInterval(() => {
 					if (asyncState.status === 'ready' && !syncPaused) {
-						performSyncPull(asyncState.account);
+						performSync();
 					}
 				}, intervalMs);
 			}
@@ -1215,7 +1180,7 @@ export function createSyncableStore<S extends Schema>(
 				syncDebounceTimer = undefined;
 			}
 
-			await performSyncPush();
+			await performSync();
 		},
 
 		pauseSync(): void {
@@ -1233,7 +1198,7 @@ export function createSyncableStore<S extends Schema>(
 			mutableSyncStatus.isPaused = false;
 			emitSyncEvent({type: 'resumed'});
 			if (syncDirty) {
-				scheduleSyncPush();
+				scheduleSync();
 			}
 		},
 

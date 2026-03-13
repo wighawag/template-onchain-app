@@ -111,6 +111,8 @@ export interface MapMergeResult<T> {
 	timestamps: Record<string, number>;
 	tombstones: Record<string, number>;
 	changes: MapChange<T>[];
+	/** Count of items where local (current) data won over incoming */
+	localWonCount: number;
 }
 
 /**
@@ -127,6 +129,7 @@ export function mergeMap<T>(
 	const timestamps: Record<string, number> = {};
 	const tombstones: Record<string, number> = {};
 	const changes: MapChange<T>[] = [];
+	let localWonCount = 0;
 
 	// Merge tombstones first - later deleteAt wins
 	const allTombstoneKeys = new Set([
@@ -180,9 +183,10 @@ export function mergeMap<T>(
 				data: {key, item: iItem},
 			});
 		} else if (cItem && !iItem) {
-			// Only in current - keep it
+			// Only in current - LOCAL WINS (server doesn't have this item)
 			winner = cItem;
 			winnerTs = cTs;
+			localWonCount++;
 			// No change - we keep current
 		} else {
 			// Both have item - higher timestamp wins
@@ -195,9 +199,10 @@ export function mergeMap<T>(
 					data: {key, item: iItem},
 				});
 			} else if (cTs > iTs) {
-				// Current has higher timestamp - no change
+				// Current has higher timestamp - LOCAL WINS
 				winner = cItem;
 				winnerTs = cTs;
+				localWonCount++;
 			} else {
 				// Same timestamp - deterministic tiebreaker
 				const picked = tiebreaker(
@@ -212,6 +217,9 @@ export function mergeMap<T>(
 						event: `${fieldName}:updated`,
 						data: {key, item: iItem},
 					});
+				} else {
+					// Current won tiebreaker - LOCAL WINS
+					localWonCount++;
 				}
 			}
 		}
@@ -220,7 +228,7 @@ export function mergeMap<T>(
 		timestamps[key] = winnerTs;
 	}
 
-	return {items, timestamps, tombstones, changes};
+	return {items, timestamps, tombstones, changes, localWonCount};
 }
 
 // ============================================================================
@@ -242,6 +250,8 @@ import type {
 export interface StoreMergeResult<S extends Schema> {
 	merged: InternalStorage<S>;
 	changes: StoreChange[];
+	/** True if local (current) data won any field or item over incoming */
+	localWonAny: boolean;
 }
 
 /**
@@ -261,6 +271,7 @@ export function mergeStore<S extends Schema>(
 		$tombstones: {} as InternalStorage<S>['$tombstones'],
 	};
 	const changes: StoreChange[] = [];
+	let localWonAny = false;
 
 	for (const field of Object.keys(schema) as (keyof S & string)[]) {
 		const fieldDef = schema[field];
@@ -286,6 +297,10 @@ export function mergeStore<S extends Schema>(
 			// Track change if incoming won
 			if (mergeResult.incomingWon) {
 				changes.push({event: `${field}:changed`, data: mergeResult.value});
+			} else if (currentTs > 0) {
+				// Local won this permanent field with an actual timestamp (not default 0)
+				// This means local has real data that server needs
+				localWonAny = true;
 			}
 		} else if (fieldDef.__type === 'map') {
 			// Merge map field
@@ -334,10 +349,15 @@ export function mergeStore<S extends Schema>(
 
 			// Add map changes
 			changes.push(...(mapResult.changes as StoreChange[]));
+
+			// Track if local won any items in this map
+			if (mapResult.localWonCount > 0) {
+				localWonAny = true;
+			}
 		}
 	}
 
-	return {merged: result, changes};
+	return {merged: result, changes, localWonAny};
 }
 
 // ============================================================================
@@ -361,6 +381,9 @@ export interface MergeAndCleanupResult<S extends Schema> {
 
 	/** True if cleanup deleted any expired items */
 	itemsExpired: boolean;
+
+	/** True if server should receive a push (local had winning data) */
+	serverNeedsUpdate: boolean;
 }
 
 /**
@@ -377,7 +400,7 @@ export function mergeAndCleanup<S extends Schema>(
 	now: number = Date.now(),
 ): MergeAndCleanupResult<S> {
 	// Step 1: Merge
-	const {merged, changes: mergeChanges} = mergeStore(current, incoming, schema);
+	const {merged, changes: mergeChanges, localWonAny} = mergeStore(current, incoming, schema);
 
 	// Step 2: Cleanup
 	const {
@@ -391,11 +414,19 @@ export function mergeAndCleanup<S extends Schema>(
 	// should only emit :removed (or nothing if it was :added then :removed)
 	const allChanges = deduplicateChanges(mergeChanges, cleanupChanges);
 
+	// Step 4: Determine if server needs an update
+	// Server needs update when local had winning data.
+	// Note: Cleanup (tombstonesDeleted, itemsExpired) does NOT trigger a push.
+	// Cleanup happens independently on each client, so server data will
+	// eventually be cleaned when a client pushes for other reasons.
+	const serverNeedsUpdate = localWonAny;
+
 	return {
 		storage: cleaned,
 		changes: allChanges,
 		tombstonesDeleted,
 		itemsExpired: cleanupChanges.length > 0,
+		serverNeedsUpdate,
 	};
 }
 
