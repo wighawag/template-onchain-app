@@ -8,20 +8,56 @@
 import stableStringify from 'json-stable-stringify';
 
 // ============================================================================
+// Merge Outcome Types
+// ============================================================================
+
+/**
+ * Clear discriminated union for merge outcomes.
+ * - 'incoming': Incoming value won (emit change, no push)
+ * - 'current': Current value won with different data (need push)
+ * - 'tie': Values semantically equal (no action needed)
+ */
+export type MergeOutcome = 'incoming' | 'current' | 'tie';
+
+/**
+ * Tiebreaker-specific outcome (first/second args, or tie).
+ */
+export type TiebreakerOutcome = 'first' | 'second' | 'tie';
+
+/**
+ * Result of tiebreaker function with clear outcome indication.
+ */
+export interface TiebreakerResult<T> {
+	value: T;
+	outcome: TiebreakerOutcome;
+}
+
+// ============================================================================
 // Tiebreaker
 // ============================================================================
 
 /**
  * Deterministic tiebreaker for values with identical timestamps.
- * Returns the lexicographically smaller value when serialized.
+ * Returns the lexicographically smaller value when serialized,
+ * with explicit outcome indicating which argument won or if they're equal.
  *
  * CRITICAL: Uses json-stable-stringify (NOT JSON.stringify) to ensure
  * deterministic property order across all JavaScript engines.
  */
-export function tiebreaker<T>(a: T, b: T): T {
+export function tiebreaker<T>(a: T, b: T): TiebreakerResult<T> {
 	const aStr = stableStringify(a) ?? '';
 	const bStr = stableStringify(b) ?? '';
-	return aStr <= bStr ? a : b;
+
+	if (aStr === bStr) {
+		// Semantically equal - true tie
+		return { value: a, outcome: 'tie' };
+	}
+
+	// Different values - pick lexicographically smaller
+	if (aStr < bStr) {
+		return { value: a, outcome: 'first' };
+	}
+	return { value: b, outcome: 'second' };
 }
 
 // ============================================================================
@@ -42,8 +78,8 @@ export interface PermanentMergeInput<T> {
 export interface PermanentMergeResult<T> {
 	value: T;
 	timestamp: number;
-	/** True if incoming value was picked */
-	incomingWon: boolean;
+	/** Clear indication of who won - mutually exclusive states */
+	outcome: MergeOutcome;
 }
 
 /**
@@ -59,7 +95,7 @@ export function mergePermanent<T>(
 		return {
 			value: incoming.value,
 			timestamp: incoming.timestamp,
-			incomingWon: true,
+			outcome: 'incoming',
 		};
 	}
 
@@ -67,18 +103,27 @@ export function mergePermanent<T>(
 		return {
 			value: current.value,
 			timestamp: current.timestamp,
-			incomingWon: false,
+			outcome: 'current',
 		};
 	}
 
 	// Same timestamp - use deterministic tiebreaker
-	const winner = tiebreaker(current.value, incoming.value);
-	const incomingWon = winner === incoming.value;
+	const result = tiebreaker(current.value, incoming.value);
+
+	// Map tiebreaker outcome to merge outcome
+	let outcome: MergeOutcome;
+	if (result.outcome === 'tie') {
+		outcome = 'tie';
+	} else if (result.outcome === 'second') {
+		outcome = 'incoming'; // Second arg (incoming) won
+	} else {
+		outcome = 'current'; // First arg (current) won
+	}
 
 	return {
-		value: winner,
+		value: result.value,
 		timestamp: current.timestamp,
-		incomingWon,
+		outcome,
 	};
 }
 
@@ -111,8 +156,10 @@ export interface MapMergeResult<T> {
 	timestamps: Record<string, number>;
 	tombstones: Record<string, number>;
 	changes: MapChange<T>[];
-	/** Count of items where local (current) data won over incoming */
+	/** Count of items where local had genuinely different/newer data */
 	localWonCount: number;
+	/** Count of items where timestamps matched AND values were semantically equal */
+	tieCount: number;
 }
 
 /**
@@ -130,6 +177,7 @@ export function mergeMap<T>(
 	const tombstones: Record<string, number> = {};
 	const changes: MapChange<T>[] = [];
 	let localWonCount = 0;
+	let tieCount = 0;
 
 	// Merge tombstones first - later deleteAt wins
 	const allTombstoneKeys = new Set([
@@ -209,17 +257,24 @@ export function mergeMap<T>(
 					{item: cItem, ts: cTs},
 					{item: iItem, ts: iTs},
 				);
-				winner = picked.item;
-				winnerTs = picked.ts;
-				// Emit update if incoming won the tiebreaker
-				if (winner === iItem) {
-					changes.push({
-						event: `${fieldName}:updated`,
-						data: {key, item: iItem},
-					});
-				} else {
-					// Current won tiebreaker - LOCAL WINS
-					localWonCount++;
+				winner = picked.value.item;
+				winnerTs = picked.value.ts;
+
+				// Use outcome discriminated union
+				switch (picked.outcome) {
+					case 'tie':
+						tieCount++; // Values equal, no push needed
+						break;
+					case 'first':
+						localWonCount++; // Current won with different data
+						break;
+					case 'second':
+						// Incoming won tiebreaker
+						changes.push({
+							event: `${fieldName}:updated`,
+							data: {key, item: iItem},
+						});
+						break;
 				}
 			}
 		}
@@ -228,7 +283,7 @@ export function mergeMap<T>(
 		timestamps[key] = winnerTs;
 	}
 
-	return {items, timestamps, tombstones, changes, localWonCount};
+	return {items, timestamps, tombstones, changes, localWonCount, tieCount};
 }
 
 // ============================================================================
@@ -250,8 +305,8 @@ import type {
 export interface StoreMergeResult<S extends Schema> {
 	merged: InternalStorage<S>;
 	changes: StoreChange[];
-	/** True if local (current) data won any field or item over incoming */
-	localWonAny: boolean;
+	/** True if local has changes that need to be pushed to server */
+	hasLocalChanges: boolean;
 }
 
 /**
@@ -271,7 +326,7 @@ export function mergeStore<S extends Schema>(
 		$tombstones: {} as InternalStorage<S>['$tombstones'],
 	};
 	const changes: StoreChange[] = [];
-	let localWonAny = false;
+	let hasLocalChanges = false;
 
 	for (const field of Object.keys(schema) as (keyof S & string)[]) {
 		const fieldDef = schema[field];
@@ -294,13 +349,20 @@ export function mergeStore<S extends Schema>(
 			(result.$timestamps as Record<string, number>)[field] =
 				mergeResult.timestamp;
 
-			// Track change if incoming won
-			if (mergeResult.incomingWon) {
-				changes.push({event: `${field}:changed`, data: mergeResult.value});
-			} else if (currentTs > 0) {
-				// Local won this permanent field with an actual timestamp (not default 0)
-				// This means local has real data that server needs
-				localWonAny = true;
+			// Use outcome discriminated union
+			switch (mergeResult.outcome) {
+				case 'incoming':
+					changes.push({event: `${field}:changed`, data: mergeResult.value});
+					break;
+				case 'current':
+					if (currentTs > 0) {
+						// Local has changes that need pushing
+						hasLocalChanges = true;
+					}
+					break;
+				case 'tie':
+					// Values were semantically equal - no action needed
+					break;
 			}
 		} else if (fieldDef.__type === 'map') {
 			// Merge map field
@@ -351,13 +413,14 @@ export function mergeStore<S extends Schema>(
 			changes.push(...(mapResult.changes as StoreChange[]));
 
 			// Track if local won any items in this map
+			// tieCount doesn't contribute to hasLocalChanges - ties mean equal values
 			if (mapResult.localWonCount > 0) {
-				localWonAny = true;
+				hasLocalChanges = true;
 			}
 		}
 	}
 
-	return {merged: result, changes, localWonAny};
+	return {merged: result, changes, hasLocalChanges};
 }
 
 // ============================================================================
@@ -400,7 +463,7 @@ export function mergeAndCleanup<S extends Schema>(
 	now: number = Date.now(),
 ): MergeAndCleanupResult<S> {
 	// Step 1: Merge
-	const {merged, changes: mergeChanges, localWonAny} = mergeStore(current, incoming, schema);
+	const {merged, changes: mergeChanges, hasLocalChanges} = mergeStore(current, incoming, schema);
 
 	// Step 2: Cleanup
 	const {
@@ -419,7 +482,7 @@ export function mergeAndCleanup<S extends Schema>(
 	// Note: Cleanup (tombstonesDeleted, itemsExpired) does NOT trigger a push.
 	// Cleanup happens independently on each client, so server data will
 	// eventually be cleaned when a client pushes for other reasons.
-	const serverNeedsUpdate = localWonAny;
+	const serverNeedsUpdate = hasLocalChanges;
 
 	return {
 		storage: cleaned,

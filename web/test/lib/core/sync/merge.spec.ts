@@ -17,8 +17,13 @@ describe('tiebreaker', () => {
 		const b = {name: 'bob'};
 
 		// 'alice' < 'bob' lexicographically, so a should win
-		expect(tiebreaker(a, b)).toBe(a);
-		expect(tiebreaker(b, a)).toBe(a);
+		const result1 = tiebreaker(a, b);
+		expect(result1.value).toBe(a);
+		expect(result1.outcome).toBe('first');
+
+		const result2 = tiebreaker(b, a);
+		expect(result2.value).toBe(a);
+		expect(result2.outcome).toBe('second');
 	});
 
 	it('is deterministic regardless of property insertion order', () => {
@@ -28,14 +33,15 @@ describe('tiebreaker', () => {
 		b.a = 2;
 		b.z = 1;
 
-		// Both serialize to the same string, so either is valid
-		// The important thing is it doesn't throw or behave inconsistently
+		// Both serialize to the same string, so it's a tie
 		const result1 = tiebreaker(a, b);
 		const result2 = tiebreaker(b, a);
 
-		// Both calls should return content-equivalent objects
-		expect(result1).toStrictEqual({z: 1, a: 2});
-		expect(result2).toStrictEqual({z: 1, a: 2});
+		// Both calls should return content-equivalent objects with 'tie' outcome
+		expect(result1.value).toStrictEqual({z: 1, a: 2});
+		expect(result1.outcome).toBe('tie');
+		expect(result2.value).toStrictEqual({z: 1, a: 2});
+		expect(result2.outcome).toBe('tie');
 	});
 
 	it('handles nested objects deterministically', () => {
@@ -43,8 +49,22 @@ describe('tiebreaker', () => {
 		const b = {outer: {inner: 'value2'}};
 
 		// 'value1' < 'value2', so a wins
-		expect(tiebreaker(a, b)).toBe(a);
-		expect(tiebreaker(b, a)).toBe(a);
+		const result1 = tiebreaker(a, b);
+		expect(result1.value).toBe(a);
+		expect(result1.outcome).toBe('first');
+
+		const result2 = tiebreaker(b, a);
+		expect(result2.value).toBe(a);
+		expect(result2.outcome).toBe('second');
+	});
+
+	it('returns tie outcome when values are semantically equal', () => {
+		const a = {name: 'alice', age: 30};
+		const b = {name: 'alice', age: 30};
+
+		const result = tiebreaker(a, b);
+		expect(result.value).toBe(a); // Returns first arg when equal
+		expect(result.outcome).toBe('tie');
 	});
 });
 
@@ -57,7 +77,7 @@ describe('mergePermanent', () => {
 
 		expect(result.value).toBe(incoming.value);
 		expect(result.timestamp).toBe(2000);
-		expect(result.incomingWon).toBe(true);
+		expect(result.outcome).toBe('incoming');
 	});
 
 	it('returns current value when current timestamp is higher', () => {
@@ -68,10 +88,10 @@ describe('mergePermanent', () => {
 
 		expect(result.value).toBe(current.value);
 		expect(result.timestamp).toBe(3000);
-		expect(result.incomingWon).toBe(false);
+		expect(result.outcome).toBe('current');
 	});
 
-	it('uses tiebreaker when timestamps are equal', () => {
+	it('uses tiebreaker when timestamps are equal and values differ', () => {
 		const current = {value: {name: 'bob'}, timestamp: 1000};
 		const incoming = {value: {name: 'alice'}, timestamp: 1000};
 
@@ -80,7 +100,7 @@ describe('mergePermanent', () => {
 		// 'alice' < 'bob' lexicographically, so incoming wins
 		expect(result.value).toStrictEqual({name: 'alice'});
 		expect(result.timestamp).toBe(1000);
-		expect(result.incomingWon).toBe(true);
+		expect(result.outcome).toBe('incoming');
 	});
 
 	it('returns current when timestamps equal and current wins tiebreaker', () => {
@@ -92,7 +112,19 @@ describe('mergePermanent', () => {
 		// 'alice' < 'bob' lexicographically, so current wins
 		expect(result.value).toStrictEqual({name: 'alice'});
 		expect(result.timestamp).toBe(1000);
-		expect(result.incomingWon).toBe(false);
+		expect(result.outcome).toBe('current');
+	});
+
+	it('returns tie outcome when timestamps and values are equal', () => {
+		const current = {value: {name: 'alice', age: 30}, timestamp: 1000};
+		const incoming = {value: {name: 'alice', age: 30}, timestamp: 1000};
+
+		const result = mergePermanent(current, incoming);
+
+		// Values are semantically equal - true tie
+		expect(result.value).toStrictEqual({name: 'alice', age: 30});
+		expect(result.timestamp).toBe(1000);
+		expect(result.outcome).toBe('tie');
 	});
 });
 
