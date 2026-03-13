@@ -236,6 +236,13 @@ export function createSyncableStore<S extends Schema>(
 	let internalStorage: InternalStorage<S> | null = null;
 	let loadGeneration = 0;
 
+	// Storage queue state
+	let storageSavePending: {
+		account: `0x${string}`;
+		data: InternalStorage<S>;
+	} | null = null;
+	let currentSavePromise: Promise<void> | null = null;
+
 	// Internal mutable sync status type
 	interface MutableSyncStatus {
 		isSyncing: boolean;
@@ -249,7 +256,7 @@ export function createSyncableStore<S extends Schema>(
 
 	// Internal mutable storage status type
 	interface MutableStorageStatus {
-		pendingSaves: number;
+		isSaving: boolean;
 		lastSavedAt: number | null;
 		storageError: Error | null;
 		readonly displayState: 'saving' | 'error' | 'idle';
@@ -274,11 +281,11 @@ export function createSyncableStore<S extends Schema>(
 
 	// Mutable storage status (readonly externally via StorageStatus type)
 	const mutableStorageStatus: MutableStorageStatus = {
-		pendingSaves: 0,
+		isSaving: false,
 		lastSavedAt: null,
 		storageError: null,
 		get displayState() {
-			if (this.pendingSaves > 0) return 'saving';
+			if (this.isSaving) return 'saving';
 			if (this.storageError) return 'error';
 			return 'idle';
 		},
@@ -457,7 +464,7 @@ export function createSyncableStore<S extends Schema>(
 				}
 
 				// Step 3: Save merged state to local storage
-				await storage.save(storageKey(account), cleanedMerged);
+				await saveToStorage(account, cleanedMerged);
 			}
 
 			// Step 4: Push if needed (local had winning data or server was empty)
@@ -535,25 +542,96 @@ export function createSyncableStore<S extends Schema>(
 		};
 	}
 
-	// Save to storage (fire-and-forget)
-	async function saveToStorage(account: `0x${string}`): Promise<void> {
-		if (!internalStorage) return;
-
-		mutableStorageStatus.pendingSaves++;
-		mutableStorageStatus.storageError = null; // Clear previous error when starting new save
-		emitStorageEvent({type: 'saving'});
-
+	/**
+	 * Internal: Actually perform the storage save operation.
+	 * This is called by the queuing logic and should not be called directly.
+	 * Note: This does NOT emit 'saved' event - that's handled by processStorageSave
+	 * when the queue drains to ensure displayState is accurate when subscribers are notified.
+	 */
+	async function doStorageSave(
+		account: `0x${string}`,
+		data: InternalStorage<S>,
+	): Promise<void> {
 		try {
-			await storage.save(storageKey(account), internalStorage);
-
-			mutableStorageStatus.pendingSaves--;
+			await storage.save(storageKey(account), data);
 			mutableStorageStatus.lastSavedAt = clock();
-			emitStorageEvent({type: 'saved', timestamp: clock()});
+			// Note: 'saved' event is emitted by processStorageSave when queue drains
 		} catch (error) {
-			mutableStorageStatus.pendingSaves--;
 			mutableStorageStatus.storageError = error as Error;
 			emitStorageEvent({type: 'failed', error: error as Error});
+			throw error; // Re-throw so caller knows it failed
 		}
+	}
+
+	/**
+	 * Process the storage save and handle the queue.
+	 * This runs the save and recursively processes any queued save.
+	 */
+	async function processStorageSave(
+		account: `0x${string}`,
+		data: InternalStorage<S>,
+	): Promise<void> {
+		try {
+			await doStorageSave(account, data);
+		} catch {
+			// Error already handled in doStorageSave (status updated, event emitted)
+			// Continue to process queue even on error
+		}
+
+		// Check if there's a queued save
+		if (storageSavePending) {
+			const pending = storageSavePending;
+			storageSavePending = null;
+
+			// Clear any previous error since we're retrying
+			mutableStorageStatus.storageError = null;
+			emitStorageEvent({type: 'saving'});
+
+			// Process the queued save (isSaving stays true)
+			await processStorageSave(pending.account, pending.data);
+		} else {
+			// No more saves pending - queue drained
+			mutableStorageStatus.isSaving = false;
+			// Emit 'saved' AFTER setting isSaving = false so displayState is 'idle'
+			emitStorageEvent({type: 'saved', timestamp: mutableStorageStatus.lastSavedAt ?? clock()});
+		}
+	}
+
+	/**
+	 * Save data to storage with coalescing queue.
+	 *
+	 * Uses a coalescing queue (size 1) to ensure:
+	 * 1. Only one save is in-flight at a time
+	 * 2. Rapid saves coalesce to save only the latest data
+	 * 3. Write ordering is preserved (latest data always wins)
+	 *
+	 * @param account - The account to save for
+	 * @param data - The data to save
+	 * @returns Promise that resolves when all pending saves complete
+	 *          (callers who don't need to wait can ignore this)
+	 */
+	function saveToStorage(
+		account: `0x${string}`,
+		data: InternalStorage<S>,
+	): Promise<void> {
+		if (mutableStorageStatus.isSaving) {
+			// A save is already in progress - queue this one (replacing any previously queued)
+			storageSavePending = {account, data};
+			// Clear any previous error since we're going to retry
+			mutableStorageStatus.storageError = null;
+			// Return the current save promise - it will process our queued data
+			return currentSavePromise!;
+		}
+
+		// No save in progress - start one
+		mutableStorageStatus.isSaving = true;
+		storageSavePending = null; // Clear any stale pending save (defensive)
+		mutableStorageStatus.storageError = null;
+		emitStorageEvent({type: 'saving'});
+
+		// Start the save chain and store the promise
+		currentSavePromise = processStorageSave(account, data);
+		return currentSavePromise;
 	}
 
 	// Set account (internal)
@@ -632,7 +710,7 @@ export function createSyncableStore<S extends Schema>(
 		internalStorage = cleanedStorage;
 
 		// Save cleaned state
-		await storage.save(storageKey(newAccount), internalStorage);
+		await saveToStorage(newAccount, internalStorage);
 
 		// Final check
 		if (currentGeneration !== loadGeneration) return;
@@ -716,8 +794,8 @@ export function createSyncableStore<S extends Schema>(
 				value as StoreEvents<S>[keyof StoreEvents<S>],
 			);
 
-			// Save to storage and mark for sync
-			saveToStorage(asyncState.account);
+			// Save to storage (fire-and-forget) and mark for sync
+			saveToStorage(asyncState.account, internalStorage);
 			markDirty();
 		},
 
@@ -749,8 +827,8 @@ export function createSyncableStore<S extends Schema>(
 				merged as StoreEvents<S>[keyof StoreEvents<S>],
 			);
 
-			// Save to storage and mark for sync
-			saveToStorage(asyncState.account);
+			// Save to storage (fire-and-forget) and mark for sync
+			saveToStorage(asyncState.account, internalStorage);
 			markDirty();
 		},
 
@@ -802,8 +880,8 @@ export function createSyncableStore<S extends Schema>(
 				{key, item: itemWithDeleteAt} as StoreEvents<S>[keyof StoreEvents<S>],
 			);
 
-			// Save to storage and mark for sync
-			saveToStorage(asyncState.account);
+			// Save to storage (fire-and-forget) and mark for sync
+			saveToStorage(asyncState.account, internalStorage);
 			markDirty();
 		},
 
@@ -857,8 +935,8 @@ export function createSyncableStore<S extends Schema>(
 				{key, item: updatedItem} as StoreEvents<S>[keyof StoreEvents<S>],
 			);
 
-			// Save to storage and mark for sync
-			saveToStorage(asyncState.account);
+			// Save to storage (fire-and-forget) and mark for sync
+			saveToStorage(asyncState.account, internalStorage);
 			markDirty();
 		},
 
@@ -908,8 +986,8 @@ export function createSyncableStore<S extends Schema>(
 				{key, item: existing} as StoreEvents<S>[keyof StoreEvents<S>],
 			);
 
-			// Save to storage and mark for sync
-			saveToStorage(asyncState.account);
+			// Save to storage (fire-and-forget) and mark for sync
+			saveToStorage(asyncState.account, internalStorage);
 			markDirty();
 		},
 
@@ -979,7 +1057,7 @@ export function createSyncableStore<S extends Schema>(
 			if (typeof window !== 'undefined') {
 				handleBeforeUnload = (e: BeforeUnloadEvent) => {
 					if (
-						mutableStorageStatus.pendingSaves > 0 ||
+						mutableStorageStatus.isSaving ||
 						mutableSyncStatus.hasPendingSync
 					) {
 						// Attempt to prevent close and warn user about pending saves or unsynced changes
@@ -1220,12 +1298,13 @@ export function createSyncableStore<S extends Schema>(
 		},
 
 		async flush(timeoutMs = 30000): Promise<void> {
-			// Wait for all pending storage saves to complete with timeout
+			// TODO: Consider replacing polling with Promise-based waiting for better efficiency.
+			// Could use a resolver array that gets called when the storage queue drains.
 			const startTime = clock();
-			while (mutableStorageStatus.pendingSaves > 0) {
+			while (mutableStorageStatus.isSaving) {
 				if (clock() - startTime > timeoutMs) {
 					throw new Error(
-						`flush() timed out after ${timeoutMs}ms waiting for ${mutableStorageStatus.pendingSaves} pending saves`,
+						`flush() timed out after ${timeoutMs}ms waiting for storage save to complete`,
 					);
 				}
 				await new Promise((r) => setTimeout(r, 10));

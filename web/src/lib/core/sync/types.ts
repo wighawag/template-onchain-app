@@ -198,8 +198,8 @@ export type SyncEvent =
  * Storage status - local persistence state.
  */
 export interface StorageStatus {
-	/** Number of pending saves in queue */
-	readonly pendingSaves: number;
+	/** True when a storage save operation is in progress */
+	readonly isSaving: boolean;
 
 	/** Last successful save timestamp */
 	readonly lastSavedAt: number | null;
@@ -236,8 +236,8 @@ export function combineStatus(
 } {
 	return {
 		hasError: sync.syncError !== null || storage.storageError !== null,
-		hasUnsavedChanges: storage.pendingSaves > 0,
-		isBusy: sync.isSyncing || storage.pendingSaves > 0,
+		hasUnsavedChanges: storage.isSaving,
+		isBusy: sync.isSyncing || storage.isSaving,
 	};
 }
 

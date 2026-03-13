@@ -851,7 +851,7 @@ describe('createSyncableStore', () => {
 
 			expect(receivedStatus).toBeDefined();
 			expect(receivedStatus?.displayState).toBe('idle');
-			expect(receivedStatus?.pendingSaves).toBe(0);
+			expect(receivedStatus?.isSaving).toBe(false);
 		});
 
 		it('syncStatusStore notifies when syncState changes', async () => {
@@ -1005,7 +1005,7 @@ describe('createSyncableStore', () => {
 			// No pending saves - should resolve immediately
 			let storageStatus: StorageStatus | undefined;
 			store.storageStatusStore.subscribe((s) => (storageStatus = s));
-			expect(storageStatus?.pendingSaves).toBe(0);
+			expect(storageStatus?.isSaving).toBe(false);
 			await expect(store.flush()).resolves.toBeUndefined();
 		});
 
@@ -1058,10 +1058,10 @@ describe('createSyncableStore', () => {
 			// Wait a moment for the save to start
 			await new Promise((r) => setTimeout(r, 10));
 
-			// Should have pending saves
+			// Should be saving
 			let storageStatus: StorageStatus | undefined;
 			store.storageStatusStore.subscribe((s) => (storageStatus = s));
-			expect(storageStatus?.pendingSaves).toBeGreaterThan(0);
+			expect(storageStatus?.isSaving).toBe(true);
 
 			// Start flush - it should wait
 			let flushComplete = false;
@@ -1079,7 +1079,7 @@ describe('createSyncableStore', () => {
 			// Now flush should complete
 			await flushPromise;
 			expect(flushComplete).toBe(true);
-			expect(storageStatus?.pendingSaves).toBe(0);
+			expect(storageStatus?.isSaving).toBe(false);
 		});
 	});
 
