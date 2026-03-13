@@ -252,6 +252,69 @@ describe('mergeMap', () => {
 	});
 });
 
+describe('mergeMap - tieCount', () => {
+	it('tracks tie when both have same item with same timestamp and value', () => {
+		const current = {
+			items: {'item-1': {value: 'same', deleteAt: 9999}},
+			timestamps: {'item-1': 1000},
+			tombstones: {},
+		};
+		const incoming = {
+			items: {'item-1': {value: 'same', deleteAt: 9999}},
+			timestamps: {'item-1': 1000},
+			tombstones: {},
+		};
+
+		const result = mergeMap(current, incoming, 'operations');
+
+		// Values are equal - should be a tie, not a local win
+		expect(result.localWonCount).toBe(0);
+		expect(result.tieCount).toBe(1);
+		expect(result.changes).toHaveLength(0);
+	});
+
+	it('increments localWonCount when values differ at same timestamp and current wins', () => {
+		const current = {
+			items: {'item-1': {value: 'aaa', deleteAt: 9999}}, // 'aaa' < 'bbb'
+			timestamps: {'item-1': 1000},
+			tombstones: {},
+		};
+		const incoming = {
+			items: {'item-1': {value: 'bbb', deleteAt: 9999}},
+			timestamps: {'item-1': 1000},
+			tombstones: {},
+		};
+
+		const result = mergeMap(current, incoming, 'operations');
+
+		// Current wins tiebreaker - should be localWonCount
+		expect(result.localWonCount).toBe(1);
+		expect(result.tieCount).toBe(0);
+		expect(result.changes).toHaveLength(0);
+	});
+
+	it('emits update and no localWonCount when values differ at same timestamp and incoming wins', () => {
+		const current = {
+			items: {'item-1': {value: 'bbb', deleteAt: 9999}},
+			timestamps: {'item-1': 1000},
+			tombstones: {},
+		};
+		const incoming = {
+			items: {'item-1': {value: 'aaa', deleteAt: 9999}}, // 'aaa' < 'bbb'
+			timestamps: {'item-1': 1000},
+			tombstones: {},
+		};
+
+		const result = mergeMap(current, incoming, 'operations');
+
+		// Incoming wins tiebreaker - should emit update, no localWonCount
+		expect(result.localWonCount).toBe(0);
+		expect(result.tieCount).toBe(0);
+		expect(result.changes).toHaveLength(1);
+		expect(result.changes[0].event).toBe('operations:updated');
+	});
+});
+
 describe('mergeStore', () => {
 	// Define a test schema
 	const testSchema = defineSchema({
@@ -360,5 +423,139 @@ describe('mergeStore', () => {
 		expect(result.changes).toHaveLength(0);
 		expect(result.merged.data.settings.theme).toBe('dark');
 		expect(result.merged.data.operations['op-1'].tx).toBe('0xabc');
+	});
+
+	it('hasLocalChanges is false when both have same default data with timestamp 0', () => {
+		// This simulates: new client with default data vs server with no data
+		// Both create synthetic default storage - should be detected as tie
+		const defaultSettings = {theme: 'dark', volume: 0.5};
+
+		const current = {
+			$version: 1,
+			data: {
+				settings: defaultSettings,
+				operations: {},
+			},
+			$timestamps: {settings: 0}, // timestamp 0 = default/unmodified
+			$itemTimestamps: {operations: {}},
+			$tombstones: {operations: {}},
+		};
+
+		const incoming = {
+			$version: 1,
+			data: {
+				settings: {...defaultSettings}, // Same default value (different object)
+				operations: {},
+			},
+			$timestamps: {settings: 0}, // Also timestamp 0
+			$itemTimestamps: {operations: {}},
+			$tombstones: {operations: {}},
+		};
+
+		const result = mergeStore(current, incoming, testSchema);
+
+		// Both have same values at timestamp 0 - this is a tie
+		// hasLocalChanges should be false - no need to push default data
+		expect(result.hasLocalChanges).toBe(false);
+		expect(result.changes).toHaveLength(0);
+	});
+
+	it('hasLocalChanges is false when values are semantically equal at any matching timestamp', () => {
+		const current = {
+			$version: 1,
+			data: {
+				settings: {theme: 'dark', volume: 0.5},
+				operations: {
+					'op-1': {tx: '0xabc', status: 'done', deleteAt: 9999},
+				},
+			},
+			$timestamps: {settings: 1000},
+			$itemTimestamps: {operations: {'op-1': 1000}},
+			$tombstones: {operations: {}},
+		};
+
+		const incoming = {
+			$version: 1,
+			data: {
+				settings: {theme: 'dark', volume: 0.5}, // Same value
+				operations: {
+					'op-1': {tx: '0xabc', status: 'done', deleteAt: 9999}, // Same value
+				},
+			},
+			$timestamps: {settings: 1000}, // Same timestamp
+			$itemTimestamps: {operations: {'op-1': 1000}}, // Same timestamp
+			$tombstones: {operations: {}},
+		};
+
+		const result = mergeStore(current, incoming, testSchema);
+
+		// All values are semantically equal at same timestamps - all ties
+		expect(result.hasLocalChanges).toBe(false);
+		expect(result.changes).toHaveLength(0);
+	});
+
+	it('hasLocalChanges is true when local has genuinely different data', () => {
+		const current = {
+			$version: 1,
+			data: {
+				settings: {theme: 'light', volume: 0.8}, // Different value
+				operations: {},
+			},
+			$timestamps: {settings: 1000},
+			$itemTimestamps: {operations: {}},
+			$tombstones: {operations: {}},
+		};
+
+		const incoming = {
+			$version: 1,
+			data: {
+				settings: {theme: 'dark', volume: 0.5},
+				operations: {},
+			},
+			$timestamps: {settings: 1000}, // Same timestamp but different value
+			$itemTimestamps: {operations: {}},
+			$tombstones: {operations: {}},
+		};
+
+		const result = mergeStore(current, incoming, testSchema);
+
+		// Current wins tiebreaker ('dark' < 'light') so incoming wins
+		// Wait - 'dark' < 'light' so incoming wins, hasLocalChanges should be false
+		// Let me check: 'd' < 'l' so dark < light, incoming wins
+		expect(result.merged.data.settings.theme).toBe('dark');
+		expect(result.hasLocalChanges).toBe(false); // incoming won, not local
+		expect(result.changes).toHaveLength(1);
+		expect(result.changes[0].event).toBe('settings:changed');
+	});
+
+	it('hasLocalChanges is true when local wins tiebreaker with different values', () => {
+		const current = {
+			$version: 1,
+			data: {
+				settings: {theme: 'aaa', volume: 0.5}, // Lexicographically smaller
+				operations: {},
+			},
+			$timestamps: {settings: 1000},
+			$itemTimestamps: {operations: {}},
+			$tombstones: {operations: {}},
+		};
+
+		const incoming = {
+			$version: 1,
+			data: {
+				settings: {theme: 'zzz', volume: 0.5},
+				operations: {},
+			},
+			$timestamps: {settings: 1000}, // Same timestamp, current wins tiebreaker
+			$itemTimestamps: {operations: {}},
+			$tombstones: {operations: {}},
+		};
+
+		const result = mergeStore(current, incoming, testSchema);
+
+		// Current wins tiebreaker with different data
+		expect(result.merged.data.settings.theme).toBe('aaa');
+		expect(result.hasLocalChanges).toBe(true); // local won with different data
+		expect(result.changes).toHaveLength(0);
 	});
 });
