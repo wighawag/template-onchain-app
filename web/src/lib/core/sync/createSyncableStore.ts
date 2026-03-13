@@ -1285,7 +1285,7 @@ export function createSyncableStore<S extends Schema>(
 		retryLoad(): void {
 			// Only retry if we're in loading state with an error (e.g., migration failure)
 			if (asyncState.status !== 'loading' || !asyncState.account) {
-				return;
+				throw new Error(`cannot retry if not loading or no account`);
 			}
 
 			// Clear the error
