@@ -19,7 +19,7 @@
 
 <div class="fixed bottom-4 left-4 z-50">
 	<div
-		class="max-w-[280px] min-w-[200px] overflow-hidden rounded-lg border bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80"
+		class="max-w-70 min-w-50 overflow-hidden rounded-lg border bg-background/95 shadow-lg backdrop-blur supports-backdrop-filter:bg-background/80"
 	>
 		<!-- Header / Toggle button -->
 		<button
@@ -43,7 +43,7 @@
 
 		<!-- Expanded list -->
 		{#if expanded}
-			<div class="max-h-[300px] overflow-y-auto border-t">
+			<div class="max-h-75 overflow-y-auto border-t">
 				{#if $currentAccountData?.status === 'idle'}
 					<div class="px-3 py-2 text-xs text-muted-foreground">
 						No account connected

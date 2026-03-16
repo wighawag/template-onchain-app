@@ -43,7 +43,7 @@
 		<Separator.Root />
 
 		{#if !$currentAccountData || $currentAccountData.status === 'idle'}
-			<Empty.Root class="min-h-[400px]">
+			<Empty.Root class="min-h-100">
 				<Empty.Header>
 					<Empty.Media variant="icon">
 						<ListIcon />
@@ -62,7 +62,7 @@
 				<p class="mt-4 text-muted-foreground">Loading operations...</p>
 			</div>
 		{:else if !$operationIds || $operationIds.length === 0}
-			<Empty.Root class="min-h-[400px]">
+			<Empty.Root class="min-h-100">
 				<Empty.Header>
 					<Empty.Media variant="icon">
 						<ListIcon />
