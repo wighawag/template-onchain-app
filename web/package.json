@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"devDependencies": {
-		"@etherkit/tx-observer": "0.0.6",
+		"@etherkit/tx-observer": "0.0.7",
 		"@etherkit/viem-tx-tracker": "^0.0.5",
 		"@etherplay/connect": "^0.0.41",
 		"@internationalized/date": "^3.11.0",
@@ -34,6 +34,7 @@
 		"shadcn-svelte": "^1.1.1",
 		"svelte": "^5.53.10",
 		"svelte-check": "^4.0.0",
+		"synqable": "^0.0.4",
 		"tailwind-merge": "^3.5.0",
 		"tailwind-variants": "^3.2.2",
 		"tailwindcss": "^4.1.17",

@@ -22,7 +22,6 @@ export async function createContext(): Promise<{
 	// ----------------------------------------------------------------------------
 
 	const {
-		signer,
 		connection,
 		walletClient: rawWalletClient,
 		publicClient,
@@ -54,7 +53,7 @@ export async function createContext(): Promise<{
 	});
 
 	const accountData = createAccountData({
-		account,
+		accountStore: account,
 		deployments: deployments.current,
 	});
 
@@ -63,61 +62,42 @@ export async function createContext(): Promise<{
 		provider: connection.provider,
 	});
 
-	accountData.on('state', (state) => {
-		if (state.status == 'idle' || state.status == 'loading') {
-			txOberserver.clear();
-		} else {
-			const operations = state.data.operations;
-			const intents: {[id: string]: TransactionIntent} = {};
-			for (const id in operations) {
-				intents[id] = operations[id].transactionIntent;
-			}
-			txOberserver.addMultiple(intents);
-		}
-	});
-	accountData.on('operations:added', ({id, operation}) => {
-		txOberserver.add(id.toString(), operation.transactionIntent);
-	});
-	accountData.on('operations:removed', ({id}) => {
-		txOberserver.remove(id.toString());
-	});
-
 	walletClient.onTransactionBroadcasted((transaction) => {
-		// TODO handle account
-		if (accountData.state.status !== 'ready') {
+		const currentAccount = accountData.get();
+		if (!currentAccount) {
 			console.error(`broadcasted transaction but accountData is not ready`);
 			return;
 		}
-		const currentAccount = accountData.state.account;
-		accountData.addOperation(
-			currentAccount,
+		// TODO unique id
+		const id = Date.now();
+		currentAccount.addItem(
+			'operations',
+			id.toString(),
 			{
-				transactions: [
-					{
-						broadcastTimestampMs: transaction.broadcastTimestampMs,
-						from: transaction.from,
-						hash: transaction.hash,
-						nonce: transaction.nonce,
-					},
-				],
+				transactionIntent: {
+					transactions: [
+						{
+							broadcastTimestampMs: transaction.broadcastTimestampMs,
+							from: transaction.from,
+							hash: transaction.hash,
+							nonce: transaction.nonce,
+						},
+					],
+				},
+				metadata: transaction.metadata,
 			},
-			transaction.metadata,
+			{deleteAt: Date.now() + 7 * 24 * 60 * 60 * 1000},
 		);
 	});
 
 	txOberserver.on('intent:status', (event) => {
-		const operationID = Number(event.id);
-		if (accountData.state.status === 'ready') {
+		const operationID = event.id;
+		const currentAccount = accountData.get();
+		if (currentAccount) {
 			// tx-observer is built in a way that we can be sure that the tx belong to the current account
-			const account = accountData.state.account;
-			const currentOperation = accountData.state.data.operations[operationID];
-			if (currentOperation) {
-				currentOperation.transactionIntent = event.intent;
-				accountData.setOperation(account, operationID, currentOperation);
-			} else {
-				console.error(`operation with id ${operationID} not found`);
-				// TODO remove from tx observer ?
-			}
+			currentAccount.updateItem('operations', operationID, {
+				transactionIntent: event.intent,
+			});
 		}
 	});
 
@@ -134,7 +114,7 @@ export async function createContext(): Promise<{
 
 	// TODO use deployment store ?
 	const gasFee = createGasFeeStore({
-		publicClient: publicClient as any, // TODO fix publicClient type
+		publicClient: publicClient,
 		deployments: deployments.current,
 	});
 	window.gasFee = gasFee;
@@ -161,17 +141,75 @@ export async function createContext(): Promise<{
 			const unsubscribeFromGasFee = gasFee.subscribe((v) => {
 				console.log(`gas fee updated`, v);
 			});
-			accountData.start();
 
 			const txObserverInterval = setInterval(() => {
 				txOberserver.process();
 			}, 2 * 1000); // TODO delay or use onNewBlock hook
 
+			let currentAccountSubscription:
+				| {
+						account: `0x${string}`;
+						unsubscribe: () => void;
+				  }
+				| undefined;
+			const unsubscribeFromAccountData = accountData.subscribe(
+				(currentAccountData) => {
+					console.log(currentAccountData);
+					if (currentAccountData) {
+						if (
+							!currentAccountSubscription ||
+							currentAccountSubscription.account != currentAccountData.account
+						) {
+							currentAccountSubscription?.unsubscribe();
+							txOberserver.clear();
+							const unsubFromAdded = currentAccountData.on(
+								'operations:added',
+								({key, item}) => {
+									txOberserver.add(key, item.transactionIntent);
+								},
+							);
+							const unsubFromRemoved = currentAccountData.on(
+								'operations:removed',
+								({key}) => {
+									txOberserver.remove(key);
+								},
+							);
+							const unsubFromState = currentAccountData.subscribe((state) => {
+								console.log(`STATE`, state);
+								if (state.status == 'ready') {
+									const data = state.data;
+									const operations = data.operations;
+									const intents: {[id: string]: TransactionIntent} = {};
+									for (const id in operations) {
+										intents[id] = operations[id].transactionIntent;
+									}
+									txOberserver.addMultiple(intents);
+								} else {
+								}
+							});
+							currentAccountSubscription = {
+								account: currentAccountData.account,
+								unsubscribe: () => {
+									unsubFromAdded();
+									unsubFromRemoved();
+									unsubFromState();
+								},
+							};
+						}
+					} else {
+						console.log(`no account`);
+						currentAccountSubscription?.unsubscribe();
+						currentAccountSubscription = undefined;
+						txOberserver.clear();
+					}
+				},
+			);
+
 			return () => {
 				clearInterval(txObserverInterval);
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();
-				accountData.stop();
+				unsubscribeFromAccountData();
 			};
 		},
 	};

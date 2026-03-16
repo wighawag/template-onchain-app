@@ -21,10 +21,10 @@
 	import type {Readable} from 'svelte/store';
 
 	interface Props {
-		id: number;
+		id: string;
 		operationStore: Readable<OnchainOperation | undefined>;
-		onDismiss: (id: number) => void;
-		onBumpGas: (id: number) => void;
+		onDismiss: (id: string) => void;
+		onBumpGas: (id: string) => void;
 	}
 
 	let {id, operationStore, onDismiss, onBumpGas}: Props = $props();

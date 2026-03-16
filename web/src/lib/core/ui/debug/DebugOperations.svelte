@@ -8,16 +8,9 @@
 
 	let expanded = $state(false);
 
-	// Get operation IDs
-	let operationIds = $derived.by(() => {
-		if ($accountData.status === 'ready') {
-			return Object.keys($accountData.data.operations).map(Number);
-		}
-		return [];
-	});
-
-	// Get total count for the badge
-	let operationCount = $derived(operationIds.length);
+	let currentAccountData = $derived($accountData);
+	let operationIds = $derived(currentAccountData?.watchItemIds('operations'));
+	let operationCount = $derived($operationIds?.length || 0);
 
 	function toggleExpanded() {
 		expanded = !expanded;
@@ -51,21 +44,21 @@
 		<!-- Expanded list -->
 		{#if expanded}
 			<div class="max-h-[300px] overflow-y-auto border-t">
-				{#if $accountData.status === 'idle'}
+				{#if $currentAccountData?.status === 'idle'}
 					<div class="px-3 py-2 text-xs text-muted-foreground">
 						No account connected
 					</div>
-				{:else if $accountData.status === 'loading'}
+				{:else if $currentAccountData?.isLoading}
 					<div class="px-3 py-2 text-xs text-muted-foreground">Loading...</div>
-				{:else if operationIds.length === 0}
+				{:else if operationCount == 0}
 					<div class="px-3 py-2 text-xs text-muted-foreground">
 						No operations
 					</div>
 				{:else}
 					<div class="divide-y">
-						{#each operationIds as id (id)}
+						{#each $operationIds as id (id)}
 							<DebugOperationItem
-								operationStore={accountData.getOperationStore(id)}
+								operationStore={$accountData!.watchItem('operations', id)}
 							/>
 						{/each}
 					</div>

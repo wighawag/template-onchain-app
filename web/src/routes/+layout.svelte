@@ -25,7 +25,6 @@
 	{/snippet}
 	<Navbar name="Template" />
 	{@render children()}
-	<DebugOperations />
 </AsyncContext>
 
 <VersionAndInstallNotfications
