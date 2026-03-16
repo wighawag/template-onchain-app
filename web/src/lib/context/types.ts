@@ -16,6 +16,10 @@ import type {OnchainStateStore} from '$lib/onchain/state';
 export type WalletClient =
 	TrackedWalletClientAutoPopulate<OnchainOperationMetadata>;
 
+export type Clock = {
+	now(): number;
+};
+
 export type Context = {
 	gasFee: GasFeeStore;
 	balance: BalanceStore;
@@ -30,4 +34,5 @@ export type Context = {
 	deployments: DeploymentsStore;
 	accountData: AccountDataStore;
 	onchainState: OnchainStateStore;
+	clock: Clock;
 };

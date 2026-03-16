@@ -33,6 +33,8 @@ export async function createContext(): Promise<{
 	window.publicClient = publicClient;
 	window.deployments = deployments;
 
+	const clock = Date;
+
 	// ----------------------------------------------------------------------------
 	// TRACKED WALLET CLIENT
 	// ----------------------------------------------------------------------------
@@ -55,6 +57,7 @@ export async function createContext(): Promise<{
 	const accountData = createAccountData({
 		accountStore: account,
 		deployments: deployments.current,
+		clock,
 	});
 
 	const txOberserver = createTransactionObserver({
@@ -62,17 +65,28 @@ export async function createContext(): Promise<{
 		provider: connection.provider,
 	});
 
+	// ----------------------------------------------------------------
+	// Capture tx from Tracked Wallet Client
+	// ----------------------------------------------------------------
+	let lastId: number = 0;
+	function generateId() {
+		let id = clock.now();
+		if (id == lastId) {
+			id = lastId + 1;
+		}
+		lastId = id;
+		return id.toString();
+	}
 	walletClient.onTransactionBroadcasted((transaction) => {
 		const currentAccount = accountData.get();
 		if (!currentAccount) {
 			console.error(`broadcasted transaction but accountData is not ready`);
 			return;
 		}
-		// TODO unique id
-		const id = Date.now();
+		const id = generateId();
 		currentAccount.addItem(
 			'operations',
-			id.toString(),
+			id,
 			{
 				transactionIntent: {
 					transactions: [
@@ -86,10 +100,15 @@ export async function createContext(): Promise<{
 				},
 				metadata: transaction.metadata,
 			},
-			{deleteAt: Date.now() + 7 * 24 * 60 * 60 * 1000},
+			{deleteAt: clock.now() + 7 * 24 * 60 * 60 * 1000},
 		);
 	});
+	// ----------------------------------------------------------------
 
+	// ----------------------------------------------------------------
+	// Each time the tx observer compute a new state for a tx
+	// make the account aware of it
+	// ----------------------------------------------------------------
 	txOberserver.on('intent:status', (event) => {
 		const operationID = event.id;
 		const currentAccount = accountData.get();
@@ -131,21 +150,22 @@ export async function createContext(): Promise<{
 			deployments,
 			accountData,
 			onchainState,
+			clock,
 		},
 		start: () => {
-			// to keep balance in memory
-			// TODO use an methodology to handle this when wanted
+			// we trigger it so it is always availabe
 			const unsubscribeFromBalance = balance.subscribe(() => {});
-			// TODO remove
-			// we trigger it
-			const unsubscribeFromGasFee = gasFee.subscribe((v) => {
-				console.log(`gas fee updated`, v);
-			});
+			// we trigger it so it is always availabe
+			const unsubscribeFromGasFee = gasFee.subscribe(() => {});
 
 			const txObserverInterval = setInterval(() => {
 				txOberserver.process();
 			}, 2 * 1000); // TODO delay or use onNewBlock hook
 
+			// ----------------------------------------------------------------
+			// Subscribing to Tx from Account Data
+			//  and submitting them to the tx observer
+			// ----------------------------------------------------------------
 			let currentAccountSubscription:
 				| {
 						account: `0x${string}`;
@@ -154,7 +174,6 @@ export async function createContext(): Promise<{
 				| undefined;
 			const unsubscribeFromAccountData = accountData.subscribe(
 				(currentAccountData) => {
-					console.log(currentAccountData);
 					if (currentAccountData) {
 						if (
 							!currentAccountSubscription ||
@@ -197,13 +216,13 @@ export async function createContext(): Promise<{
 							};
 						}
 					} else {
-						console.log(`no account`);
 						currentAccountSubscription?.unsubscribe();
 						currentAccountSubscription = undefined;
 						txOberserver.clear();
 					}
 				},
 			);
+			// ----------------------------------------------------------------
 
 			return () => {
 				clearInterval(txObserverInterval);
