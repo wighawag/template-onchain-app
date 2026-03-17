@@ -8,6 +8,7 @@ import {
 	createSyncableStore,
 	defineSchema,
 	map,
+	type SyncableStore,
 } from 'synqable';
 
 export type OnchainOperationMetadata = PopulatedMetadata;
@@ -21,6 +22,8 @@ const schema = defineSchema({
 	operations: map<OnchainOperation>(),
 });
 
+export type Schema = typeof schema;
+
 export function createAccountData(params: {
 	accountStore: AccountStore;
 	deployments: TypedDeployments;
@@ -29,6 +32,7 @@ export function createAccountData(params: {
 	const {accountStore, deployments, clock} = params;
 	return createMultiAccountStore({
 		accountStore,
+		schema,
 		factory: (account) =>
 			createSyncableStore({
 				schema,
@@ -45,4 +49,4 @@ export function createAccountData(params: {
 	});
 }
 
-export type AccountDataStore = ReturnType<typeof createAccountData>;
+export type MultiAccountDataStore = ReturnType<typeof createAccountData>;

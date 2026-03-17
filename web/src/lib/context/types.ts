@@ -8,10 +8,11 @@ import type {
 } from '$lib/core/connection/types';
 import type {TrackedWalletClientAutoPopulate} from '@etherkit/viem-tx-tracker';
 import type {
-	AccountDataStore,
+	MultiAccountDataStore,
 	OnchainOperationMetadata,
 } from '$lib/account/AccountData';
 import type {OnchainStateStore} from '$lib/onchain/state';
+import type {ViewStateStore} from '$lib/view';
 
 export type WalletClient =
 	TrackedWalletClientAutoPopulate<OnchainOperationMetadata>;
@@ -32,7 +33,8 @@ export type Context = {
 	publicClient: PublicClient;
 	account: AccountStore;
 	deployments: DeploymentsStore;
-	accountData: AccountDataStore;
+	accountData: MultiAccountDataStore;
 	onchainState: OnchainStateStore;
+	viewState: ViewStateStore;
 	clock: Clock;
 };

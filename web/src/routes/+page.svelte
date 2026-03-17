@@ -8,11 +8,11 @@
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import ImgBlockie from '$lib/core/ui/ethereum/ImgBlockie.svelte';
-	import DebugOperations from '$lib/core/ui/debug/DebugOperations.svelte';
+	import DebugOperations from '$lib/ui/debug/DebugOperations.svelte';
 
 	let dependencies = getUserContext();
 
-	let {connection, onchainState, walletClient, deployments} =
+	let {connection, onchainState, viewState, walletClient, deployments} =
 		$derived(dependencies);
 
 	let greetingInput = $state('');
@@ -102,7 +102,7 @@
 
 		<!-- Messages List -->
 		<div class="space-y-1">
-			{#if $onchainState.length === 0}
+			{#if $viewState.length === 0}
 				<div
 					class="flex flex-col items-center justify-center py-6 text-muted-foreground"
 				>
@@ -110,7 +110,7 @@
 					<p class="text-sm">No messages yet. Be the first!</p>
 				</div>
 			{:else}
-				{#each $onchainState as message}
+				{#each $viewState as message}
 					<div
 						class="flex items-center gap-1.5 rounded-md border px-2 py-1 text-sm sm:gap-2"
 					>

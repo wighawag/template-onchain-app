@@ -9,13 +9,15 @@
 
 	const {connection, accountData} = getUserContext();
 
-	let currentAccountData = $derived($accountData);
-	let operationIds = $derived(currentAccountData?.watchItemIds('operations'));
+	let accountDataState = $derived(accountData.state$);
+	let operationIds = $derived(accountData.watchItemIds('operations'));
 
 	// Dismiss operation
 	function dismissOperation(id: string) {
-		if (!currentAccountData) return;
-		currentAccountData.removeItem('operations', id);
+		const account = accountData.get();
+		if (account) {
+			account.removeItem('operations', id);
+		}
 	}
 
 	// Bump gas price (placeholder)
@@ -42,7 +44,7 @@
 
 		<Separator.Root />
 
-		{#if !$currentAccountData || $currentAccountData.status === 'idle'}
+		{#if $accountDataState.status === 'idle'}
 			<Empty.Root class="min-h-100">
 				<Empty.Header>
 					<Empty.Media variant="icon">
@@ -54,14 +56,14 @@
 					</Empty.Description>
 				</Empty.Header>
 			</Empty.Root>
-		{:else if $currentAccountData.isLoading}
+		{:else if $accountDataState.isLoading}
 			<div class="flex flex-col items-center justify-center py-12">
 				<div
 					class="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
 				></div>
 				<p class="mt-4 text-muted-foreground">Loading operations...</p>
 			</div>
-		{:else if !$operationIds || $operationIds.length === 0}
+		{:else if $operationIds.length === 0}
 			<Empty.Root class="min-h-100">
 				<Empty.Header>
 					<Empty.Media variant="icon">
@@ -79,7 +81,7 @@
 				{#each $operationIds as id (id)}
 					<OperationCard
 						{id}
-						operationStore={$accountData!.watchItem('operations', id)}
+						operationStore={accountData.watchItem('operations', id)}
 						onDismiss={dismissOperation}
 						onBumpGas={bumpGasPrice}
 					/>

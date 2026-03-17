@@ -4,7 +4,13 @@ import type {
 	UnderlyingEthereumProvider,
 } from '@etherplay/connect';
 import type {Readable} from 'svelte/store';
-import type {PublicClient, WalletClient} from 'viem';
+import type {
+	Chain,
+	CustomTransport,
+	PublicClient,
+	Transport,
+	WalletClient,
+} from 'viem';
 
 export type Signer = {
 	owner: `0x${string}`;

@@ -5,7 +5,7 @@
 	"type": "module",
 	"devDependencies": {
 		"@etherkit/tx-observer": "0.0.7",
-		"@etherkit/viem-tx-tracker": "^0.0.5",
+		"@etherkit/viem-tx-tracker": "^0.0.6",
 		"@etherplay/connect": "^0.0.41",
 		"@internationalized/date": "^3.11.0",
 		"@lucide/svelte": "^0.577.0",
@@ -23,6 +23,7 @@
 		"clsx": "^2.1.1",
 		"eip-1193": "^0.6.5",
 		"ipfs-gateway-emulator": "4.2.1-ipfs.2",
+		"json-stable-stringify": "^1.3.0",
 		"named-logs": "^0.4.1",
 		"observator": "^0.3.0",
 		"playwright": "^1.58.2",
@@ -34,7 +35,7 @@
 		"shadcn-svelte": "^1.1.1",
 		"svelte": "^5.53.10",
 		"svelte-check": "^4.0.0",
-		"synqable": "^0.0.4",
+		"synqable": "^0.0.9",
 		"tailwind-merge": "^3.5.0",
 		"tailwind-variants": "^3.2.2",
 		"tailwindcss": "^4.1.17",
@@ -60,8 +61,5 @@
 		"serve": "ipfs-emulator --only -d build -p 8080",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run"
-	},
-	"dependencies": {
-		"json-stable-stringify": "^1.3.0"
 	}
 }

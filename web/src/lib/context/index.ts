@@ -10,6 +10,7 @@ import {
 } from '@etherkit/tx-observer';
 import {createAccountData} from '$lib/account/AccountData.js';
 import {createOnchainState} from '$lib/onchain/state.js';
+import {createViewState} from '$lib/view/index.js';
 
 export async function createContext(): Promise<{
 	context: Context;
@@ -77,7 +78,7 @@ export async function createContext(): Promise<{
 		lastId = id;
 		return id.toString();
 	}
-	walletClient.onTransactionBroadcasted((transaction) => {
+	walletClient.on('transaction:broadcasted', (transaction) => {
 		const currentAccount = accountData.get();
 		if (!currentAccount) {
 			console.error(`broadcasted transaction but accountData is not ready`);
@@ -102,6 +103,54 @@ export async function createContext(): Promise<{
 			},
 			{deleteAt: clock.now() + 7 * 24 * 60 * 60 * 1000},
 		);
+	});
+	// if needed we can also update on getting the full tx data
+	walletClient.on('transaction:fetched', (transaction) => {
+		const currentAccount = accountData.get();
+		if (!currentAccount) {
+			console.error(`broadcasted transaction but accountData is not ready`);
+			return;
+		}
+		const account = currentAccount.get();
+		if (account.status === 'ready') {
+			let txFound: {operationID: string; txIndex: number} | undefined;
+			const operationIds = Object.keys(account.data.operations);
+			for (const operationID of operationIds) {
+				const operation = account.data.operations[operationID];
+				const txIndex = operation.transactionIntent.transactions.findIndex(
+					(tx) => tx.hash === transaction.hash,
+				);
+				if (txIndex > 0) {
+					txFound = {operationID, txIndex};
+					break;
+				}
+			}
+			if (txFound) {
+				currentAccount.patchItem(
+					'operations',
+					txFound.operationID,
+					(operation) => {
+						const transactions = [...operation.transactionIntent.transactions];
+						transactions[txFound.txIndex] = {
+							broadcastTimestampMs: transaction.broadcastTimestampMs,
+							from: transaction.from,
+							hash: transaction.hash,
+							nonce: transaction.nonce,
+							// TODO add other info that we now know
+						};
+						return {
+							...operation,
+							transactionIntent: {
+								...operation.transactionIntent,
+								transactions,
+							},
+						};
+					},
+				);
+			} else {
+				console.error(`no operations found with tx: ${transaction.hash}`);
+			}
+		}
 	});
 	// ----------------------------------------------------------------
 
@@ -139,6 +188,11 @@ export async function createContext(): Promise<{
 	window.gasFee = gasFee;
 	// ----------------------------------------------------------------------------
 
+	const viewState = createViewState({
+		onchainState,
+		operations: accountData.watchField('operations'),
+	});
+
 	return {
 		context: {
 			gasFee,
@@ -150,6 +204,7 @@ export async function createContext(): Promise<{
 			deployments,
 			accountData,
 			onchainState,
+			viewState,
 			clock,
 		},
 		start: () => {
@@ -193,19 +248,21 @@ export async function createContext(): Promise<{
 									txOberserver.remove(key);
 								},
 							);
-							const unsubFromState = currentAccountData.subscribe((state) => {
-								console.log(`STATE`, state);
-								if (state.status == 'ready') {
-									const data = state.data;
-									const operations = data.operations;
-									const intents: {[id: string]: TransactionIntent} = {};
-									for (const id in operations) {
-										intents[id] = operations[id].transactionIntent;
+							const unsubFromState = currentAccountData.state$.subscribe(
+								(state) => {
+									console.log(`STATE`, state);
+									if (state.status == 'ready') {
+										// const data = state.data; // TODO
+										// const operations = data.operations;
+										// const intents: {[id: string]: TransactionIntent} = {};
+										// for (const id in operations) {
+										// 	intents[id] = operations[id].transactionIntent;
+										// }
+										// txOberserver.addMultiple(intents);
+									} else {
 									}
-									txOberserver.addMultiple(intents);
-								} else {
-								}
-							});
+								},
+							);
 							currentAccountSubscription = {
 								account: currentAccountData.account,
 								unsubscribe: () => {

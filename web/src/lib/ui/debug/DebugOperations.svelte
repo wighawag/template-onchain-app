@@ -8,8 +8,8 @@
 
 	let expanded = $state(false);
 
-	let currentAccountData = $derived($accountData);
-	let operationIds = $derived(currentAccountData?.watchItemIds('operations'));
+	let accountDataState = $derived(accountData.state$);
+	let operationIds = $derived(accountData.watchItemIds('operations'));
 	let operationCount = $derived($operationIds?.length || 0);
 
 	function toggleExpanded() {
@@ -44,11 +44,11 @@
 		<!-- Expanded list -->
 		{#if expanded}
 			<div class="max-h-75 overflow-y-auto border-t">
-				{#if $currentAccountData?.status === 'idle'}
+				{#if $accountDataState.status === 'idle'}
 					<div class="px-3 py-2 text-xs text-muted-foreground">
 						No account connected
 					</div>
-				{:else if $currentAccountData?.isLoading}
+				{:else if $accountDataState.isLoading}
 					<div class="px-3 py-2 text-xs text-muted-foreground">Loading...</div>
 				{:else if operationCount == 0}
 					<div class="px-3 py-2 text-xs text-muted-foreground">
@@ -58,7 +58,7 @@
 					<div class="divide-y">
 						{#each $operationIds as id (id)}
 							<DebugOperationItem
-								operationStore={$accountData!.watchItem('operations', id)}
+								operationStore={accountData.watchItem('operations', id)}
 							/>
 						{/each}
 					</div>

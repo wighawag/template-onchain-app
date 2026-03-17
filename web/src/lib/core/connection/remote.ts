@@ -1,7 +1,14 @@
 import deploymentsFromFiles from '$lib/deployments';
 import {createConnection} from '@etherplay/connect';
 import {derived, writable} from 'svelte/store';
-import {createPublicClient, createWalletClient, custom} from 'viem';
+import {
+	createPublicClient,
+	createWalletClient,
+	custom,
+	type Chain,
+	type PublicClient,
+	type Transport,
+} from 'viem';
 import type {
 	Account,
 	DeploymentsStore,
@@ -34,7 +41,7 @@ export async function establishRemoteConnection(): Promise<EstablishedConnection
 	const publicClient = createPublicClient({
 		chain: chainInfo,
 		transport: custom(connection.provider),
-	});
+	}) as unknown as PublicClient<Transport, Chain, undefined>; // TODO anyway to reconciliate?
 
 	const account = derived<typeof connection, Account>(
 		connection,
