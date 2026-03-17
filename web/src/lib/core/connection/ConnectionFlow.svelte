@@ -91,6 +91,24 @@
 				</Button>
 			{/each}
 		</div>
+	{:else}
+		<div class="mb-6 flex flex-col gap-2">
+			<p class="text-zinc-400 text-sm mb-2">You need a web3 wallet to continue</p>
+			<a
+				href="https://metamask.io/download/"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium text-white transition-colors hover:opacity-90"
+				style="background-color: #FF5C16;"
+			>
+				<img
+					src="/wallets/metamask/MetaMask-icon-fox.svg"
+					alt="MetaMask"
+					class="h-6 w-6"
+				/>
+				Download MetaMask
+			</a>
+		</div>
 	{/if}
 
 	{#if connection.targetStep == 'SignedIn' && !connection.walletOnly}

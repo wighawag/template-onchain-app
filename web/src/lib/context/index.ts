@@ -268,7 +268,6 @@ export async function createContext(): Promise<{
 							);
 							const unsubFromState = currentAccountData.state$.subscribe(
 								(state) => {
-									console.log(`STATE`, state);
 									if (state.status == 'ready') {
 										// const data = state.data; // TODO
 										// const operations = data.operations;

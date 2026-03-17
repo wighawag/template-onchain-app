@@ -2,7 +2,6 @@ import {derived, type Readable} from 'svelte/store';
 import type {Message, OnchainStateStore} from '$lib/onchain/state';
 import type {Schema} from '$lib/account/AccountData';
 import type {FieldReadable} from 'synqable';
-import {zeroAddress} from 'viem';
 
 export type MessageView = Message & {pending?: boolean};
 
@@ -24,10 +23,15 @@ export function createViewState(params: {
 			}
 			// TODO use $accountData (but so far we only react to account change)
 
+			const inclusionsToIgnore = ['NotFound', 'Dropped'];
 			const operationIds = Object.keys($operations);
 			for (const operationID of operationIds) {
 				const operation = $operations[operationID];
 				if (
+					operation.transactionIntent.state?.status !== 'Failure' &&
+					!inclusionsToIgnore.find(
+						(v) => operation.transactionIntent.state?.inclusion == v,
+					) &&
 					operation.metadata.type === 'functionCall' &&
 					operation.metadata.functionName === 'setMessage'
 				) {
