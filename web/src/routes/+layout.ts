@@ -3,6 +3,12 @@ import {onDocumentLoaded} from '$lib/core/utils/web/hooks.js';
 import {dev, version} from '$app/environment';
 import {serviceWorker, params} from '$lib';
 
+import {logs} from 'named-logs';
+
+const logger = logs('init');
+
+logger.debug(`initialization...`);
+
 export const prerender = true;
 export const trailingSlash = 'always';
 export const ssr = true;

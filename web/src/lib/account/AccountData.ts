@@ -1,5 +1,6 @@
 import type {Clock} from '$lib/context/types';
 import type {AccountStore, TypedDeployments} from '$lib/core/connection/types';
+import {serializer} from '$lib/core/utils/data/serializer';
 import type {TransactionIntent} from '@etherkit/tx-observer';
 import type {
 	PopulatedMetadata,
@@ -48,7 +49,8 @@ export function createAccountData(params: {
 				},
 				clock: () => clock.now(),
 				storage: {
-					adapterFactory: (_privateKey) => createLocalStorageAdapter(),
+					adapterFactory: (_privateKey) =>
+						createLocalStorageAdapter(serializer),
 					key: `__private__${deployments.chain.id}_${deployments.chain.genesisHash}_${deployments.contracts.GreetingsRegistry.address}_${account}`,
 				},
 			}),

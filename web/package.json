@@ -35,7 +35,7 @@
 		"shadcn-svelte": "^1.1.1",
 		"svelte": "^5.53.10",
 		"svelte-check": "^4.0.0",
-		"synqable": "^0.0.9",
+		"synqable": "^0.0.10",
 		"tailwind-merge": "^3.5.0",
 		"tailwind-variants": "^3.2.2",
 		"tailwindcss": "^4.1.17",

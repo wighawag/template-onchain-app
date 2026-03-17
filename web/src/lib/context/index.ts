@@ -180,7 +180,7 @@ export async function createContext(): Promise<{
 								operation.transactionIntent.transactions.findIndex(
 									(tx) => tx.hash === transaction.hash,
 								);
-							if (txIndex > 0) {
+							if (txIndex >= 0) {
 								txFound = {operationID, txIndex};
 								break;
 							}
