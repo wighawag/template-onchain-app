@@ -20,7 +20,7 @@ export function createViewState(params: {
 		([$onchainState, $operations]): ViewState => {
 			const messageViews: ViewState = [];
 			for (const message of $onchainState) {
-				messageViews.push(message);
+				messageViews.push({...message});
 			}
 			// TODO use $accountData (but so far we only react to account change)
 
@@ -31,16 +31,33 @@ export function createViewState(params: {
 					operation.metadata.type === 'functionCall' &&
 					operation.metadata.functionName === 'setMessage'
 				) {
-					// const account  =
-					messageViews.push({
-						account: zeroAddress,
-						message: (operation.metadata.args?.[0] as string) || '',
-						timestamp: Math.floor(
-							operation.transactionIntent.transactions[0].broadcastTimestampMs /
-								1000,
-						),
-						pending: true,
-					});
+					const account = operation.metadata.tx.from;
+					const time = operation.metadata.tx.broadcastTimestampMs;
+					const message = (operation.metadata.args?.[0] as string) || '';
+					const existingMessageIndex = messageViews.findIndex(
+						(v) => v.account.toLowerCase() === account.toLowerCase(),
+					);
+					let addMessage = true;
+					if (existingMessageIndex >= 0) {
+						const existingMessageObject = messageViews[existingMessageIndex];
+						if (
+							existingMessageObject.message == message &&
+							existingMessageObject.timestamp > time
+						) {
+							addMessage = false;
+						} else {
+							messageViews.splice(existingMessageIndex, 1);
+						}
+					}
+
+					if (addMessage) {
+						messageViews.unshift({
+							account,
+							message,
+							timestamp: time,
+							pending: true,
+						});
+					}
 				}
 			}
 

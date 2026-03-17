@@ -155,7 +155,7 @@ export async function createContext(): Promise<{
 									},
 								],
 							},
-							metadata: transaction.metadata,
+							metadata: {...transaction.metadata, tx: transaction},
 						},
 						{deleteAt: clock.now() + 7 * 24 * 60 * 60 * 1000},
 					);
@@ -167,9 +167,7 @@ export async function createContext(): Promise<{
 				(transaction) => {
 					const currentAccount = accountData.get();
 					if (!currentAccount) {
-						console.error(
-							`broadcasted transaction but accountData is not ready`,
-						);
+						console.error(`fetched transaction but accountData is not ready`);
 						return;
 					}
 					const account = currentAccount.get();
@@ -196,11 +194,8 @@ export async function createContext(): Promise<{
 										...operation.transactionIntent.transactions,
 									];
 									transactions[txFound.txIndex] = {
-										broadcastTimestampMs: transaction.broadcastTimestampMs,
-										from: transaction.from,
-										hash: transaction.hash,
+										...transactions[txFound.txIndex],
 										nonce: transaction.nonce,
-										// TODO add other info that we now know
 									};
 									return {
 										...operation,
@@ -208,6 +203,7 @@ export async function createContext(): Promise<{
 											...operation.transactionIntent,
 											transactions,
 										},
+										metadata: {...transaction.metadata, tx: transaction},
 									};
 								},
 							);

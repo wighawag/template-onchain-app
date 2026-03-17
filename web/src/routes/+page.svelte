@@ -126,7 +126,11 @@
 						<span
 							class="overflow-hidden text-xs whitespace-nowrap text-muted-foreground"
 						>
-							{formatRelativeTime(message.timestamp)}
+							{#if message.pending}
+								<Spinner class="h-3 w-3" />
+							{:else}
+								{formatRelativeTime(message.timestamp)}
+							{/if}
 						</span>
 					</div>
 				{/each}

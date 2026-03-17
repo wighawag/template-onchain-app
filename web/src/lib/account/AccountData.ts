@@ -1,17 +1,23 @@
 import type {Clock} from '$lib/context/types';
 import type {AccountStore, TypedDeployments} from '$lib/core/connection/types';
 import type {TransactionIntent} from '@etherkit/tx-observer';
-import type {PopulatedMetadata} from '@etherkit/viem-tx-tracker';
+import type {
+	PopulatedMetadata,
+	TrackedTransaction,
+} from '@etherkit/viem-tx-tracker';
 import {
 	createLocalStorageAdapter,
 	createMultiAccountStore,
 	createSyncableStore,
 	defineSchema,
 	map,
-	type SyncableStore,
 } from 'synqable';
 
-export type OnchainOperationMetadata = PopulatedMetadata;
+export type TransactionMetadata = PopulatedMetadata;
+
+export type OnchainOperationMetadata = TransactionMetadata & {
+	tx: Omit<TrackedTransaction<PopulatedMetadata>, 'metadata'>;
+};
 
 export type OnchainOperation = {
 	metadata: OnchainOperationMetadata;

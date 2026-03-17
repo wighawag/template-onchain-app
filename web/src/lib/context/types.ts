@@ -9,13 +9,12 @@ import type {
 import type {TrackedWalletClientAutoPopulate} from '@etherkit/viem-tx-tracker';
 import type {
 	MultiAccountDataStore,
-	OnchainOperationMetadata,
+	TransactionMetadata,
 } from '$lib/account/AccountData';
 import type {OnchainStateStore} from '$lib/onchain/state';
 import type {ViewStateStore} from '$lib/view';
 
-export type WalletClient =
-	TrackedWalletClientAutoPopulate<OnchainOperationMetadata>;
+export type WalletClient = TrackedWalletClientAutoPopulate<TransactionMetadata>;
 
 export type Clock = {
 	now(): number;
