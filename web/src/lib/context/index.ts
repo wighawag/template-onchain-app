@@ -8,7 +8,11 @@ import {
 	createTransactionObserver,
 	type TransactionIntent,
 } from '@etherkit/tx-observer';
-import {createAccountData} from '$lib/account/AccountData.js';
+import {
+	createAccountData,
+	createTrackedWalletConnector,
+	createTransactionObserverConnector,
+} from '$lib/account/AccountData.js';
 import {createOnchainState} from '$lib/onchain/state.js';
 import {createViewState} from '$lib/view/index.js';
 
@@ -65,11 +69,22 @@ export async function createContext(): Promise<{
 	});
 	window.accountData = accountData;
 
-	const txOberserver = createTransactionObserver({
+	const txObserver = createTransactionObserver({
 		finality: 12, //TODO
 		provider: connection.provider,
 	});
-	window.txOberserver = txOberserver;
+	window.txObserver = txObserver;
+
+	const trackedWalletConnector = createTrackedWalletConnector({
+		walletClient,
+		accountData,
+		clock,
+	});
+
+	const txObserverConnector = createTransactionObserverConnector({
+		accountData,
+		txObserver,
+	});
 
 	// ----------------------------------------------------------------------------
 	// BALANCE AND COSTS
@@ -115,197 +130,17 @@ export async function createContext(): Promise<{
 			const unsubscribeFromGasFee = gasFee.subscribe(() => {});
 
 			const txObserverInterval = setInterval(() => {
-				txOberserver.process();
+				txObserver.process();
 			}, 2 * 1000); // TODO delay or use onNewBlock hook
-
-			// ----------------------------------------------------------------
-			// Capture tx from Tracked Wallet Client
-			// ----------------------------------------------------------------
-			let lastId: number = 0;
-			function generateId() {
-				let id = clock.now();
-				if (id == lastId) {
-					id = lastId + 1;
-				}
-				lastId = id;
-				return id.toString();
-			}
-			const unsubscribeFromBroadcastedTransaction = walletClient.on(
-				'transaction:broadcasted',
-				(transaction) => {
-					const currentAccount = accountData.get();
-					if (!currentAccount) {
-						console.error(
-							`broadcasted transaction but accountData is not ready`,
-						);
-						return;
-					}
-					const id = generateId();
-					currentAccount.addItem(
-						'operations',
-						id,
-						{
-							transactionIntent: {
-								transactions: [
-									{
-										broadcastTimestampMs: transaction.broadcastTimestampMs,
-										from: transaction.from,
-										hash: transaction.hash,
-										nonce: transaction.nonce,
-									},
-								],
-							},
-							metadata: {...transaction.metadata, tx: transaction},
-						},
-						{deleteAt: clock.now() + 7 * 24 * 60 * 60 * 1000},
-					);
-				},
-			);
-			// if needed we can also update on getting the full tx data
-			const unsubscribeFromFetchedTransaction = walletClient.on(
-				'transaction:fetched',
-				(transaction) => {
-					const currentAccount = accountData.get();
-					if (!currentAccount) {
-						console.error(`fetched transaction but accountData is not ready`);
-						return;
-					}
-					const account = currentAccount.get();
-					if (account.status === 'ready') {
-						let txFound: {operationID: string; txIndex: number} | undefined;
-						const operationIds = Object.keys(account.data.operations);
-						for (const operationID of operationIds) {
-							const operation = account.data.operations[operationID];
-							const txIndex =
-								operation.transactionIntent.transactions.findIndex(
-									(tx) => tx.hash === transaction.hash,
-								);
-							if (txIndex >= 0) {
-								txFound = {operationID, txIndex};
-								break;
-							}
-						}
-						if (txFound) {
-							currentAccount.patchItem(
-								'operations',
-								txFound.operationID,
-								(operation) => {
-									const transactions = [
-										...operation.transactionIntent.transactions,
-									];
-									transactions[txFound.txIndex] = {
-										...transactions[txFound.txIndex],
-										nonce: transaction.nonce,
-									};
-									return {
-										...operation,
-										transactionIntent: {
-											...operation.transactionIntent,
-											transactions,
-										},
-										metadata: {...transaction.metadata, tx: transaction},
-									};
-								},
-							);
-						} else {
-							console.error(`no operations found with tx: ${transaction.hash}`);
-						}
-					}
-				},
-			);
-			// ----------------------------------------------------------------
-
-			// ----------------------------------------------------------------
-			// Each time the tx observer compute a new state for a tx
-			// make the account aware of it
-			// ----------------------------------------------------------------
-			const unsubscribeFromTransactionStatusUpdates = txOberserver.on(
-				'intent:status',
-				(event) => {
-					const operationID = event.id;
-					const currentAccount = accountData.get();
-					if (currentAccount) {
-						// tx-observer is built in a way that we can be sure that the tx belong to the current account
-						currentAccount.updateItem('operations', operationID, {
-							transactionIntent: event.intent,
-						});
-					}
-				},
-			);
-
-			// ----------------------------------------------------------------------------
-
-			// ----------------------------------------------------------------
-			// Subscribing to Tx from Account Data
-			//  and submitting them to the tx observer
-			// ----------------------------------------------------------------
-			let currentAccountSubscription:
-				| {
-						account: `0x${string}`;
-						unsubscribe: () => void;
-				  }
-				| undefined;
-			const unsubscribeFromAccountData = accountData.subscribe(
-				(currentAccountData) => {
-					if (currentAccountData) {
-						if (
-							!currentAccountSubscription ||
-							currentAccountSubscription.account != currentAccountData.account
-						) {
-							currentAccountSubscription?.unsubscribe();
-							txOberserver.clear();
-							const unsubFromAdded = currentAccountData.on(
-								'operations:added',
-								({key, item}) => {
-									txOberserver.add(key, item.transactionIntent);
-								},
-							);
-							const unsubFromRemoved = currentAccountData.on(
-								'operations:removed',
-								({key}) => {
-									txOberserver.remove(key);
-								},
-							);
-							const unsubFromState = currentAccountData.state$.subscribe(
-								(state) => {
-									if (state.status == 'ready') {
-										// const data = state.data; // TODO
-										// const operations = data.operations;
-										// const intents: {[id: string]: TransactionIntent} = {};
-										// for (const id in operations) {
-										// 	intents[id] = operations[id].transactionIntent;
-										// }
-										// txOberserver.addMultiple(intents);
-									} else {
-									}
-								},
-							);
-							currentAccountSubscription = {
-								account: currentAccountData.account,
-								unsubscribe: () => {
-									unsubFromAdded();
-									unsubFromRemoved();
-									unsubFromState();
-								},
-							};
-						}
-					} else {
-						currentAccountSubscription?.unsubscribe();
-						currentAccountSubscription = undefined;
-						txOberserver.clear();
-					}
-				},
-			);
-			// ----------------------------------------------------------------
+			trackedWalletConnector.connect();
+			txObserverConnector.connect();
 
 			return () => {
-				unsubscribeFromBroadcastedTransaction();
-				unsubscribeFromFetchedTransaction();
-				unsubscribeFromTransactionStatusUpdates();
+				trackedWalletConnector.disconnect();
+				txObserverConnector.disconnect();
 				clearInterval(txObserverInterval);
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();
-				unsubscribeFromAccountData();
 			};
 		},
 	};

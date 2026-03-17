@@ -11,3 +11,6 @@ static/pwa
 *.local
 
 src/lib/deployments.ts
+
+.yalc
+yalc.lock
