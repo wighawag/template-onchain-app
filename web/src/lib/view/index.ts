@@ -12,8 +12,11 @@ export type ViewStateStore = Readable<ViewState>;
 export function createViewState(params: {
 	onchainState: OnchainStateStore;
 	operations: FieldReadable<Schema, 'operations'>;
+	config: {
+		maxMessages: number;
+	};
 }) {
-	const {onchainState, operations} = params;
+	const {onchainState, operations, config} = params;
 	const viewState = derived(
 		[onchainState, operations],
 		([$onchainState, $operations]): ViewState => {
@@ -21,7 +24,6 @@ export function createViewState(params: {
 			for (const message of $onchainState) {
 				messageViews.push({...message});
 			}
-			// TODO use $accountData (but so far we only react to account change)
 
 			const inclusionsToIgnore = ['NotFound', 'Dropped'];
 			const operationIds = Object.keys($operations);
@@ -64,6 +66,8 @@ export function createViewState(params: {
 					}
 				}
 			}
+
+			messageViews.splice(config.maxMessages);
 
 			return messageViews;
 		},

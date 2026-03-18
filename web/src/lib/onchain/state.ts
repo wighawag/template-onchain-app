@@ -19,8 +19,11 @@ function defaultState(): OnchainState {
 export function createOnchainState(params: {
 	publicClient: PublicClient;
 	deployments: TypedDeployments;
+	config: {
+		maxMessages: number;
+	};
 }) {
-	const {publicClient, deployments} = params;
+	const {publicClient, deployments, config} = params;
 	let $state: OnchainState = defaultState();
 
 	const _store = writable<OnchainState>($state, start);
@@ -34,7 +37,7 @@ export function createOnchainState(params: {
 		const valueFromContracts = await publicClient.readContract({
 			...deployments.contracts.GreetingsRegistry,
 			functionName: 'getLastMessages',
-			args: [10n],
+			args: [BigInt(config.maxMessages)],
 		});
 		const state = valueFromContracts.map((v) => ({
 			...v,

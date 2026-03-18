@@ -53,9 +53,14 @@ export async function createContext(): Promise<{
 
 	// ----------------------------------------------------------------------------
 
+	const config = {
+		maxMessages: 10,
+	};
+
 	const onchainState = createOnchainState({
 		publicClient,
 		deployments: deployments.current,
+		config,
 	});
 	window.onchainState = onchainState;
 
@@ -102,6 +107,7 @@ export async function createContext(): Promise<{
 	const viewState = createViewState({
 		onchainState,
 		operations: accountData.watchField('operations'),
+		config,
 	});
 	window.viewState = viewState;
 
