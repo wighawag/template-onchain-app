@@ -16,6 +16,7 @@ export const {isParentRoute, isSameRoute, route, params} = createRouteHandler(
 	paramFromLocation,
 	{
 		globalQueryParams: [
+			'transactions',
 			'debug',
 			'debugLevel',
 			'traceLevel',

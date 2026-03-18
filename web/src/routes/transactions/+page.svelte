@@ -26,7 +26,7 @@
 	}
 </script>
 
-<DefaultHead title={'Operations'} />
+<DefaultHead title={'Transactions'} />
 
 <ConnectionFlow {connection} />
 
@@ -36,9 +36,9 @@
 			<div class="rounded-full bg-primary/10 p-3">
 				<ListIcon class="h-8 w-8 text-primary" />
 			</div>
-			<h1 class="text-3xl font-bold">Operations</h1>
+			<h1 class="text-3xl font-bold">Transactions</h1>
 			<p class="text-muted-foreground">
-				Track your pending and completed blockchain operations
+				Track your pending and completed transactions
 			</p>
 		</div>
 
@@ -52,7 +52,7 @@
 					</Empty.Media>
 					<Empty.Title>No Account Connected</Empty.Title>
 					<Empty.Description>
-						Connect your wallet to view your operations.
+						Connect your wallet to view your transactions.
 					</Empty.Description>
 				</Empty.Header>
 			</Empty.Root>
@@ -61,7 +61,7 @@
 				<div
 					class="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
 				></div>
-				<p class="mt-4 text-muted-foreground">Loading operations...</p>
+				<p class="mt-4 text-muted-foreground">Loading transactions...</p>
 			</div>
 		{:else if $operationIds.length === 0}
 			<Empty.Root class="min-h-100">
@@ -71,7 +71,7 @@
 					</Empty.Media>
 					<Empty.Title>No Operations</Empty.Title>
 					<Empty.Description>
-						You haven't performed any operations yet. Once you interact with
+						You haven't performed any transactions yet. Once you interact with
 						contracts, your transactions will appear here.
 					</Empty.Description>
 				</Empty.Header>

@@ -27,7 +27,7 @@
 			class="flex w-full items-center justify-between gap-2 px-3 py-2 transition-colors hover:bg-muted/50"
 		>
 			<div class="flex items-center gap-2">
-				<span class="text-xs font-medium">Operations</span>
+				<span class="text-xs font-medium">Transactions</span>
 				{#if operationCount > 0}
 					<Badge variant="secondary" class="h-4 px-1.5 py-0 text-[10px]">
 						{operationCount}
@@ -52,7 +52,7 @@
 					<div class="px-3 py-2 text-xs text-muted-foreground">Loading...</div>
 				{:else if operationCount == 0}
 					<div class="px-3 py-2 text-xs text-muted-foreground">
-						No operations
+						No transactions
 					</div>
 				{:else}
 					<div class="divide-y">

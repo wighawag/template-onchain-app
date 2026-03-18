@@ -79,7 +79,7 @@
 				<!-- Connected User Actions -->
 				<div class="flex flex-col gap-2 px-4">
 					<a
-						href={route('/operations/')}
+						href={route('/transactions/')}
 						class={buttonVariants({variant: 'outline'})}
 						onclick={() => (showMenu = false)}
 					>

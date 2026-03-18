@@ -8,7 +8,6 @@
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import ImgBlockie from '$lib/core/ui/ethereum/ImgBlockie.svelte';
-	import DebugOperations from '$lib/ui/debug/DebugOperations.svelte';
 
 	let dependencies = getUserContext();
 
@@ -64,8 +63,6 @@
 </script>
 
 <DefaultHead title={'Greetings Registry'} />
-
-<DebugOperations />
 
 <ConnectionFlow {connection} />
 

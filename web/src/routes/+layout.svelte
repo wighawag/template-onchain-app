@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 
-	import {serviceWorker, notifications} from '$lib';
+	import {serviceWorker, notifications, params} from '$lib';
 	import NotificationOverlay from '$lib/core/notifications/NotificationOverlay.svelte';
 	import Notifications from '$lib/core/notifications/Notifications.svelte';
 	import VersionAndInstallNotfications from '$lib/core/service-worker/VersionAndInstallNotfications.svelte';
@@ -11,6 +11,7 @@
 	import Navbar from '$lib/core/ui/navbar/navbar.svelte';
 	import {createENSService} from '$lib/core/ens';
 	import {setContext} from 'svelte';
+	import DebugOperations from '$lib/ui/debug/DebugOperations.svelte';
 
 	let {children} = $props();
 
@@ -24,6 +25,10 @@
 	{/snippet}
 	<Navbar name="Template" />
 	{@render children()}
+
+	{#if params.transactions}
+		<DebugOperations />
+	{/if}
 </AsyncContext>
 
 <VersionAndInstallNotfications
