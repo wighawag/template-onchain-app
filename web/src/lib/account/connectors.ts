@@ -1,0 +1,77 @@
+import type {TrackedWalletClientType} from '@etherkit/viem-tx-tracker';
+import type {MultiAccountDataStore, TransactionMetadata} from './AccountData';
+import type {TransactionObserver} from '@etherkit/tx-observer';
+import {hookTxObserverToAccountData} from '$lib/core/utils/data/synqable-transactions';
+
+/// Listen for broadcasted transaction and save them in the Account Data
+export function createTrackedWalletConnector(params: {
+	walletClient: TrackedWalletClientType<TransactionMetadata, true>;
+	accountData: MultiAccountDataStore;
+}) {
+	const {accountData, walletClient} = params;
+
+	let unsubscribeFromBroadcastedTransaction: (() => void) | undefined;
+	let unsubscribeFromFetchedTransaction: (() => void) | undefined;
+	function connect() {
+		disconnect();
+		unsubscribeFromBroadcastedTransaction = walletClient.on(
+			'transaction:broadcasted',
+			(tx) => accountData.addOperationFromTrackedTransaction(tx),
+		);
+		// if needed we can also update on getting the full tx data
+		unsubscribeFromFetchedTransaction = walletClient.on(
+			'transaction:fetched',
+			(tx) => accountData.updateOperationFromFetchedTransaction(tx),
+		);
+	}
+
+	function disconnect() {
+		unsubscribeFromBroadcastedTransaction?.();
+		unsubscribeFromFetchedTransaction?.();
+	}
+
+	return {
+		connect,
+		disconnect,
+	};
+}
+
+/// Listen for Account Data transaction being added/removed
+///  Notify the transaction observer
+///  And in turn save any update from the observer
+export function createTransactionObserverConnector(params: {
+	txObserver: TransactionObserver;
+	accountData: MultiAccountDataStore;
+}) {
+	const {accountData, txObserver} = params;
+
+	function notifyObserverOfTransactions() {
+		return hookTxObserverToAccountData({
+			accountData,
+			mapKey: 'operations',
+			extractValue: (item) => item.transactionIntent,
+			observer: txObserver,
+		});
+	}
+
+	let stopListeningForTransactions: (() => void) | undefined;
+	let unsubscribeFromTransactionUpdates: (() => void) | undefined;
+	function connect() {
+		disconnect();
+		unsubscribeFromTransactionUpdates = txObserver.on(
+			'intent:status',
+			(event) => accountData.updateOperationFromTransactionStateUpdated(event),
+		);
+		stopListeningForTransactions = notifyObserverOfTransactions();
+	}
+
+	function disconnect() {
+		stopListeningForTransactions?.();
+		unsubscribeFromTransactionUpdates?.();
+	}
+
+	return {
+		connect,
+		disconnect,
+	};
+}

@@ -1,20 +1,17 @@
 import type {Context} from './types.js';
 
+import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance.js';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
-import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
-import {
-	createTransactionObserver,
-	type TransactionIntent,
-} from '@etherkit/tx-observer';
-import {
-	createAccountData,
-	createTrackedWalletConnector,
-	createTransactionObserverConnector,
-} from '$lib/account/AccountData.js';
 import {createOnchainState} from '$lib/onchain/state.js';
 import {createViewState} from '$lib/view/index.js';
+import {createTransactionObserver} from '@etherkit/tx-observer';
+import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
+import {
+	createTrackedWalletConnector,
+	createTransactionObserverConnector,
+} from '$lib/account/connectors.js';
 
 export async function createContext(): Promise<{
 	context: Context;
@@ -78,7 +75,6 @@ export async function createContext(): Promise<{
 	const trackedWalletConnector = createTrackedWalletConnector({
 		walletClient,
 		accountData,
-		clock,
 	});
 
 	const txObserverConnector = createTransactionObserverConnector({
