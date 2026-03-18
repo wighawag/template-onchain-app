@@ -12,6 +12,7 @@
 	import {createENSService} from '$lib/core/ens';
 	import {setContext} from 'svelte';
 	import DebugOperations from '$lib/ui/debug/DebugOperations.svelte';
+	import {Toaster} from '$lib/shadcn/ui/sonner';
 
 	let {children} = $props();
 
@@ -30,6 +31,8 @@
 		<DebugOperations />
 	{/if}
 </AsyncContext>
+
+<Toaster position="top-right" richColors />
 
 <VersionAndInstallNotfications
 	{serviceWorker}

@@ -12,6 +12,7 @@ import {
 	createTrackedWalletConnector,
 	createTransactionObserverConnector,
 } from '$lib/account/connectors.js';
+import {createToastConnector} from '$lib/account/toastConnector.js';
 
 export async function createContext(): Promise<{
 	context: Context;
@@ -87,6 +88,10 @@ export async function createContext(): Promise<{
 		txObserver,
 	});
 
+	const toastConnector = createToastConnector({
+		accountData,
+	});
+
 	// ----------------------------------------------------------------------------
 	// BALANCE AND COSTS
 	// ----------------------------------------------------------------------------
@@ -136,10 +141,12 @@ export async function createContext(): Promise<{
 			}, 2 * 1000); // TODO delay or use onNewBlock hook
 			trackedWalletConnector.connect();
 			txObserverConnector.connect();
+			toastConnector.connect();
 
 			return () => {
 				trackedWalletConnector.disconnect();
 				txObserverConnector.disconnect();
+				toastConnector.disconnect();
 				clearInterval(txObserverInterval);
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();

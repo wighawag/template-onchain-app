@@ -26,8 +26,13 @@ export function createViewState(params: {
 			}
 
 			const inclusionsToIgnore = ['NotFound', 'Dropped'];
-			const operationIds = Object.keys($operations);
-			for (const operationID of operationIds) {
+
+			// First, filter to get only valid setMessage operations
+			const validOperations: Array<{
+				operationID: string;
+				operation: (typeof $operations)[string];
+			}> = [];
+			for (const operationID of Object.keys($operations)) {
 				const operation = $operations[operationID];
 				if (
 					operation.transactionIntent.state?.status !== 'Failure' &&
@@ -37,34 +42,72 @@ export function createViewState(params: {
 					operation.metadata.type === 'functionCall' &&
 					operation.metadata.functionName === 'setMessage'
 				) {
-					const account = operation.metadata.tx.from;
-					const time = operation.metadata.tx.broadcastTimestampMs;
-					const message = (operation.metadata.args?.[0] as string) || '';
-					const existingMessageIndex = messageViews.findIndex(
-						(v) => v.account.toLowerCase() === account.toLowerCase(),
-					);
-					let addMessage = true;
-					if (existingMessageIndex >= 0) {
-						const existingMessageObject = messageViews[existingMessageIndex];
-						if (
-							existingMessageObject.message == message &&
-							existingMessageObject.timestamp > time
-						) {
-							addMessage = false;
-						} else {
-							messageViews.splice(existingMessageIndex, 1);
-						}
-					}
+					validOperations.push({operationID, operation});
+				}
+			}
 
-					if (addMessage) {
-						messageViews.unshift({
-							account,
-							message,
-							timestamp: time,
-							pending: true,
-						});
+			// Group operations by account and find the latest for each account
+			// Latest is determined by: highest nonce, or latest broadcastTimestamp if nonces are equal
+			const latestOperationByAccount = new Map<
+				string,
+				(typeof validOperations)[number]
+			>();
+			for (const entry of validOperations) {
+				const account = entry.operation.metadata.tx.from.toLowerCase();
+				const existing = latestOperationByAccount.get(account);
+				if (!existing) {
+					latestOperationByAccount.set(account, entry);
+				} else {
+					const existingNonce = existing.operation.metadata.tx.nonce;
+					const currentNonce = entry.operation.metadata.tx.nonce;
+					const existingTimestamp =
+						existing.operation.metadata.tx.broadcastTimestampMs;
+					const currentTimestamp =
+						entry.operation.metadata.tx.broadcastTimestampMs;
+
+					// Compare by nonce first, then by broadcastTimestamp if nonces are equal
+					if (
+						currentNonce > existingNonce ||
+						(currentNonce === existingNonce &&
+							currentTimestamp > existingTimestamp)
+					) {
+						latestOperationByAccount.set(account, entry);
 					}
 				}
+			}
+
+			// Apply the latest operation for each account to the view
+			for (const entry of latestOperationByAccount.values()) {
+				const operation = entry.operation;
+				const account = operation.metadata.tx.from;
+				const time = operation.metadata.tx.broadcastTimestampMs;
+				const metadata = operation.metadata as {args?: unknown[]};
+				const message = (metadata.args?.[0] as string) || '';
+
+				const existingMessageIndex = messageViews.findIndex(
+					(v) => v.account.toLowerCase() === account.toLowerCase(),
+				);
+
+				if (existingMessageIndex >= 0) {
+					const existingMessageObject = messageViews[existingMessageIndex];
+					// If onchain message matches and onchain timestamp is newer, operation is complete
+					if (
+						existingMessageObject.message === message &&
+						existingMessageObject.timestamp > time
+					) {
+						// Onchain state already reflects this operation, no pending needed
+						continue;
+					}
+					// Otherwise, replace with pending operation
+					messageViews.splice(existingMessageIndex, 1);
+				}
+
+				messageViews.unshift({
+					account,
+					message,
+					timestamp: time,
+					pending: operation.transactionIntent.state?.inclusion !== 'Included',
+				});
 			}
 
 			messageViews.splice(config.maxMessages);
