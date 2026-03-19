@@ -146,3 +146,16 @@ html {
 [data-sonner-toast] [data-description] {
 	font-size: 0.7rem !important;
 }
+
+/* Style action button for error toasts */
+[data-sonner-toast][data-type='error'] [data-button] {
+	background-color: rgba(0, 0, 0, 0.2) !important;
+	color: inherit !important;
+	border: 1px solid rgba(255, 255, 255, 0.3) !important;
+	font-size: 0.7rem !important;
+	padding: 0.25rem 0.5rem !important;
+}
+
+[data-sonner-toast][data-type='error'] [data-button]:hover {
+	background-color: rgba(0, 0, 0, 0.3) !important;
+}
