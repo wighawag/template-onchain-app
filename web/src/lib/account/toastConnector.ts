@@ -21,7 +21,7 @@ function getOperationName(op: OnchainOperation): string {
  */
 function getStatusType(
 	intent: TransactionIntent,
-): 'pending' | 'success' | 'error' | 'warning' {
+): 'pending' | 'success' | 'error' {
 	const state = intent.state;
 
 	if (!state || state.inclusion === 'InMemPool') {
@@ -40,7 +40,7 @@ function getStatusType(
 		}
 	}
 
-	return 'warning';
+	return 'error';
 }
 
 /**
@@ -86,12 +86,19 @@ export function createToastConnector(params: {
 	// Map to track last status type for each operation to prevent duplicate toasts
 	const operationLastStatus = new Map<
 		string,
-		'pending' | 'success' | 'error' | 'warning'
+		'pending' | 'success' | 'error'
 	>();
 
 	let currentAccountSubscription:
 		| {account: `0x${string}`; unsubscribe: () => void}
 		| undefined;
+
+	function deleteOperation(key: string) {
+		const currentAccountData = accountData.get();
+		if (currentAccountData) {
+			currentAccountData.removeItem('operations', key);
+		}
+	}
 
 	function showToast(key: string, operation: OnchainOperation) {
 		const operationName = getOperationName(operation);
@@ -119,6 +126,11 @@ export function createToastConnector(params: {
 			toast.error(operationName, {
 				description: message,
 				id: key,
+				duration: Infinity,
+				action: {
+					label: 'Dismiss',
+					onClick: () => deleteOperation(key),
+				},
 			});
 		} else {
 			toast.warning(operationName, {
@@ -208,7 +220,7 @@ export function createToastConnector(params: {
 											);
 											// Only show toasts for pending operations on initial load
 											if (
-												statusType === 'pending' &&
+												statusType !== 'success' &&
 												!operationToasts.has(key)
 											) {
 												showToast(key, operation);
