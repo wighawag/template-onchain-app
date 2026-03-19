@@ -24,7 +24,10 @@
 	{#snippet loading()}
 		<!-- TODO SplashScreen -->
 	{/snippet}
-	<Navbar name="Template" />
+	<Navbar
+		name="Template"
+		githubUrl="https://github.com/wighawag/template-onchain-app"
+	/>
 	{@render children()}
 
 	{#if params.transactions}

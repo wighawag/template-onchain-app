@@ -5,9 +5,17 @@
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Drawer from '$lib/shadcn/ui/drawer/index.js';
 	import Address from '../ethereum/Address.svelte';
-	import {MenuIcon} from '@lucide/svelte';
+	import {MenuIcon, GithubIcon, MessageCircleIcon} from '@lucide/svelte';
 
-	let {name}: {name?: string} = $props();
+	let {
+		name,
+		githubUrl,
+		discordUrl,
+	}: {
+		name?: string;
+		githubUrl?: string;
+		discordUrl?: string;
+	} = $props();
 
 	const {connection} = getUserContext();
 
@@ -22,8 +30,38 @@
 <nav
 	class="sticky top-0 left-0 z-50 flex h-12 w-full items-center justify-between bg-background py-4 shadow-md"
 >
-	<div class="m-1 flex h-full items-center space-x-2">
+	<div class="m-1 flex h-full items-center space-x-4">
 		<a href={route('/')} class="text-lg font-bold hover:underline">{name}</a>
+		<a
+			href={route('/')}
+			class="text-sm text-muted-foreground hover:text-foreground hover:underline"
+		>
+			Demo
+		</a>
+		<div class="flex items-center space-x-2">
+			{#if githubUrl}
+				<a
+					href={githubUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="text-muted-foreground hover:text-foreground"
+					aria-label="GitHub"
+				>
+					<GithubIcon class="h-5 w-5" />
+				</a>
+			{/if}
+			{#if discordUrl}
+				<a
+					href={discordUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					class="text-muted-foreground hover:text-foreground"
+					aria-label="Discord"
+				>
+					<MessageCircleIcon class="h-5 w-5" />
+				</a>
+			{/if}
+		</div>
 	</div>
 
 	<div class="relative flex h-full items-center space-x-2">
@@ -33,7 +71,7 @@
 				<Spinner /> Connect
 			</Button>
 		{:else if connection.isTargetStepReached($connection)}
-			<div class="m-1 flex h-8 items-center space-x-2">
+			<div class="m-1 hidden h-8 items-center space-x-2 sm:flex">
 				<Address value={$connection.account.address} />
 			</div>
 		{:else}
