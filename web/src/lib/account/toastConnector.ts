@@ -1,6 +1,7 @@
-import type {MultiAccountDataStore, OnchainOperation} from './AccountData';
+import type {MultiAccountDataStore, OnchainOperation, Schema} from './AccountData';
 import {toast} from 'svelte-sonner';
 import type {TransactionIntent} from '@etherkit/tx-observer';
+import {subscribeToAccountDataMap} from '$lib/core/utils/data/account-data-subscription';
 
 /**
  * Gets a human-readable name for an operation from its metadata
@@ -89,10 +90,6 @@ export function createToastConnector(params: {
 		'pending' | 'success' | 'error'
 	>();
 
-	let currentAccountSubscription:
-		| {account: `0x${string}`; unsubscribe: () => void}
-		| undefined;
-
 	function deleteOperation(key: string) {
 		const currentAccountData = accountData.get();
 		if (currentAccountData) {
@@ -166,93 +163,36 @@ export function createToastConnector(params: {
 		stopConnection?.();
 		stopConnection = undefined;
 
-		const unsubscribeFromAccountData = accountData.subscribe(
-			(currentAccountData) => {
-				if (currentAccountData) {
-					if (
-						!currentAccountSubscription ||
-						currentAccountSubscription.account !== currentAccountData.account
-					) {
-						currentAccountSubscription?.unsubscribe();
-						clearAllToasts();
-
-						// Listen for operations being added
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						const unsubFromAdded = (currentAccountData.on as any)(
-							'operations:added',
-							(data: {key: string; item: OnchainOperation}) => {
-								showToast(data.key, data.item);
-							},
-						);
-
-						// Listen for operations being updated
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						const unsubFromUpdated = (currentAccountData.on as any)(
-							'operations:updated',
-							(data: {key: string; item: OnchainOperation}) => {
-								showToast(data.key, data.item);
-							},
-						);
-
-						// Listen for operations being removed
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						const unsubFromRemoved = (currentAccountData.on as any)(
-							'operations:removed',
-							(data: {key: string}) => {
-								handleOperationRemoved(data.key);
-							},
-						);
-
-						// Subscribe to state$ to handle initial pending operations
-						const unsubFromState = currentAccountData.state$.subscribe(
-							(state) => {
-								if (state.status === 'ready') {
-									const currentState = currentAccountData.get();
-									if (currentState && currentState.status === 'ready') {
-										// eslint-disable-next-line @typescript-eslint/no-explicit-any
-										const operations = currentState.data
-											.operations as any as Record<string, OnchainOperation>;
-										for (const [key, operation] of Object.entries(
-											operations,
-										) as [string, OnchainOperation][]) {
-											const statusType = getStatusType(
-												operation.transactionIntent,
-											);
-											// Only show toasts for pending operations on initial load
-											if (
-												statusType !== 'success' &&
-												!operationToasts.has(key)
-											) {
-												showToast(key, operation);
-											}
-										}
-									}
-								}
-							},
-						);
-
-						currentAccountSubscription = {
-							account: currentAccountData.account,
-							unsubscribe: () => {
-								unsubFromAdded();
-								unsubFromUpdated();
-								unsubFromRemoved();
-								unsubFromState();
-							},
-						};
-					}
-				} else {
-					currentAccountSubscription?.unsubscribe();
-					currentAccountSubscription = undefined;
+		const unsubscribe = subscribeToAccountDataMap<Schema, 'operations'>({
+			accountData,
+			mapKey: 'operations',
+			handlers: {
+				onAdded: (key, item) => {
+					showToast(key, item);
+				},
+				onUpdated: (key, item) => {
+					showToast(key, item);
+				},
+				onRemoved: (key) => {
+					handleOperationRemoved(key);
+				},
+				onClear: () => {
 					clearAllToasts();
-				}
+				},
+				onInitialData: (operations) => {
+					for (const [key, operation] of Object.entries(operations)) {
+						const statusType = getStatusType(operation.transactionIntent);
+						// Only show toasts for pending operations on initial load
+						if (statusType !== 'success' && !operationToasts.has(key)) {
+							showToast(key, operation);
+						}
+					}
+				},
 			},
-		);
+		});
 
 		return () => {
-			unsubscribeFromAccountData();
-			currentAccountSubscription?.unsubscribe();
-			currentAccountSubscription = undefined;
+			unsubscribe();
 			clearAllToasts();
 		};
 	}
