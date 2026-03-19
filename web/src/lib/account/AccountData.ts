@@ -151,9 +151,14 @@ export function createAccountData(params: {
 		const accountData = store.get();
 		if (accountData) {
 			// tx-observer is built in a way that we can be sure that the tx belong to the current account
-			accountData.updateItem('operations', operationID, {
-				transactionIntent: event.intent,
-			});
+			if (event.intent.state?.status == 'Success' && event.intent.state.final) {
+				// on Success we delete when inclusion is final
+				accountData.removeItem('operations', operationID);
+			} else {
+				accountData.updateItem('operations', operationID, {
+					transactionIntent: event.intent,
+				});
+			}
 		}
 	}
 
