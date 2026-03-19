@@ -6,6 +6,7 @@
 		canonicalURL,
 		appleStatusBarStyle,
 		ENSName,
+		icon,
 	} from '../../web-config.json';
 	import Head from '$lib/core/metadata/Head.svelte';
 
@@ -29,6 +30,11 @@
 		description: overrides.description || description,
 		image: overrides.image || previewImage,
 	});
+
+	let iconExtension = $derived.by(() => {
+		const split = icon.split('.');
+		return split[split.length - 1];
+	});
 </script>
 
 <Head
@@ -41,4 +47,5 @@
 	image={metadata.image}
 	{name}
 	type={metadata.type}
+	{iconExtension}
 ></Head>

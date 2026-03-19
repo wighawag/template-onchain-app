@@ -13,6 +13,7 @@
 		ENSName?: string | null;
 		themeColor?: string | null;
 		appleStatusBarStyle?: string | null; // TODO type
+		iconExtension?: string;
 	}
 
 	let {
@@ -25,6 +26,7 @@
 		ENSName,
 		appleStatusBarStyle,
 		themeColor,
+		iconExtension,
 	}: Props = $props();
 
 	let pageURL = $derived(`${host}${page.url.pathname}`);
@@ -39,6 +41,8 @@
 
 	<meta property="og:url" content={pageURL} />
 	<meta property="twitter:url" content={pageURL} />
+
+	<link rel="canonical" href={pageURL} />
 
 	{#if isHome}
 		{#if ENSName}
@@ -63,9 +67,15 @@
 	{/if}
 
 	<!-- minimal -->
-	<!-- use SVG, if need PNG, adapt accordingly -->
-	<!-- TODO automatise -->
-	<link rel="icon" href={url('/pwa/favicon.png')} type="image/png" />
+	{#if iconExtension === 'svg'}
+		<link rel="icon" href={url('/pwa/favicon.svg')} type="image/svg+xml" />
+	{:else}
+		<link
+			rel="icon"
+			href={url(`/pwa/favicon.${iconExtension}`)}
+			type={`image/${iconExtension}`}
+		/>
+	{/if}
 	<link rel="icon" href={url('/pwa/favicon.ico')} sizes="any" /><!-- 32×32 -->
 	<link
 		rel="apple-touch-icon"
