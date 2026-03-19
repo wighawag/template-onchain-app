@@ -1,0 +1,204 @@
+<script lang="ts">
+	import DefaultHead from '../../lib/metadata/DefaultHead.svelte';
+	import {Button} from '$lib/shadcn/ui/button';
+	import {
+		GithubIcon,
+		TwitterIcon,
+		GlobeIcon,
+		HeartIcon,
+		CodeIcon,
+		UsersIcon,
+	} from '@lucide/svelte';
+</script>
+
+<DefaultHead title={'About - Jolly Roger'} />
+
+<div class="container mx-auto max-w-4xl px-4 py-12">
+	<!-- Hero Section -->
+	<div class="mb-12 text-center">
+		<img
+			src="/icon.svg"
+			alt="Jolly Roger"
+			class="mx-auto mb-6 h-32 w-32 drop-shadow-lg"
+		/>
+		<h1 class="mb-4 text-4xl font-bold tracking-tight">About Jolly Roger</h1>
+		<p class="text-xl text-muted-foreground">
+			A production-ready template for building decentralized applications
+		</p>
+	</div>
+
+	<!-- Mission Section -->
+	<section class="mb-12">
+		<div class="rounded-lg border bg-card p-8">
+			<div class="mb-4 flex items-center gap-3">
+				<HeartIcon class="h-6 w-6 text-primary" />
+				<h2 class="text-2xl font-bold">Our Mission</h2>
+			</div>
+			<p class="mb-4 text-muted-foreground">
+				Jolly Roger was created to provide developers with a solid foundation
+				for building decentralized applications. We believe that building on
+				the blockchain should be accessible to everyone, and that the tools we
+				use should be production-ready from day one.
+			</p>
+			<p class="text-muted-foreground">
+				The template brings together the best practices from the Ethereum
+				development ecosystem, combining smart contract development with a
+				modern frontend stack that's optimized for both performance and
+				developer experience.
+			</p>
+		</div>
+	</section>
+
+	<!-- Tech Stack Section -->
+	<section class="mb-12">
+		<div class="mb-6 flex items-center gap-3">
+			<CodeIcon class="h-6 w-6 text-primary" />
+			<h2 class="text-2xl font-bold">Technology Stack</h2>
+		</div>
+
+		<div class="grid gap-4 md:grid-cols-2">
+			<div class="rounded-lg border bg-card p-6">
+				<h3 class="mb-3 text-lg font-semibold text-primary">
+					Smart Contracts
+				</h3>
+				<ul class="space-y-2 text-sm text-muted-foreground">
+					<li>
+						• <strong>Hardhat</strong> - Ethereum development environment
+					</li>
+					<li>
+						• <strong>hardhat-deploy</strong> - Deployment management
+					</li>
+					<li>
+						• <strong>TypeScript</strong> - Type-safe contract scripts
+					</li>
+					<li>• <strong>Solidity</strong> - Smart contract language</li>
+				</ul>
+			</div>
+
+			<div class="rounded-lg border bg-card p-6">
+				<h3 class="mb-3 text-lg font-semibold text-primary">Frontend</h3>
+				<ul class="space-y-2 text-sm text-muted-foreground">
+					<li>• <strong>SvelteKit</strong> - Full-stack web framework</li>
+					<li>• <strong>Vite</strong> - Next generation build tool</li>
+					<li>• <strong>TailwindCSS</strong> - Utility-first CSS</li>
+					<li>• <strong>shadcn-svelte</strong> - UI components</li>
+				</ul>
+			</div>
+
+			<div class="rounded-lg border bg-card p-6">
+				<h3 class="mb-3 text-lg font-semibold text-primary">Web3</h3>
+				<ul class="space-y-2 text-sm text-muted-foreground">
+					<li>• <strong>viem</strong> - TypeScript Ethereum library</li>
+					<li>
+						• <strong>ethereum-indexer</strong> - In-browser event indexing
+					</li>
+					<li>• <strong>PWA Support</strong> - Works offline</li>
+					<li>• <strong>IPFS Ready</strong> - Decentralized hosting</li>
+				</ul>
+			</div>
+
+			<div class="rounded-lg border bg-card p-6">
+				<h3 class="mb-3 text-lg font-semibold text-primary">Developer Tools</h3>
+				<ul class="space-y-2 text-sm text-muted-foreground">
+					<li>• <strong>VSCode Workspace</strong> - Pre-configured editor</li>
+					<li>• <strong>Hot Reload</strong> - Instant feedback</li>
+					<li>• <strong>TypeScript</strong> - End-to-end type safety</li>
+					<li>• <strong>Testing</strong> - Contract & frontend tests</li>
+				</ul>
+			</div>
+		</div>
+	</section>
+
+	<!-- Creator Section -->
+	<section class="mb-12">
+		<div class="mb-6 flex items-center gap-3">
+			<UsersIcon class="h-6 w-6 text-primary" />
+			<h2 class="text-2xl font-bold">Creator</h2>
+		</div>
+
+		<div class="rounded-lg border bg-card p-8">
+			<div class="flex flex-col items-center text-center md:flex-row md:items-start md:text-left">
+				<div class="mb-4 md:mb-0 md:mr-6">
+					<div class="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-3xl font-bold text-primary">
+						RS
+					</div>
+				</div>
+				<div>
+					<h3 class="mb-2 text-xl font-semibold">Ronan Sandford</h3>
+					<p class="mb-4 text-muted-foreground">
+						Ethereum developer and creator of various open-source projects
+						including Bleeps, Mandalas, and Conquest. Passionate about building
+						decentralized applications that are truly eternal - apps that can
+						run forever without external dependencies.
+					</p>
+					<div class="flex flex-wrap justify-center gap-4 md:justify-start">
+						<Button
+							href="https://twitter.com/wighawag"
+							variant="outline"
+							size="sm"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							<TwitterIcon class="h-4 w-4" />
+							Twitter
+						</Button>
+						<Button
+							href="https://github.com/wighawag"
+							variant="outline"
+							size="sm"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							<GithubIcon class="h-4 w-4" />
+							GitHub
+						</Button>
+						<Button
+							href="https://ronan.eth.limo"
+							variant="outline"
+							size="sm"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							<GlobeIcon class="h-4 w-4" />
+							Website
+						</Button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- Get Started Section -->
+	<section class="text-center">
+		<h2 class="mb-4 text-2xl font-bold">Ready to Build?</h2>
+		<p class="mb-6 text-muted-foreground">
+			Start building your decentralized application today with Jolly Roger.
+		</p>
+		<div
+			class="mb-6 inline-block rounded-lg border border-primary/30 bg-muted/50 px-6 py-3"
+		>
+			<code class="text-sm text-primary md:text-base">
+				npx degit wighawag/jolly-roger your-app-folder
+			</code>
+		</div>
+		<div class="flex flex-wrap justify-center gap-4">
+			<Button
+				href="https://github.com/wighawag/jolly-roger"
+				size="lg"
+				target="_blank"
+				rel="noopener noreferrer"
+			>
+				View on GitHub
+			</Button>
+			<Button
+				href="https://github.com/wighawag/jolly-roger#readme"
+				variant="outline"
+				size="lg"
+				target="_blank"
+				rel="noopener noreferrer"
+			>
+				Read the Docs
+			</Button>
+		</div>
+	</section>
+</div>

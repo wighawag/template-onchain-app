@@ -6,6 +6,7 @@
 	import * as Drawer from '$lib/shadcn/ui/drawer/index.js';
 	import Address from '../ethereum/Address.svelte';
 	import {MenuIcon, GithubIcon, MessageCircleIcon} from '@lucide/svelte';
+	import {page} from '$app/state';
 
 	let {
 		name,
@@ -24,6 +25,14 @@
 	function toggleMenu() {
 		showMenu = !showMenu;
 	}
+
+	function isActive(path: string): boolean {
+		const currentPath = String(page.url.pathname);
+		if (path === '/') {
+			return currentPath === '/';
+		}
+		return currentPath.startsWith(path);
+	}
 </script>
 
 <!--navbar padding handled by scrollbar-gutter on desktop, needs-gutter-padding class adds padding on touch devices, see app.css-->
@@ -32,12 +41,29 @@
 >
 	<div class="m-1 flex h-full items-center space-x-4">
 		<span class="inline-flex items-baseline gap-4">
-			<a href={route('/')} class="text-lg font-bold hover:underline">{name}</a>
 			<a
 				href={route('/')}
-				class="text-sm text-muted-foreground hover:text-foreground hover:underline"
+				class="rounded px-2 py-1 text-sm transition-colors {isActive('/')
+					? 'bg-primary/20 font-semibold text-primary'
+					: 'text-muted-foreground hover:text-foreground hover:underline'}"
+			>
+				Home
+			</a>
+			<a
+				href={route('/demo/')}
+				class="rounded px-2 py-1 text-sm transition-colors {isActive('/demo')
+					? 'bg-primary/20 font-semibold text-primary'
+					: 'text-muted-foreground hover:text-foreground hover:underline'}"
 			>
 				Demo
+			</a>
+			<a
+				href={route('/about/')}
+				class="rounded px-2 py-1 text-sm transition-colors {isActive('/about')
+					? 'bg-primary/20 font-semibold text-primary'
+					: 'text-muted-foreground hover:text-foreground hover:underline'}"
+			>
+				About
 			</a>
 		</span>
 		<div class="flex items-center space-x-2">
@@ -148,10 +174,38 @@
 				</Button>
 			{/if}
 
-			<!-- Public Navigation Links -->
+			<!-- Navigation Links -->
 			<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
 				<span class="text-xs tracking-wide text-muted-foreground uppercase"
-					>Explore</span
+					>Navigation</span
+				>
+				<a
+					href={route('/')}
+					class={buttonVariants({variant: isActive('/') ? 'default' : 'outline'})}
+					onclick={() => (showMenu = false)}
+				>
+					Home
+				</a>
+				<a
+					href={route('/demo/')}
+					class={buttonVariants({variant: isActive('/demo') ? 'default' : 'outline'})}
+					onclick={() => (showMenu = false)}
+				>
+					Demo
+				</a>
+				<a
+					href={route('/about/')}
+					class={buttonVariants({variant: isActive('/about') ? 'default' : 'outline'})}
+					onclick={() => (showMenu = false)}
+				>
+					About
+				</a>
+			</div>
+
+			<!-- Developer Links -->
+			<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
+				<span class="text-xs tracking-wide text-muted-foreground uppercase"
+					>Developer</span
 				>
 				<a
 					href={route('/contracts/')}
