@@ -66,8 +66,14 @@
 
 <ConnectionFlow {connection} />
 
-<div class="container mx-auto max-w-2xl px-4 py-2">
-	<div class="space-y-2">
+<div class="container mx-auto max-w-2xl px-4 py-8">
+	<div class="space-y-6">
+		<!-- Title Section -->
+		<div class="text-center">
+			<h1 class="text-3xl font-bold tracking-tight">Greetings Registry</h1>
+			<p class="mt-2 text-muted-foreground">Share your greeting with the world</p>
+		</div>
+
 		<!-- Input Section -->
 		<form
 			class="flex gap-2"
@@ -98,33 +104,33 @@
 		</form>
 
 		<!-- Messages List -->
-		<div class="space-y-1">
+		<div class="space-y-3">
 			{#if $viewState.length === 0}
 				<div
-					class="flex flex-col items-center justify-center py-6 text-muted-foreground"
+					class="flex flex-col items-center justify-center py-8 text-muted-foreground"
 				>
-					<MessageSquareIcon class="mb-2 h-8 w-8" />
-					<p class="text-sm">No messages yet. Be the first!</p>
+					<MessageSquareIcon class="mb-3 h-10 w-10" />
+					<p class="text-base">No messages yet. Be the first!</p>
 				</div>
 			{:else}
 				{#each $viewState as message}
 					<div
-						class="flex items-center gap-1.5 rounded-md border px-2 py-1 text-sm sm:gap-2"
+						class="flex items-center gap-3 rounded-lg border px-4 py-3 sm:gap-4"
 					>
 						<ImgBlockie
 							address={message.account}
-							class="h-5 w-5 shrink-0 rounded-full"
+							class="h-8 w-8 shrink-0 rounded-full"
 						/>
 						<Address
 							value={message.account}
-							class="hidden shrink-0 text-xs sm:inline-flex"
+							class="hidden shrink-0 text-sm sm:inline-flex"
 						/>
-						<p class="min-w-0 flex-1 truncate">{message.message}</p>
+						<p class="min-w-0 flex-1 truncate text-base">{message.message}</p>
 						<span
-							class="overflow-hidden text-xs whitespace-nowrap text-muted-foreground"
+							class="overflow-hidden text-sm whitespace-nowrap text-muted-foreground"
 						>
 							{#if message.pending}
-								<Spinner class="h-3 w-3" />
+								<Spinner class="h-4 w-4" />
 							{:else}
 								{formatRelativeTime(message.timestamp)}
 							{/if}
