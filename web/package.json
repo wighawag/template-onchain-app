@@ -37,7 +37,7 @@
 		"svelte": "^5.54.0",
 		"svelte-check": "^4.0.0",
 		"svelte-sonner": "^1.1.0",
-		"synqable": "^0.0.10",
+		"synqable": "^0.0.11",
 		"tailwind-merge": "^3.5.0",
 		"tailwind-variants": "^3.2.2",
 		"tailwindcss": "^4.1.17",
