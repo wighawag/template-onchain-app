@@ -99,8 +99,8 @@ importers:
         specifier: ^2.3.1
         version: 2.3.1(prettier@3.8.1)
       purgatory:
-        specifier: ^0.0.3
-        version: 0.0.3(@libsql/core@0.15.15)(bufferutil@4.1.0)(hono@4.12.7)(typescript@5.9.3)(zod@3.25.76)
+        specifier: ^0.0.4
+        version: 0.0.4(@libsql/core@0.15.15)(bufferutil@4.1.0)(hono@4.12.8)(typescript@5.9.3)(zod@3.25.76)
       rocketh:
         specifier: ^0.19.3
         version: 0.19.3(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
@@ -2752,8 +2752,8 @@ packages:
     resolution: {integrity: sha512-ycURW7oUxE2sNiPVw1HVEFsW+ecOpJ5zaj7eC0RlwhibhRBod20muUN8qu/gzx956YrLolVvs1MTXwKgC2rVEg==}
     engines: {node: '>=0.10.0'}
 
-  hono@4.12.7:
-    resolution: {integrity: sha512-jq9l1DM0zVIvsm3lv9Nw9nlJnMNPOcAtsbsgiUhWcFzPE99Gvo6yRTlszSLLYacMeQ6quHD6hMfId8crVHvexw==}
+  hono@4.12.8:
+    resolution: {integrity: sha512-VJCEvtrezO1IAR+kqEYnxUOoStaQPGrCmX3j4wDTNOcD1uRPFpGlwQUIW8niPuvHXaTUxeOUl5MMDGrl+tmO9A==}
     engines: {node: '>=16.9.0'}
 
   http-assert@1.5.0:
@@ -3712,11 +3712,11 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  purgatory-core@0.0.2:
-    resolution: {integrity: sha512-uoNcvw3Aa993AoiiNaWsVnzCm/NlLvWtN3Kwqt5mSuHgDzOGGMGmOQzUjp9NhFupuJrtUvmYwq63Myer1XKy/Q==}
+  purgatory-core@0.0.3:
+    resolution: {integrity: sha512-l9bl2opmBw8YEuj5WgbLNuDikO3J3Y+t51xzYViIiws0mj5iGZjZEnokQuw9+GpawmQc16b5yTB3PW+jIWNpTQ==}
 
-  purgatory@0.0.3:
-    resolution: {integrity: sha512-2w3Bb/JGeE6cF3ip/Z3FWLIRi6vBaj3U3dzRZ9kqpBqvIC3b1KOlRMtNWORXZ1laBAPd+qZXL3ALigEakN3fcQ==}
+  purgatory@0.0.4:
+    resolution: {integrity: sha512-jUJJsLmiUzDarO8/VStYy7evdFTkQZ3u/ToloEkENiEFQeP6nLZR9+yse4sT4z+zuehjfW+B9YlyeWm5ktRe/Q==}
     hasBin: true
 
   pwag@0.4.0:
@@ -4868,9 +4868,9 @@ snapshots:
     dependencies:
       '@hapi/hoek': 11.0.7
 
-  '@hono/node-server@1.19.11(hono@4.12.7)':
+  '@hono/node-server@1.19.11(hono@4.12.8)':
     dependencies:
-      hono: 4.12.7
+      hono: 4.12.8
 
   '@img/sharp-darwin-arm64@0.33.5':
     optionalDependencies:
@@ -7301,7 +7301,7 @@ snapshots:
       os-homedir: 1.0.2
       os-tmpdir: 1.0.2
 
-  hono@4.12.7: {}
+  hono@4.12.8: {}
 
   http-assert@1.5.0:
     dependencies:
@@ -8240,9 +8240,9 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  purgatory-core@0.0.2(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76):
+  purgatory-core@0.0.3(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76):
     dependencies:
-      hono: 4.12.7
+      hono: 4.12.8
       named-logs: 0.3.2
       remote-sql: 0.0.6
       viem: 2.47.5(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
@@ -8252,14 +8252,14 @@ snapshots:
       - utf-8-validate
       - zod
 
-  purgatory@0.0.3(@libsql/core@0.15.15)(bufferutil@4.1.0)(hono@4.12.7)(typescript@5.9.3)(zod@3.25.76):
+  purgatory@0.0.4(@libsql/core@0.15.15)(bufferutil@4.1.0)(hono@4.12.8)(typescript@5.9.3)(zod@3.25.76):
     dependencies:
-      '@hono/node-server': 1.19.11(hono@4.12.7)
+      '@hono/node-server': 1.19.11(hono@4.12.8)
       '@libsql/client': 0.15.15(bufferutil@4.1.0)
       commander: 13.1.0
       ldenv: 0.3.16
       named-logs-context: 0.1.1
-      purgatory-core: 0.0.2(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
+      purgatory-core: 0.0.3(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
       remote-sql-libsql: 0.0.6(@libsql/core@0.15.15)
     transitivePeerDependencies:
       - '@libsql/core'
