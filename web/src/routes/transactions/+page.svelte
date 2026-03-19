@@ -11,6 +11,9 @@
 
 	let accountDataState = $derived(accountData.state$);
 	let operationIds = $derived(accountData.watchItemIds('operations'));
+	let sortedOperationIds = $derived(
+		$operationIds.sort((a, b) => (a < b ? 1 : -1)),
+	);
 
 	// Dismiss operation
 	function dismissOperation(id: string) {
@@ -78,7 +81,7 @@
 			</Empty.Root>
 		{:else}
 			<div class="space-y-4">
-				{#each $operationIds as id (id)}
+				{#each sortedOperationIds as id (id)}
 					<OperationCard
 						{id}
 						operationStore={accountData.watchItem('operations', id)}

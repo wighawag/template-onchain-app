@@ -10,6 +10,9 @@
 
 	let accountDataState = $derived(accountData.state$);
 	let operationIds = $derived(accountData.watchItemIds('operations'));
+	let sortedOperationIds = $derived(
+		$operationIds.sort((a, b) => (a < b ? 1 : -1)),
+	);
 	let operationCount = $derived($operationIds?.length || 0);
 
 	function toggleExpanded() {
@@ -56,7 +59,7 @@
 					</div>
 				{:else}
 					<div class="divide-y">
-						{#each $operationIds as id (id)}
+						{#each sortedOperationIds as id (id)}
 							<DebugOperationItem
 								operationStore={accountData.watchItem('operations', id)}
 							/>
