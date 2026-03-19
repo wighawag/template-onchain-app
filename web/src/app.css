@@ -123,3 +123,26 @@
 html {
 	scrollbar-gutter: stable both-edges;
 }
+
+/* Sonner toast customizations */
+[data-sonner-toaster][data-x-position='right'] {
+	right: 0 !important;
+}
+
+[data-sonner-toast] {
+	--width: 280px;
+	font-size: 0.75rem !important;
+	padding: 0.5rem 0.75rem !important;
+	border-radius: 0 !important;
+	border-top-left-radius: var(--radius) !important;
+	border-bottom-left-radius: var(--radius) !important;
+}
+
+[data-sonner-toast] [data-title] {
+	font-size: 0.75rem !important;
+	font-weight: 500;
+}
+
+[data-sonner-toast] [data-description] {
+	font-size: 0.7rem !important;
+}

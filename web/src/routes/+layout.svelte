@@ -32,7 +32,7 @@
 	{/if}
 </AsyncContext>
 
-<Toaster position="top-right" richColors />
+<Toaster position="bottom-right" richColors />
 
 <VersionAndInstallNotfications
 	{serviceWorker}
