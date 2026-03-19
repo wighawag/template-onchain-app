@@ -30,7 +30,7 @@
 		{
 			title: 'Great Dev Experience',
 			description:
-				'Hardhat for contracts, hardhat-deploy for contract deployment, the in-browser ethereum-indexer for contract\'s api, svelte + Svelte Kit for frontend with HMR.',
+				"Hardhat for contracts, hardhat-deploy for contract deployment, the in-browser ethereum-indexer for contract's api, svelte + Svelte Kit for frontend with HMR.",
 			icon: ZapIcon,
 		},
 		{
@@ -112,9 +112,7 @@
 			alt="Jolly Roger"
 			class="mb-8 h-48 w-48 drop-shadow-lg"
 		/>
-		<h1
-			class="mb-4 text-5xl font-bold tracking-tight text-primary md:text-6xl"
-		>
+		<h1 class="mb-4 text-5xl font-bold tracking-tight text-primary md:text-6xl">
 			Jolly Roger
 		</h1>
 		<p class="mb-6 text-xl text-muted-foreground">
@@ -128,9 +126,7 @@
 
 		<!-- Action Buttons -->
 		<div class="mb-8 flex flex-wrap justify-center gap-4">
-			<Button href={route('/demo/')} size="lg" class="min-w-40">
-				Demo
-			</Button>
+			<Button href={route('/demo/')} size="lg" class="min-w-40">Demo</Button>
 			<Button
 				href="https://github.com/wighawag/jolly-roger"
 				variant="secondary"
@@ -183,7 +179,7 @@
 					<div class="aspect-video bg-muted">
 						{#if app.image}
 							<div
-								class="flex h-full items-center justify-center bg-gradient-to-br from-muted to-muted/50 p-4"
+								class="flex h-full items-center justify-center bg-linear-to-br from-muted to-muted/50 p-4"
 							>
 								<span class="text-2xl font-bold text-muted-foreground"
 									>{app.name}</span
@@ -198,9 +194,7 @@
 							rel="noopener noreferrer"
 							class="mb-2 text-center text-primary underline hover:text-primary/80"
 						>
-							{app.name.toLowerCase()}.{app.url.includes('eth')
-								? 'eth'
-								: 'art'}
+							{app.name.toLowerCase()}.{app.url.includes('eth') ? 'eth' : 'art'}
 						</a>
 						<h3 class="mb-2 text-center text-lg font-semibold">{app.title}</h3>
 						<p class="mb-4 flex-1 text-center text-sm text-muted-foreground">

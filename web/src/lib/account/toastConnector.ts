@@ -1,4 +1,8 @@
-import type {MultiAccountDataStore, OnchainOperation, Schema} from './AccountData';
+import type {
+	MultiAccountDataStore,
+	OnchainOperation,
+	Schema,
+} from './AccountData';
 import {toast} from 'svelte-sonner';
 import type {TransactionIntent} from '@etherkit/tx-observer';
 import {subscribeToAccountDataMap} from '$lib/core/utils/data/account-data-subscription';

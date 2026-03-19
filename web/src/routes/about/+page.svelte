@@ -36,9 +36,9 @@
 			</div>
 			<p class="mb-4 text-muted-foreground">
 				Jolly Roger was created to provide developers with a solid foundation
-				for building decentralized applications. We believe that building on
-				the blockchain should be accessible to everyone, and that the tools we
-				use should be production-ready from day one.
+				for building decentralized applications. We believe that building on the
+				blockchain should be accessible to everyone, and that the tools we use
+				should be production-ready from day one.
 			</p>
 			<p class="text-muted-foreground">
 				The template brings together the best practices from the Ethereum
@@ -58,9 +58,7 @@
 
 		<div class="grid gap-4 md:grid-cols-2">
 			<div class="rounded-lg border bg-card p-6">
-				<h3 class="mb-3 text-lg font-semibold text-primary">
-					Smart Contracts
-				</h3>
+				<h3 class="mb-3 text-lg font-semibold text-primary">Smart Contracts</h3>
 				<ul class="space-y-2 text-sm text-muted-foreground">
 					<li>
 						• <strong>Hardhat</strong> - Ethereum development environment
@@ -117,9 +115,13 @@
 		</div>
 
 		<div class="rounded-lg border bg-card p-8">
-			<div class="flex flex-col items-center text-center md:flex-row md:items-start md:text-left">
-				<div class="mb-4 md:mb-0 md:mr-6">
-					<div class="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-3xl font-bold text-primary">
+			<div
+				class="flex flex-col items-center text-center md:flex-row md:items-start md:text-left"
+			>
+				<div class="mb-4 md:mr-6 md:mb-0">
+					<div
+						class="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-3xl font-bold text-primary"
+					>
 						RS
 					</div>
 				</div>

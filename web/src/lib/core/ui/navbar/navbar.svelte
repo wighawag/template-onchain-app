@@ -181,21 +181,27 @@
 				>
 				<a
 					href={route('/')}
-					class={buttonVariants({variant: isActive('/') ? 'default' : 'outline'})}
+					class={buttonVariants({
+						variant: isActive('/') ? 'default' : 'outline',
+					})}
 					onclick={() => (showMenu = false)}
 				>
 					Home
 				</a>
 				<a
 					href={route('/demo/')}
-					class={buttonVariants({variant: isActive('/demo') ? 'default' : 'outline'})}
+					class={buttonVariants({
+						variant: isActive('/demo') ? 'default' : 'outline',
+					})}
 					onclick={() => (showMenu = false)}
 				>
 					Demo
 				</a>
 				<a
 					href={route('/about/')}
-					class={buttonVariants({variant: isActive('/about') ? 'default' : 'outline'})}
+					class={buttonVariants({
+						variant: isActive('/about') ? 'default' : 'outline',
+					})}
 					onclick={() => (showMenu = false)}
 				>
 					About

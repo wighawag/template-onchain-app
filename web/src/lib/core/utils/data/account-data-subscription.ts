@@ -70,7 +70,10 @@ export interface AccountDataMapHandlers<
  * });
  * ```
  */
-export function subscribeToAccountDataMap<S extends Schema, K extends MapKeys<S>>(params: {
+export function subscribeToAccountDataMap<
+	S extends Schema,
+	K extends MapKeys<S>,
+>(params: {
 	accountData: SubscribableMultiAccountStore<S>;
 	mapKey: K;
 	handlers: AccountDataMapHandlers<S, K>;

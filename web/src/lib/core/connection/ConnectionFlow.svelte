@@ -93,7 +93,9 @@
 		</div>
 	{:else}
 		<div class="mb-6 flex flex-col gap-2">
-			<p class="text-zinc-400 text-sm mb-2">You need a web3 wallet to continue</p>
+			<p class="mb-2 text-sm text-zinc-400">
+				You need a web3 wallet to continue
+			</p>
 			<a
 				href="https://metamask.io/download/"
 				target="_blank"
