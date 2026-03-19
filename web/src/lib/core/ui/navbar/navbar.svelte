@@ -26,9 +26,9 @@
 	}
 </script>
 
-<!--nabvar have some top padding to match the scrollbar gutter on the right, see app.css-->
+<!--navbar padding handled by scrollbar-gutter on desktop, needs-gutter-padding class adds padding on touch devices, see app.css-->
 <nav
-	class="sticky top-0 left-0 z-50 flex h-12 w-full items-center justify-between bg-background py-4 shadow-md"
+	class="needs-gutter-padding sticky top-0 left-0 z-50 flex h-12 w-full items-center justify-between bg-background py-4 shadow-md"
 >
 	<div class="m-1 flex h-full items-center space-x-4">
 		<a href={route('/')} class="text-lg font-bold hover:underline">{name}</a>

@@ -124,6 +124,15 @@ html {
 	scrollbar-gutter: stable both-edges;
 }
 
+/* On touch devices (no visible scrollbar), scrollbar-gutter has no visual effect.
+   Add explicit padding to compensate for the missing gutter space. */
+@media (pointer: coarse) {
+	.needs-gutter-padding {
+		padding-left: 0.5rem;
+		padding-right: 0.5rem;
+	}
+}
+
 /* Sonner toast customizations */
 [data-sonner-toaster][data-x-position='right'] {
 	right: 0 !important;
