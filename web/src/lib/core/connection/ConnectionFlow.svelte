@@ -2,16 +2,12 @@
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import BlockieAvatar from '$lib/core/ui/ethereum/BlockieAvatar.svelte';
 	import {Button} from '$lib/shadcn/ui/button';
-	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
-	import {ChevronDownIcon} from '@lucide/svelte';
 	import type {
 		AnyConnectionStore,
 		UnderlyingEthereumProvider,
 	} from '@etherplay/connect';
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import BasicModal from '../ui/modal/basic-modal.svelte';
-
-	let accountsOpen = $state(true);
 
 	interface Props {
 		connection: AnyConnectionStore<UnderlyingEthereumProvider>;
@@ -36,8 +32,9 @@
 		$connection.step == 'MechanismToChoose'}
 	onCancel={() => connection.cancel()}
 	elementToFocus={emailInput}
-	><Modal.Title>Choose Connection Type...</Modal.Title>
+>
 	{#if connection.targetStep == 'SignedIn' && !connection.walletOnly}
+		<Modal.Title>Choose Connection Type...</Modal.Title>
 		<!-- Email option first -->
 		<div class="mb-6 flex flex-col gap-2">
 			<input
@@ -62,12 +59,14 @@
 
 	<!-- Wallet options -->
 	{#if $connection.wallets.length > 0}
-		<div class="flex flex-col gap-3 py-2">
-			<span class="text-sm text-muted-foreground">
+		{#if !(connection.targetStep == 'SignedIn' && !connection.walletOnly)}
+			<Modal.Title>
 				{$connection.wallets.length} wallet{$connection.wallets.length > 1
 					? 's'
-					: ''} available
-			</span>
+					: ''} available, choose one
+			</Modal.Title>
+		{/if}
+		<div class="flex flex-col gap-3 py-2">
 			<div
 				class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
 			>
@@ -102,10 +101,10 @@
 			</Button>
 		</div>
 	{:else}
+		{#if !(connection.targetStep == 'SignedIn' && !connection.walletOnly)}
+			<Modal.Title>No Wallet Detected</Modal.Title>
+		{/if}
 		<div class="flex flex-col gap-3 py-2">
-			<span class="text-sm text-muted-foreground">
-				No wallets detected
-			</span>
 			<div
 				class="flex flex-col gap-2 rounded-md border border-input bg-muted/50 p-2"
 			>
@@ -169,48 +168,32 @@
 	openWhen={$connection.step === 'ChooseWalletAccount'}
 	onCancel={() => connection.cancel()}
 >
-	<Modal.Title>Choose Wallet Account</Modal.Title>
 	{#if $connection.step == 'ChooseWalletAccount'}
 		<!-- ASSERT ChooseWalletAccount -->
+		<Modal.Title>
+			{$connection.wallet.accounts.length} account{$connection.wallet
+				.accounts.length > 1
+				? 's'
+				: ''} available, choose one
+		</Modal.Title>
 		<div class="flex flex-col gap-3 py-2">
-			<Collapsible.Root bind:open={accountsOpen}>
-				<Collapsible.Trigger class="w-full">
-					<div
-						class="flex w-full cursor-pointer items-center justify-between rounded-md border border-input bg-background px-4 py-3 hover:bg-accent hover:text-accent-foreground"
+			<div
+				class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
+			>
+				{#each $connection.wallet.accounts as account}
+					<button
+						class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+						onclick={() => connection.connectToAddress(account)}
 					>
-						<span class="text-sm text-muted-foreground">
-							{$connection.wallet.accounts.length} account{$connection.wallet
-								.accounts.length > 1
-								? 's'
-								: ''} available
-						</span>
-						<ChevronDownIcon
-							class="h-4 w-4 transition-transform {accountsOpen
-								? 'rotate-180'
-								: ''}"
-						/>
-					</div>
-				</Collapsible.Trigger>
-				<Collapsible.Content>
-					<div
-						class="mt-2 flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
-					>
-						{#each $connection.wallet.accounts as account}
-							<button
-								class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
-								onclick={() => connection.connectToAddress(account)}
-							>
-								<div
-									class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
-								>
-									<BlockieAvatar address={account} />
-								</div>
-								<Address value={account} />
-							</button>
-						{/each}
-					</div>
-				</Collapsible.Content>
-			</Collapsible.Root>
+						<div
+							class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
+						>
+							<BlockieAvatar address={account} />
+						</div>
+						<Address value={account} />
+					</button>
+				{/each}
+			</div>
 
 			<Button
 				variant="outline"
