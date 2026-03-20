@@ -62,44 +62,79 @@
 
 	<!-- Wallet options -->
 	{#if $connection.wallets.length > 0}
-		<div class="mb-6 flex flex-col gap-2">
-			{#each $connection.wallets as wallet}
-				<Button
-					class="rounded bg-zinc-700 px-4 py-2 text-zinc-100 transition hover:bg-zinc-600"
-					onclick={() =>
-						connection.connect({
-							type: 'wallet',
-							name: wallet.info.name,
-						})}
-				>
-					<img
-						src={wallet.info.icon}
-						alt={wallet.info.name}
-						class="mr-2 ml-2 inline-block h-5 w-5"
-					/>
-					{wallet.info.name}
-				</Button>
-			{/each}
+		<div class="flex flex-col gap-3 py-2">
+			<span class="text-sm text-muted-foreground">
+				{$connection.wallets.length} wallet{$connection.wallets.length > 1
+					? 's'
+					: ''} available
+			</span>
+			<div
+				class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
+			>
+				{#each $connection.wallets as wallet}
+					<button
+						class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+						onclick={() =>
+							connection.connect({
+								type: 'wallet',
+								name: wallet.info.name,
+							})}
+					>
+						<div
+							class="h-6 w-6 shrink-0 overflow-hidden rounded-full"
+						>
+							<img
+								src={wallet.info.icon}
+								alt={wallet.info.name}
+								class="h-full w-full object-contain"
+							/>
+						</div>
+						<span class="text-sm font-medium">{wallet.info.name}</span>
+					</button>
+				{/each}
+			</div>
+			<Button
+				variant="outline"
+				class="w-full"
+				onclick={() => connection.cancel()}
+			>
+				Cancel
+			</Button>
 		</div>
 	{:else}
-		<div class="mb-6 flex flex-col gap-2">
-			<p class="mb-2 text-sm text-zinc-400">
-				You need a web3 wallet to continue
-			</p>
-			<a
-				href="https://metamask.io/download/"
-				target="_blank"
-				rel="noopener noreferrer"
-				class="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium text-white transition-colors hover:opacity-90"
-				style="background-color: #FF5C16;"
+		<div class="flex flex-col gap-3 py-2">
+			<span class="text-sm text-muted-foreground">
+				No wallets detected
+			</span>
+			<div
+				class="flex flex-col gap-2 rounded-md border border-input bg-muted/50 p-2"
 			>
-				<img
-					src="/wallets/metamask/MetaMask-icon-fox.svg"
-					alt="MetaMask"
-					class="h-6 w-6"
-				/>
-				Download MetaMask
-			</a>
+				<p class="px-3 py-2 text-sm text-muted-foreground">
+					You need a web3 wallet to continue
+				</p>
+				<a
+					href="https://metamask.io/download/"
+					target="_blank"
+					rel="noopener noreferrer"
+					class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+				>
+					<div class="h-6 w-6 shrink-0 overflow-hidden rounded-full">
+						<img
+							src="/wallets/metamask/MetaMask-icon-fox.svg"
+							alt="MetaMask"
+							class="h-full w-full object-contain"
+						/>
+					</div>
+					<span class="text-sm font-medium">Download MetaMask</span>
+				</a>
+			</div>
+			<Button
+				variant="outline"
+				class="w-full"
+				onclick={() => connection.cancel()}
+			>
+				Cancel
+			</Button>
 		</div>
 	{/if}
 
