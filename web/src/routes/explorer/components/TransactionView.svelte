@@ -137,8 +137,6 @@
 
 <DefaultHead title={'Transaction Explorer'} />
 
-<ConnectionFlow {connection} />
-
 <div class="container mx-auto max-w-5xl px-4 py-8">
 	{#if !txHash}
 		<Empty.Root class="min-h-[400px]">

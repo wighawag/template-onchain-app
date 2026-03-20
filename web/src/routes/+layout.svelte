@@ -11,8 +11,8 @@
 	import Navbar from '$lib/core/ui/navbar/navbar.svelte';
 	import {createENSService} from '$lib/core/ens';
 	import {setContext} from 'svelte';
-	import DebugOperations from '$lib/ui/debug/DebugOperations.svelte';
 	import {Toaster} from '$lib/shadcn/ui/sonner';
+	import AcrossPages from '$lib/context/AcrossPages.svelte';
 
 	let {children} = $props();
 
@@ -25,11 +25,10 @@
 		<!-- TODO SplashScreen -->
 	{/snippet}
 	<Navbar />
+
 	{@render children()}
 
-	{#if params.transactions}
-		<DebugOperations />
-	{/if}
+	<AcrossPages />
 </AsyncContext>
 
 <Toaster position="bottom-right" richColors />

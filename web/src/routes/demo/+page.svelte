@@ -64,8 +64,6 @@
 
 <DefaultHead title={'Demo - Greetings Registry'} />
 
-<ConnectionFlow {connection} />
-
 <div class="container mx-auto max-w-2xl px-4 py-8">
 	<div class="space-y-6">
 		<!-- Title Section -->
