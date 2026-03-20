@@ -15,13 +15,11 @@
 	import {page} from '$app/state';
 
 	let {
-		name,
 		githubUrl,
-		discordUrl,
+		communityUrl,
 	}: {
-		name?: string;
 		githubUrl?: string;
-		discordUrl?: string;
+		communityUrl?: string;
 	} = $props();
 
 	const {connection} = getUserContext();
@@ -68,14 +66,6 @@
 			>
 				Demo
 			</a>
-			<a
-				href={route('/about/')}
-				class="rounded px-2 py-1 text-sm transition-colors {isActive('/about')
-					? 'bg-primary/20 font-semibold text-primary'
-					: 'text-muted-foreground hover:text-foreground hover:underline'}"
-			>
-				About
-			</a>
 		</span>
 		<div class="flex items-center space-x-2">
 			{#if githubUrl}
@@ -89,9 +79,9 @@
 					<GithubIcon class="h-5 w-5" />
 				</a>
 			{/if}
-			{#if discordUrl}
+			{#if communityUrl}
 				<a
-					href={discordUrl}
+					href={communityUrl}
 					target="_blank"
 					rel="noopener noreferrer"
 					class="text-muted-foreground hover:text-foreground"
