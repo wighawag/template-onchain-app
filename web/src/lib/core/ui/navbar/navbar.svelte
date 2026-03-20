@@ -28,9 +28,9 @@
 
 	let showMenu = $state(false);
 	let accountsOpen = $state(false);
-	
+
 	let hasMultipleAccounts = $derived(
-		$connection.wallet?.accounts && $connection.wallet.accounts.length > 1
+		$connection.wallet?.accounts && $connection.wallet.accounts.length > 1,
 	);
 
 	function toggleMenu() {
@@ -144,97 +144,103 @@
 			{#if connection.isTargetStepReached($connection)}
 				<!-- Account Section -->
 				<div class="flex flex-col gap-2 px-4 pt-4">
-					<Collapsible.Root bind:open={accountsOpen} disabled={!hasMultipleAccounts}>
-							<Collapsible.Trigger class="w-full" disabled={!hasMultipleAccounts}>
-								<div
-									class="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 {hasMultipleAccounts ? 'hover:bg-accent hover:text-accent-foreground cursor-pointer' : 'cursor-default'}"
-								>
-									<div class="flex items-center gap-2">
-										<div class="h-6 w-6 shrink-0 overflow-hidden rounded-full [&>*]:h-full [&>*]:w-full">
-											<BlockieAvatar address={$connection.account.address} />
-										</div>
-										<Address value={$connection.account.address} />
-									</div>
-									{#if hasMultipleAccounts}
-										<ChevronDownIcon
-											class="h-4 w-4 transition-transform {accountsOpen
-												? 'rotate-180'
-												: ''}"
-										/>
-									{/if}
-								</div>
-							</Collapsible.Trigger>
-							{#if hasMultipleAccounts}
-								<Collapsible.Content>
+					<Collapsible.Root
+						bind:open={accountsOpen}
+						disabled={!hasMultipleAccounts}
+					>
+						<Collapsible.Trigger class="w-full" disabled={!hasMultipleAccounts}>
+							<div
+								class="flex w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 {hasMultipleAccounts
+									? 'cursor-pointer hover:bg-accent hover:text-accent-foreground'
+									: 'cursor-default'}"
+							>
+								<div class="flex items-center gap-2">
 									<div
-										class="mt-1 flex flex-col gap-1 rounded-md border border-input bg-muted/50 p-1"
+										class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
 									>
-										{#each $connection.wallet.accounts as account}
-											<button
-												class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors {account ===
-												$connection.account.address
-													? 'bg-primary/20 text-primary'
-													: 'hover:bg-accent hover:text-accent-foreground'}"
-												onclick={() => {
-													if (account !== $connection.account.address) {
-														connection.connectToAddress(account);
-														accountsOpen = false;
-													}
-												}}
-											>
-												<div class="h-5 w-5 shrink-0 overflow-hidden rounded-full [&>*]:h-full [&>*]:w-full">
-													<BlockieAvatar address={account} />
-												</div>
-												<Address value={account} />
-												{#if account === $connection.account.address}
-													<span class="ml-auto text-xs text-muted-foreground"
-														>(current)</span
-													>
-												{/if}
-											</button>
-										{/each}
+										<BlockieAvatar address={$connection.account.address} />
 									</div>
-								</Collapsible.Content>
-							{/if}
-						</Collapsible.Root>
-	
-						<Button
-							class="w-full"
-							variant="destructive"
-							onclick={() => {
-								connection.disconnect();
-								showMenu = false;
-							}}
-						>
-							Disconnect
-						</Button>
-					</div>
-	
-					<!-- Transactions Section -->
-					<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
-						<a
-							href={route('/transactions/')}
-							class={buttonVariants({variant: 'outline'})}
-							onclick={() => (showMenu = false)}
-						>
-							Your Transactions
-						</a>
-					</div>
-				{:else}
-					<Drawer.Header class="text-start">
-						<Drawer.Title>You are disconnected</Drawer.Title>
-					</Drawer.Header>
-					<div class="px-4">
-						<Button
-							class="w-full"
-							onclick={() => connection.connect()}
-						>
-							Connect
-						</Button>
-					</div>
-				{/if}
-	
-				<!-- Developer Links -->
+									<Address value={$connection.account.address} />
+								</div>
+								{#if hasMultipleAccounts}
+									<ChevronDownIcon
+										class="h-4 w-4 transition-transform {accountsOpen
+											? 'rotate-180'
+											: ''}"
+									/>
+								{/if}
+							</div>
+						</Collapsible.Trigger>
+						{#if hasMultipleAccounts}
+							<Collapsible.Content>
+								<div
+									class="mt-1 flex flex-col gap-1 rounded-md border border-input bg-muted/50 p-1"
+								>
+									{#each $connection.wallet.accounts as account}
+										<button
+											class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left transition-colors {account ===
+											$connection.account.address
+												? 'bg-primary/20 text-primary'
+												: 'hover:bg-accent hover:text-accent-foreground'}"
+											onclick={() => {
+												if (account !== $connection.account.address) {
+													connection.connectToAddress(account);
+													accountsOpen = false;
+												}
+											}}
+										>
+											<div
+												class="h-5 w-5 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
+											>
+												<BlockieAvatar address={account} />
+											</div>
+											<Address value={account} />
+											{#if account === $connection.account.address}
+												<span class="ml-auto text-xs text-muted-foreground"
+													>(current)</span
+												>
+											{/if}
+										</button>
+									{/each}
+								</div>
+							</Collapsible.Content>
+						{/if}
+					</Collapsible.Root>
+
+					<Button
+						class="w-full"
+						variant="destructive"
+						onclick={() => {
+							connection.disconnect();
+							showMenu = false;
+						}}
+					>
+						Disconnect
+					</Button>
+				</div>
+
+				<!-- Transactions Section -->
+				<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
+					<a
+						href={route('/transactions/')}
+						class={buttonVariants({variant: 'outline'})}
+						onclick={() => (showMenu = false)}
+					>
+						Your Transactions
+					</a>
+				</div>
+			{:else}
+				<Drawer.Header class="text-start">
+					<Drawer.Title>You are disconnected</Drawer.Title>
+				</Drawer.Header>
+				<div class="px-4">
+					<Button class="w-full" onclick={() => connection.connect()}>
+						Connect
+					</Button>
+				</div>
+			{/if}
+
+			<!-- Developer Links -->
 			<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
 				<span class="text-xs tracking-wide text-muted-foreground uppercase"
 					>Developer</span

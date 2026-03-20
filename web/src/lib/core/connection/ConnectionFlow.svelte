@@ -166,7 +166,7 @@
 								onclick={() => connection.connectToAddress(account)}
 							>
 								<div
-									class="h-6 w-6 shrink-0 overflow-hidden rounded-full [&>*]:h-full [&>*]:w-full"
+									class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
 								>
 									<BlockieAvatar address={account} />
 								</div>
