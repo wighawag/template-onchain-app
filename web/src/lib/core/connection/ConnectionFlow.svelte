@@ -79,9 +79,7 @@
 								name: wallet.info.name,
 							})}
 					>
-						<div
-							class="h-6 w-6 shrink-0 overflow-hidden rounded-full"
-						>
+						<div class="h-6 w-6 shrink-0 overflow-hidden rounded-full">
 							<img
 								src={wallet.info.icon}
 								alt={wallet.info.name}
@@ -171,8 +169,8 @@
 	{#if $connection.step == 'ChooseWalletAccount'}
 		<!-- ASSERT ChooseWalletAccount -->
 		<Modal.Title>
-			{$connection.wallet.accounts.length} account{$connection.wallet
-				.accounts.length > 1
+			{$connection.wallet.accounts.length} account{$connection.wallet.accounts
+				.length > 1
 				? 's'
 				: ''} available, choose one
 		</Modal.Title>
