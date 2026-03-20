@@ -180,7 +180,7 @@
 			class="mb-6 inline-block rounded-lg border border-primary/30 bg-muted/50 px-6 py-3"
 		>
 			<code class="text-sm text-primary md:text-base">
-				npx degit wighawag/jolly-roger your-app-folder
+				pnpm create jolly-roger@latest
 			</code>
 		</div>
 		<div class="flex flex-wrap justify-center gap-4">
