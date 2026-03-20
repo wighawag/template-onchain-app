@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DefaultHead from '../../lib/metadata/DefaultHead.svelte';
 	import {Button} from '$lib/shadcn/ui/button';
+	import {CopyCommand} from '$lib/core/ui/copy-command';
 	import {
 		GithubIcon,
 		TwitterIcon,
@@ -176,13 +177,7 @@
 		<p class="mb-6 text-muted-foreground">
 			Start building your decentralized application today with Jolly Roger.
 		</p>
-		<div
-			class="mb-6 inline-block rounded-lg border border-primary/30 bg-muted/50 px-6 py-3"
-		>
-			<code class="text-sm text-primary md:text-base">
-				pnpm create jolly-roger@latest
-			</code>
-		</div>
+		<CopyCommand command="pnpm create jolly-roger@latest" class="mb-6" />
 		<div class="flex flex-wrap justify-center gap-4">
 			<Button
 				href="https://github.com/wighawag/jolly-roger"

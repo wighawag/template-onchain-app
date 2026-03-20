@@ -1,6 +1,7 @@
 <script lang="ts">
 	import DefaultHead from '../lib/metadata/DefaultHead.svelte';
 	import {Button} from '$lib/shadcn/ui/button';
+	import {CopyCommand} from '$lib/core/ui/copy-command';
 	import {route} from '$lib';
 	import {
 		RocketIcon,
@@ -142,13 +143,7 @@
 		<!-- Use It Section -->
 		<div class="mb-4 text-center">
 			<p class="mb-2 text-sm text-muted-foreground">Use it:</p>
-			<div
-				class="inline-block rounded-lg border border-primary/30 bg-muted/50 px-6 py-3"
-			>
-				<code class="text-sm text-primary md:text-base">
-					pnpm create jolly-roger@latest
-				</code>
-			</div>
+			<CopyCommand command="pnpm create jolly-roger@latest" />
 		</div>
 
 		<p class="text-sm text-muted-foreground">
