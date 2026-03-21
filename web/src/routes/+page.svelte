@@ -1,6 +1,10 @@
 <script lang="ts">
 	import {route} from '$lib';
 	import Button from '$lib/shadcn/ui/button/button.svelte';
+	import Features from '$lib/website/Features.svelte';
+	import Footer from '$lib/website/Footer.svelte';
+	import Showcases from '$lib/website/Showcases.svelte';
+	import UseIt from '$lib/website/UseIt.svelte';
 	import DefaultHead from '../lib/metadata/DefaultHead.svelte';
 	import {onMount} from 'svelte';
 
@@ -46,20 +50,28 @@
 			>.
 		</p>
 		<p class="mb-8 max-w-2xl text-lg font-semibold">
-			Welcome to your <span
-				class="bg-linear-to-br from-red-500 to-yellow-500 box-decoration-clone bg-clip-text text-transparent"
-				>{words[currentWordIndex]}</span
-			>!
+			Production-Ready Template To Build Decentralised Applications
 		</p>
 
 		<!-- Action Buttons -->
 		<div class="mb-8 flex flex-wrap justify-center gap-4">
+			<Button href={route('/demo/')} size="lg" class="min-w-40">Demo</Button>
 			<Button
-				href={route('/demo/')}
+				href="https://github.com/wighawag/jolly-roger"
+				variant="secondary"
 				size="lg"
-				class="min-w-40 bg-pink-500 text-white hover:bg-pink-600"
-				>Check The Demo</Button
+				class="min-w-40"
+				target="_blank"
+				rel="noopener noreferrer"
 			>
+				Github
+			</Button>
 		</div>
+
+		<UseIt />
 	</div>
+
+	<Showcases />
+	<Features />
+	<Footer />
 </div>

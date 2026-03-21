@@ -24,7 +24,7 @@
 	{#snippet loading()}
 		<!-- TODO SplashScreen -->
 	{/snippet}
-	<Navbar />
+	<Navbar githubUrl="https://github.com/wighawag/template-onchain-app" />
 
 	{@render children()}
 
