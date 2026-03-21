@@ -40,14 +40,17 @@
 	let loading = $state(true);
 	let receipt = $state<TransactionReceipt | null>(null);
 
-	// Decode transaction on mount
-	async function decodeTransactionData() {
+	// Track the hash we've decoded to prevent re-decoding
+	let decodedHash = $state<string | null>(null);
+
+	// Decode transaction on mount or when tx.hash changes
+	async function decodeTransactionData(hash: `0x${string}`) {
 		loading = true;
 		try {
 			// Fetch receipt for status
 			let txReceipt = null;
 			try {
-				txReceipt = await publicClient.getTransactionReceipt({hash: tx.hash});
+				txReceipt = await publicClient.getTransactionReceipt({hash});
 				receipt = txReceipt;
 			} catch (e) {
 				// Transaction might be pending
@@ -55,6 +58,7 @@
 
 			const decoded = await decodeTransaction(tx, txReceipt, publicClient);
 			decodedData = decoded;
+			decodedHash = hash;
 		} catch (e) {
 			console.error('Error decoding transaction:', e);
 		} finally {
@@ -62,8 +66,12 @@
 		}
 	}
 
+	// Only decode when tx.hash changes and we haven't decoded it yet
 	$effect(() => {
-		decodeTransactionData();
+		const hash = tx.hash;
+		if (hash && hash !== decodedHash) {
+			decodeTransactionData(hash);
+		}
 	});
 
 	// Navigate to transaction details page
