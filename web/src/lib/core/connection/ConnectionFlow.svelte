@@ -229,23 +229,126 @@
 	{/if}
 </BasicModal>
 
-<!-- TODO not a Modal -->
-<BasicModal
+<!-- Network Switch Modal -->
+<Modal.Root
 	openWhen={(connection.isTargetStepReached($connection) &&
 		$connection.mechanism.type === 'wallet' &&
 		$connection.wallet?.invalidChainId) ||
 		false}
-	title={`Require Connection to ${connection.chainInfo.name || `network with chainId: ${connection.chainId}`}`}
-	cancel={true}
-	confirm={{
-		label: 'Switch',
-		onclick: () => connection.switchWalletChain(),
-		disabled: !!$connection.wallet?.switchingChain,
-	}}
 	onCancel={() => connection.cancel()}
 >
-	<p>
-		Switch to {connection.chainInfo.name ||
-			`network with chainId: ${connection.chainId}`} to continue.
-	</p>
-</BasicModal>
+	<Modal.Title>Switch Network Required</Modal.Title>
+	<Modal.Description>
+		This app requires connection to a different network
+	</Modal.Description>
+
+	<div class="my-6 flex flex-col items-center gap-4">
+		<!-- Network Switch Visual -->
+		<div class="flex w-full items-center justify-center gap-3">
+			<!-- Current Network -->
+			<div class="flex flex-col items-center gap-2">
+				<div
+					class="flex h-14 w-14 items-center justify-center rounded-full bg-muted/50 ring-2 ring-destructive/50"
+				>
+					<svg
+						class="h-7 w-7 text-muted-foreground"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="1.5"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418"
+						/>
+					</svg>
+				</div>
+				<span class="text-xs text-muted-foreground">Current</span>
+			</div>
+
+			<!-- Arrow -->
+			<div class="flex flex-col items-center">
+				<svg
+					class="h-6 w-6 text-primary {$connection.wallet?.switchingChain
+						? 'animate-pulse'
+						: ''}"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+					/>
+				</svg>
+			</div>
+
+			<!-- Target Network -->
+			<div class="flex flex-col items-center gap-2">
+				<div
+					class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 ring-2 ring-primary"
+				>
+					<svg
+						class="h-7 w-7 text-primary"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+						stroke-width="1.5"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418"
+						/>
+					</svg>
+				</div>
+				<span class="text-xs font-medium text-primary"
+					>{connection.chainInfo.name || `Chain ${connection.chainId}`}</span
+				>
+			</div>
+		</div>
+
+		<!-- Info Text -->
+		<p class="text-center text-sm text-muted-foreground">
+			Your wallet might prompt you to approve the network switch
+		</p>
+	</div>
+
+	<Modal.Footer>
+		<Button
+			variant="outline"
+			onclick={() => connection.cancel()}
+			disabled={!!$connection.wallet?.switchingChain}
+		>
+			Cancel
+		</Button>
+		<Button
+			onclick={() => connection.switchWalletChain()}
+			disabled={!!$connection.wallet?.switchingChain}
+		>
+			{#if $connection.wallet?.switchingChain}
+				<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+					<circle
+						class="opacity-25"
+						cx="12"
+						cy="12"
+						r="10"
+						stroke="currentColor"
+						stroke-width="4"
+					/>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+					/>
+				</svg>
+				Switching...
+			{:else}
+				Switch Network
+			{/if}
+		</Button>
+	</Modal.Footer>
+</Modal.Root>

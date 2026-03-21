@@ -57,7 +57,7 @@
 			<Button
 				href={route('/demo/')}
 				size="lg"
-				class="min-w-40 bg-pink-500 text-white hover:bg-pink-600"
+				class="min-w-40 bg-linear-to-r from-pink-600 via-pink-500 to-rose-500 font-semibold text-white shadow-lg transition-all duration-300 hover:from-pink-700 hover:via-pink-600 hover:to-rose-600 hover:shadow-xl"
 				>Check The Demo</Button
 			>
 		</div>
