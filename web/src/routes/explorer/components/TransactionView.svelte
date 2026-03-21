@@ -1,6 +1,5 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
 	import {getUserContext} from '$lib';
 	import * as Card from '$lib/shadcn/ui/card';
 	import * as Alert from '$lib/shadcn/ui/alert';
@@ -139,7 +138,7 @@
 
 <div class="container mx-auto max-w-5xl px-4 py-8">
 	{#if !txHash}
-		<Empty.Root class="min-h-[400px]">
+		<Empty.Root class="min-h-100">
 			<Empty.Header>
 				<Empty.Media variant="icon">
 					<HashIcon />
@@ -168,7 +167,7 @@
 			<Alert.Description>{error}</Alert.Description>
 		</Alert.Root>
 	{:else if !tx || !receipt}
-		<Empty.Root class="min-h-[400px]">
+		<Empty.Root class="min-h-100">
 			<Empty.Header>
 				<Empty.Media variant="icon">
 					<HashIcon />

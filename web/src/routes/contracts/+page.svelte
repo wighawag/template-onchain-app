@@ -78,7 +78,7 @@
 
 <div class="container mx-auto max-w-5xl px-4 py-8">
 	{#if contractNames.length === 0}
-		<Empty.Root class="min-h-[400px]">
+		<Empty.Root class="min-h-100">
 			<Empty.Header>
 				<Empty.Media variant="icon">
 					<FileCodeIcon />
