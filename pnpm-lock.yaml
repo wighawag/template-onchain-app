@@ -99,8 +99,8 @@ importers:
         specifier: ^2.3.1
         version: 2.3.1(prettier@3.8.1)
       purgatory:
-        specifier: ^0.0.5
-        version: 0.0.5(@libsql/core@0.15.15)(bufferutil@4.1.0)(hono@4.12.8)(typescript@5.9.3)(zod@3.25.76)
+        specifier: ^0.0.6
+        version: 0.0.6(@libsql/core@0.15.15)(bufferutil@4.1.0)(hono@4.12.8)(typescript@5.9.3)(zod@3.25.76)
       rocketh:
         specifier: ^0.19.3
         version: 0.19.3(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
@@ -3634,11 +3634,11 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  purgatory-core@0.0.4:
-    resolution: {integrity: sha512-+cOxtQLDj63bgF/NQCHvXjxFZ1qr4ZYViBJf2tk8sIeVD2LOYNDBqTb2WvRddi+xxKwAP6PrxpoQssClu+H0qg==}
+  purgatory-core@0.0.5:
+    resolution: {integrity: sha512-l0XzmazBmZ5DMeQY4prjc8SnTd06Av9BgeGG1Ssy4fPCq4sZEjXFGKsgLyGTCmDQWsbNydxkMrLYWOdjkfPARw==}
 
-  purgatory@0.0.5:
-    resolution: {integrity: sha512-1sQoWMQjCg01bRnxSohIDIvtU+G1k22wWzWEP6N4CUuPfaJc98n3haxtHd2K4gyaR1E7zKo98+csCWQcFc+oqA==}
+  purgatory@0.0.6:
+    resolution: {integrity: sha512-27n79cZXLKSj5ZrhK1x5rsE5Sk9CwepLmAt0aoeChA33klc9aNrWJgL9yFqcTai5BKeNudP/pyg2PSw7hnxWAw==}
     hasBin: true
 
   pwag@0.4.0:
@@ -4950,7 +4950,7 @@ snapshots:
   '@libsql/isomorphic-ws@0.1.5(bufferutil@4.1.0)':
     dependencies:
       '@types/ws': 8.18.1
-      ws: 8.19.0(bufferutil@4.1.0)
+      ws: 8.20.0(bufferutil@4.1.0)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -8127,7 +8127,7 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  purgatory-core@0.0.4(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76):
+  purgatory-core@0.0.5(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76):
     dependencies:
       hono: 4.12.8
       named-logs: 0.3.2
@@ -8139,14 +8139,14 @@ snapshots:
       - utf-8-validate
       - zod
 
-  purgatory@0.0.5(@libsql/core@0.15.15)(bufferutil@4.1.0)(hono@4.12.8)(typescript@5.9.3)(zod@3.25.76):
+  purgatory@0.0.6(@libsql/core@0.15.15)(bufferutil@4.1.0)(hono@4.12.8)(typescript@5.9.3)(zod@3.25.76):
     dependencies:
       '@hono/node-server': 1.19.11(hono@4.12.8)
       '@libsql/client': 0.15.15(bufferutil@4.1.0)
       commander: 13.1.0
       ldenv: 0.3.16
       named-logs-context: 0.1.1
-      purgatory-core: 0.0.4(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
+      purgatory-core: 0.0.5(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
       remote-sql-libsql: 0.0.6(@libsql/core@0.15.15)
     transitivePeerDependencies:
       - '@libsql/core'
