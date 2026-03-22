@@ -10,7 +10,7 @@
 		onSubmit: (gasPrice: GasPrice) => void;
 		onCancel: () => void;
 		isSubmitting?: boolean;
-		currentGasPrice?: bigint;
+		minGasPrice?: GasPrice;
 		errorMessage?: string | null;
 	}
 
@@ -19,7 +19,7 @@
 		onSubmit,
 		onCancel,
 		isSubmitting = false,
-		currentGasPrice,
+		minGasPrice,
 		errorMessage = null,
 	}: Props = $props();
 
@@ -33,14 +33,81 @@
 	let gasFeeValue = $derived($gasFee);
 	let isLoaded = $derived(gasFeeValue.step === 'Loaded');
 
-	// Format gas prices for display
-	let gasPrices = $derived.by(() => {
+	// Helper to enforce minimum on a gas price
+	function enforceMinimum(price: GasPrice): GasPrice {
+		if (!minGasPrice) return price;
+		return {
+			maxFeePerGas:
+				price.maxFeePerGas >= minGasPrice.maxFeePerGas
+					? price.maxFeePerGas
+					: minGasPrice.maxFeePerGas + 1n,
+			maxPriorityFeePerGas:
+				price.maxPriorityFeePerGas >= minGasPrice.maxPriorityFeePerGas
+					? price.maxPriorityFeePerGas
+					: minGasPrice.maxPriorityFeePerGas + 1n,
+		};
+	}
+
+	// Check if a gas price meets minimum requirements (original network price)
+	function meetsMinimum(price: GasPrice): boolean {
+		if (!minGasPrice) return true;
+		return (
+			price.maxFeePerGas >= minGasPrice.maxFeePerGas &&
+			price.maxPriorityFeePerGas >= minGasPrice.maxPriorityFeePerGas
+		);
+	}
+
+	// Raw gas prices from network
+	let rawGasPrices = $derived.by(() => {
 		if (gasFeeValue.step !== 'Loaded') return null;
 		return {
 			slow: gasFeeValue.slow,
 			average: gasFeeValue.average,
 			fast: gasFeeValue.fast,
 		};
+	});
+
+	// Adjusted gas prices that enforce minimum (for display and selection)
+	let gasPrices = $derived.by(() => {
+		if (!rawGasPrices) return null;
+		return {
+			slow: enforceMinimum(rawGasPrices.slow),
+			average: enforceMinimum(rawGasPrices.average),
+			fast: enforceMinimum(rawGasPrices.fast),
+		};
+	});
+
+	// Check which preset options have been adjusted (network price was below minimum)
+	let adjustedOptions = $derived.by(() => {
+		if (!rawGasPrices) return {slow: false, average: false, fast: false};
+		return {
+			slow: !meetsMinimum(rawGasPrices.slow),
+			average: !meetsMinimum(rawGasPrices.average),
+			fast: !meetsMinimum(rawGasPrices.fast),
+		};
+	});
+
+	// Get the best default gas price for custom field (fast or minimum if fast is too low)
+	let defaultCustomGasPrice = $derived.by((): string => {
+		if (gasPrices) {
+			// Use fast (which is already adjusted to minimum if needed)
+			return formatGwei(gasPrices.fast.maxFeePerGas);
+		}
+		if (minGasPrice) {
+			return formatGwei(minGasPrice.maxFeePerGas);
+		}
+		return '';
+	});
+
+	// Initialize custom gas price when switching to custom option
+	$effect(() => {
+		if (
+			selectedOption === 'custom' &&
+			customGasPrice === '' &&
+			defaultCustomGasPrice
+		) {
+			customGasPrice = defaultCustomGasPrice;
+		}
 	});
 
 	// Get selected gas price
@@ -57,8 +124,21 @@
 		return gasPrices[selectedOption];
 	});
 
+	// Check if selected price is valid (meets minimum)
+	let isSelectedPriceValid = $derived.by((): boolean => {
+		if (!selectedGasPrice) return false;
+		return meetsMinimum(selectedGasPrice);
+	});
+
+	// Validation error message for minimum gas price
+	let minPriceError = $derived.by((): string | null => {
+		if (!selectedGasPrice || !minGasPrice) return null;
+		if (isSelectedPriceValid) return null;
+		return `Gas price must be at least ${formatGwei(minGasPrice.maxFeePerGas)} gwei (previous transaction's gas price)`;
+	});
+
 	function handleSubmit() {
-		if (selectedGasPrice) {
+		if (selectedGasPrice && isSelectedPriceValid) {
 			onSubmit(selectedGasPrice);
 		}
 	}
@@ -77,10 +157,13 @@
 			chance of the transaction being included in a block.
 		</p>
 
-		{#if currentGasPrice}
+		{#if minGasPrice}
 			<div class="rounded-md border bg-muted/30 p-3 text-sm">
-				<span class="text-muted-foreground">Current gas price:</span>
-				<span class="ml-2 font-mono">{formatGwei(currentGasPrice)} gwei</span>
+				<span class="text-muted-foreground">Minimum gas price:</span>
+				<span class="ml-2 font-mono"
+					>{formatGwei(minGasPrice.maxFeePerGas)} gwei</span
+				>
+				<span class="ml-1 text-xs text-muted-foreground">(previous tx)</span>
 			</div>
 		{/if}
 
@@ -98,6 +181,9 @@
 					<span class="mt-1 text-xs text-muted-foreground"
 						>{formatGas(gasPrices.slow)}</span
 					>
+					{#if adjustedOptions.slow}
+						<span class="text-warning mt-1 text-xs">= min</span>
+					{/if}
 				</button>
 				<button
 					type="button"
@@ -111,6 +197,9 @@
 					<span class="mt-1 text-xs text-muted-foreground"
 						>{formatGas(gasPrices.average)}</span
 					>
+					{#if adjustedOptions.average}
+						<span class="text-warning mt-1 text-xs">= min</span>
+					{/if}
 				</button>
 				<button
 					type="button"
@@ -124,6 +213,9 @@
 					<span class="mt-1 text-xs text-muted-foreground"
 						>{formatGas(gasPrices.fast)}</span
 					>
+					{#if adjustedOptions.fast}
+						<span class="text-warning mt-1 text-xs">= min</span>
+					{/if}
 				</button>
 			</div>
 		{:else}
@@ -148,8 +240,12 @@
 					<input
 						type="text"
 						bind:value={customGasPrice}
-						placeholder="Enter gas price"
-						class="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+						placeholder={minGasPrice
+							? `Min: ${formatGwei(minGasPrice.maxFeePerGas)}`
+							: 'Enter gas price'}
+						class="flex-1 rounded-md border bg-background px-3 py-2 text-sm {minPriceError
+							? 'border-destructive'
+							: ''}"
 					/>
 					<span class="text-sm text-muted-foreground">gwei</span>
 				</div>
@@ -162,6 +258,14 @@
 				<span class="ml-2 font-mono font-medium"
 					>{formatGas(selectedGasPrice)}</span
 				>
+			</div>
+		{/if}
+
+		{#if minPriceError}
+			<div
+				class="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive"
+			>
+				{minPriceError}
 			</div>
 		{/if}
 
@@ -178,7 +282,10 @@
 		<Button variant="outline" onclick={onCancel} disabled={isSubmitting}>
 			Cancel
 		</Button>
-		<Button onclick={handleSubmit} disabled={!selectedGasPrice || isSubmitting}>
+		<Button
+			onclick={handleSubmit}
+			disabled={!selectedGasPrice || !isSelectedPriceValid || isSubmitting}
+		>
 			{#if isSubmitting}
 				Submitting...
 			{:else}

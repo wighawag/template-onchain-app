@@ -37,7 +37,15 @@ export function createTrackedWalletConnector(params: {
 		// if needed we can also update on getting the full tx data
 		unsubscribeFromFetchedTransaction = walletClient.on(
 			'transaction:fetched',
-			(tx) => accountData.updateOperationFromFetchedTransaction(tx),
+			(tx) => {
+				console.log(
+					`transaction:fetche`,
+					JSON.stringify(tx, (k, v) =>
+						typeof v === 'bigint' ? v.toString() : v,
+					),
+				);
+				accountData.updateOperationFromFetchedTransaction(tx);
+			},
 		);
 	}
 

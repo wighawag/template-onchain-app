@@ -39,16 +39,24 @@
 	// Transaction is final when included or dropped - no confirmation needed for dismiss
 	let isFinal = $derived(status === 'Included' || status === 'Dropped');
 
-	// Get current gas price from operation's tracked transaction metadata
-	let currentGasPrice = $derived.by(() => {
+	// Get minimum gas price from operation's tracked transaction metadata (for resubmit validation)
+	let minGasPrice = $derived.by(() => {
 		if (!operation) return undefined;
 		const tx = operation.metadata.tx;
 		// gasParameters is nested in the tracked transaction
 		const gasParams = tx.gasParameters as {
 			maxFeePerGas?: bigint;
+			maxPriorityFeePerGas?: bigint;
 			gasPrice?: bigint;
 		};
-		return gasParams?.maxFeePerGas ?? gasParams?.gasPrice;
+		const maxFeePerGas = gasParams?.maxFeePerGas ?? gasParams?.gasPrice;
+		const maxPriorityFeePerGas =
+			gasParams?.maxPriorityFeePerGas ?? gasParams?.gasPrice;
+
+		console.log({maxFeePerGas, maxPriorityFeePerGas});
+		if (maxFeePerGas === undefined || maxPriorityFeePerGas === undefined)
+			return undefined;
+		return {maxFeePerGas, maxPriorityFeePerGas};
 	});
 
 	function handleClose() {
@@ -200,14 +208,21 @@
 		</div>
 
 		<Modal.Footer>
-			<Button variant="outline" onclick={() => (isFinal ? handleDismiss() : (showDismissConfirm = true))}>
+			<Button
+				variant="outline"
+				onclick={() =>
+					isFinal ? handleDismiss() : (showDismissConfirm = true)}
+			>
 				Dismiss
 			</Button>
 			{#if status !== 'Dropped' && status !== 'Included'}
 				<Button variant="secondary" onclick={() => (showResubmitForm = true)}>
 					Resubmit
 				</Button>
-				<Button variant="destructive" onclick={() => (showCancelConfirm = true)}>
+				<Button
+					variant="destructive"
+					onclick={() => (showCancelConfirm = true)}
+				>
 					Cancel Transaction
 				</Button>
 			{/if}
@@ -228,7 +243,7 @@
 	onSubmit={handleResubmit}
 	onCancel={closeResubmitForm}
 	{isSubmitting}
-	{currentGasPrice}
+	{minGasPrice}
 	errorMessage={resubmitError}
 />
 

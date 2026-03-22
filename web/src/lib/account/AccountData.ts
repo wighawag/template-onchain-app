@@ -146,6 +146,10 @@ export function createAccountData(params: {
 						i === txFound.txIndex ? {...tx, nonce: transaction.nonce} : tx,
 					),
 				},
+				metadata: {
+					...operation.metadata,
+					tx: transaction, // we update the tx for latest parameters
+				},
 			}));
 		} else {
 			throw new Error(`accountData not ready`);
