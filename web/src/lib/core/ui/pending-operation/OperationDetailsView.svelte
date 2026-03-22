@@ -26,6 +26,18 @@
 		operation.transactionIntent.state?.inclusion || 'Fetching',
 	);
 
+	// Get transaction result (Success/Failure) when included
+	let transactionResult = $derived.by(() => {
+		const state = operation.transactionIntent.state;
+		if (state?.inclusion === 'Included') {
+			return state.status; // 'Success' or 'Failure'
+		}
+		return null;
+	});
+
+	// Get finality block number
+	let finalityBlock = $derived(operation.transactionIntent.state?.final);
+
 	// Format broadcast time
 	let broadcastTime = $derived.by(() => {
 		const txs = operation.transactionIntent.transactions;
@@ -80,6 +92,20 @@
 		<span>
 			<Badge variant={statusVariant}>{status}</Badge>
 		</span>
+
+		{#if transactionResult}
+			<span class="text-muted-foreground">Result:</span>
+			<span>
+				<Badge variant={transactionResult === 'Success' ? 'default' : 'destructive'}>
+					{transactionResult}
+				</Badge>
+			</span>
+		{/if}
+
+		{#if finalityBlock !== undefined}
+			<span class="text-muted-foreground">Finality:</span>
+			<span class="font-mono">Block {finalityBlock}</span>
+		{/if}
 
 		{#if fromAddress}
 			<span class="text-muted-foreground">From:</span>

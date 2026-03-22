@@ -5,29 +5,24 @@
 	import {Button} from '$lib/shadcn/ui/button';
 	import {
 		ExternalLinkIcon,
-		XIcon,
-		ArrowUpIcon,
 		ClockIcon,
 		CircleCheckIcon,
 		TriangleAlertIcon,
 		CircleXIcon,
 		CircleQuestionMarkIcon,
+		SearchIcon,
 	} from '@lucide/svelte';
 	import type {OnchainOperation} from '$lib/account/AccountData';
-	import type {
-		TransactionIntent,
-		TransactionIntentStatus,
-	} from '@etherkit/tx-observer';
+	import type {TransactionIntent} from '@etherkit/tx-observer';
 	import type {Readable} from 'svelte/store';
+	import {pendingOperationModal} from '$lib/core/ui/pending-operation';
 
 	interface Props {
 		id: string;
 		operationStore: Readable<OnchainOperation | undefined>;
-		onDismiss: (id: string) => void;
-		onBumpGas: (id: string) => void;
 	}
 
-	let {id, operationStore, onDismiss, onBumpGas}: Props = $props();
+	let {id, operationStore}: Props = $props();
 
 	// Subscribe to the operation store
 	// let operation = $derived($operationStore);
@@ -104,19 +99,6 @@
 	function formatTimestamp(timestampMs: number): string {
 		const date = new Date(timestampMs);
 		return date.toLocaleString();
-	}
-
-	// Check if transaction needs action
-	function needsBumpGas(state: TransactionIntentStatus | undefined): boolean {
-		return !state || state.inclusion === 'InMemPool';
-	}
-
-	function needsDismiss(state: TransactionIntentStatus | undefined): boolean {
-		return (
-			state?.final !== undefined ||
-			state?.inclusion === 'NotFound' ||
-			state?.inclusion === 'Dropped'
-		);
 	}
 
 	$inspect($operationStore);
@@ -225,21 +207,15 @@
 			</div>
 		</Card.Content>
 
-		{#if needsBumpGas(state) || needsDismiss(state)}
-			<Card.Footer class="flex justify-end gap-2">
-				{#if needsBumpGas(state)}
-					<Button variant="outline" size="sm" onclick={() => onBumpGas(id)}>
-						<ArrowUpIcon class="mr-1 h-4 w-4" />
-						Bump Gas
-					</Button>
-				{/if}
-				{#if needsDismiss(state)}
-					<Button variant="destructive" size="sm" onclick={() => onDismiss(id)}>
-						<XIcon class="mr-1 h-4 w-4" />
-						Dismiss
-					</Button>
-				{/if}
-			</Card.Footer>
-		{/if}
+		<Card.Footer class="flex justify-end gap-2">
+			<Button
+				variant="outline"
+				size="sm"
+				onclick={() => pendingOperationModal.open(id, $operationStore)}
+			>
+				<SearchIcon class="mr-1 h-4 w-4" />
+				Inspect
+			</Button>
+		</Card.Footer>
 	</Card.Root>
 {/if}

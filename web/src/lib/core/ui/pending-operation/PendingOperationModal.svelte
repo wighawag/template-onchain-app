@@ -36,6 +36,9 @@
 		operation?.transactionIntent.state?.inclusion || 'Fetching',
 	);
 
+	// Transaction is final when included or dropped - no confirmation needed for dismiss
+	let isFinal = $derived(status === 'Included' || status === 'Dropped');
+
 	// Get current gas price from operation's tracked transaction metadata
 	let currentGasPrice = $derived.by(() => {
 		if (!operation) return undefined;
@@ -197,10 +200,10 @@
 		</div>
 
 		<Modal.Footer>
-			<Button variant="outline" onclick={() => (showDismissConfirm = true)}>
+			<Button variant="outline" onclick={() => (isFinal ? handleDismiss() : (showDismissConfirm = true))}>
 				Dismiss
 			</Button>
-			{#if status !== 'Dropped'}
+			{#if status !== 'Dropped' && status !== 'Included'}
 				<Button variant="secondary" onclick={() => (showResubmitForm = true)}>
 					Resubmit
 				</Button>

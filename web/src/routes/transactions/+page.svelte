@@ -1,32 +1,18 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
 	import {getUserContext} from '$lib';
 	import * as Empty from '$lib/shadcn/ui/empty';
 	import * as Separator from '$lib/shadcn/ui/separator';
 	import {ListIcon} from '@lucide/svelte';
 	import OperationCard from './components/OperationCard.svelte';
 
-	const {connection, accountData} = getUserContext();
+	const {accountData} = getUserContext();
 
 	let accountDataState = $derived(accountData.state$);
 	let operationIds = $derived(accountData.watchItemIds('operations'));
 	let sortedOperationIds = $derived(
 		$operationIds.sort((a, b) => (a < b ? 1 : -1)),
 	);
-
-	// Dismiss operation
-	function dismissOperation(id: string) {
-		const account = accountData.get();
-		if (account) {
-			account.removeItem('operations', id);
-		}
-	}
-
-	// Bump gas price (placeholder)
-	async function bumpGasPrice(id: string) {
-		alert('Bump gas price feature coming soon!');
-	}
 </script>
 
 <DefaultHead title={'Transactions'} />
@@ -83,8 +69,6 @@
 					<OperationCard
 						{id}
 						operationStore={accountData.watchItem('operations', id)}
-						onDismiss={dismissOperation}
-						onBumpGas={bumpGasPrice}
 					/>
 				{/each}
 			</div>

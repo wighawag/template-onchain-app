@@ -61,6 +61,10 @@ export function hookTxObserverToAccountData<
 			onAdded: (key, item) => {
 				observer.add(key, extractValue(item));
 			},
+			onUpdated: (key, item) => {
+				// Re-add with updated data (e.g., when a new transaction is added to an existing operation)
+				observer.add(key, extractValue(item));
+			},
 			onRemoved: (key) => {
 				observer.remove(key);
 			},
