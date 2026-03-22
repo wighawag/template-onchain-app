@@ -298,8 +298,6 @@ export function createPushNotificationService(params: {
 				message,
 			}),
 		});
-		const text = await response.text();
-		console.log({text});
 		return response.ok;
 	}
 

@@ -20,6 +20,15 @@ import {
 
 export type TransactionMetadata = PopulatedMetadata;
 
+/**
+ * Extended metadata type that includes an optional operationId.
+ * When operationId is set, the transaction is added to an existing operation
+ * rather than creating a new one (used for resubmit functionality).
+ */
+export type ExtendedTransactionMetadata = TransactionMetadata & {
+	operationId?: string;
+};
+
 export type OnchainOperationMetadata = TransactionMetadata & {
 	tx: Omit<TrackedTransaction<PopulatedMetadata>, 'metadata'>;
 };
@@ -137,7 +146,10 @@ export function createAccountData(params: {
 						i === txFound.txIndex ? {...tx, nonce: transaction.nonce} : tx,
 					),
 				},
-				metadata: {...transaction.metadata, tx: transaction},
+				metadata: {
+					...operation.metadata,
+					tx: transaction, // we update the tx for latest parameters
+				},
 			}));
 		} else {
 			throw new Error(`accountData not ready`);
@@ -155,16 +167,86 @@ export function createAccountData(params: {
 				// on Success we delete when inclusion is final
 				accountData.removeItem('operations', operationID);
 			} else {
-				accountData.updateItem('operations', operationID, {
-					transactionIntent: event.intent,
+				// Use patchItem to merge transactions instead of overwriting.
+				// This ensures we don't lose transactions added locally that the observer
+				// might not know about yet (e.g., in multi-tab scenarios or race conditions)
+				accountData.patchItem('operations', operationID, (operation) => {
+					const observerTxHashes = new Set(
+						event.intent.transactions.map((tx) => tx.hash),
+					);
+
+					// Start with observer's transactions (they have the latest state info)
+					const mergedTransactions = [...event.intent.transactions];
+
+					// Add any local transactions that the observer doesn't know about yet
+					for (const localTx of operation.transactionIntent.transactions) {
+						if (!observerTxHashes.has(localTx.hash)) {
+							mergedTransactions.push(localTx);
+						}
+					}
+
+					return {
+						...operation,
+						transactionIntent: {
+							...event.intent,
+							transactions: mergedTransactions,
+						},
+					};
 				});
 			}
+		}
+	}
+
+	/**
+	 * Add a new transaction to an existing operation (used for resubmit).
+	 * This adds the transaction to the operation's transactionIntent.transactions array.
+	 */
+	function addTransactionToOperation(
+		operationId: string,
+		transaction: TrackedTransaction<TransactionMetadata>,
+	) {
+		const accountData = store.get();
+		if (accountData) {
+			const currentData = accountData.get();
+			if (currentData?.status !== 'ready') {
+				throw new Error(`accountData not ready`);
+			}
+
+			// Check if operation exists
+			const operation = currentData.data.operations[operationId];
+			if (!operation) {
+				console.error(`Operation not found: ${operationId}`);
+				return;
+			}
+
+			accountData.patchItem('operations', operationId, (op) => {
+				return {
+					...op,
+					transactionIntent: {
+						...op.transactionIntent,
+						// // Reset state since we're adding a new attempt ?
+						// state: undefined,
+						transactions: [
+							...op.transactionIntent.transactions,
+							{
+								broadcastTimestampMs: transaction.broadcastTimestampMs,
+								from: transaction.from,
+								hash: transaction.hash,
+								nonce: transaction.nonce,
+							},
+						],
+					},
+				};
+			});
+		} else {
+			throw new Error(`accountData not ready`);
 		}
 	}
 
 	return {
 		...store,
 		addOperationFromTrackedTransaction,
+		addTransactionToOperation,
 		updateOperationFromFetchedTransaction,
 		updateOperationFromTransactionStateUpdated,
 	};

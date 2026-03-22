@@ -8,7 +8,7 @@
 
 	import {createContext} from '$lib/context/index.js';
 	import AsyncContext from '$lib/context/AsyncContext.svelte';
-	import Navbar from '$lib/core/ui/navbar/navbar.svelte';
+	import Navbar from '$lib/ui/navbar/navbar.svelte';
 	import {createENSService} from '$lib/core/ens';
 	import {setContext} from 'svelte';
 	import {Toaster} from '$lib/shadcn/ui/sonner';

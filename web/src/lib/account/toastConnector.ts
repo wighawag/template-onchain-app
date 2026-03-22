@@ -6,6 +6,7 @@ import type {
 import {toast} from 'svelte-sonner';
 import type {TransactionIntent} from '@etherkit/tx-observer';
 import {subscribeToAccountDataMap} from '$lib/core/utils/data/account-data-subscription';
+import {pendingOperationModal} from '$lib/ui/pending-operation';
 
 /**
  * Gets a human-readable name for an operation from its metadata
@@ -93,7 +94,10 @@ export function createToastConnector(params: {
 		string,
 		'pending' | 'success' | 'error'
 	>();
-
+	// Map to track last inclusion state to detect transitions within same status type (e.g. NotFound→Dropped)
+	const operationLastInclusion = new Map<string, string>();
+	// Map to track last final state to detect when Dropped becomes final (Inspect → Dismiss button)
+	const operationLastFinal = new Map<string, boolean>();
 	function deleteOperation(key: string) {
 		const currentAccountData = accountData.get();
 		if (currentAccountData) {
@@ -101,32 +105,38 @@ export function createToastConnector(params: {
 		}
 	}
 
-	function showToast(key: string, operation: OnchainOperation) {
+	// Helper to open modal while keeping toast visible
+	function openModalAndKeepToast(
+		key: string,
+		operation: OnchainOperation,
+		event: MouseEvent,
+	) {
+		// Prevent default to stop sonner from dismissing the toast
+		event.preventDefault();
+		// Open the modal
+		pendingOperationModal.open(key, operation);
+	}
+
+	// Show an error toast (extracted for reuse)
+	// Note: Previous toast dismissal is handled by showToast before calling this
+	function showErrorToast(key: string, operation: OnchainOperation) {
 		const operationName = getOperationName(operation);
-		const statusType = getStatusType(operation.transactionIntent);
+		const state = operation.transactionIntent.state;
+		const inclusion = state?.inclusion ?? 'Unknown';
+		const isFinal = !!state?.final;
 		const message = getStatusMessage(operation.transactionIntent);
 
-		// Skip if status hasn't changed (prevents duplicate toasts from multiple update events)
-		const lastStatus = operationLastStatus.get(key);
-		if (lastStatus === statusType) {
-			return;
-		}
-		operationLastStatus.set(key, statusType);
+		// Use a unique toast ID per inclusion state and final flag to ensure proper updates
+		// Include final flag so button changes from Inspect to Dismiss when Dropped becomes final
+		const toastId = `${key}-${inclusion}-${isFinal ? 'final' : 'pending'}`;
 
-		if (statusType === 'pending') {
-			toast.loading(operationName, {
-				description: message,
-				id: key,
-			});
-		} else if (statusType === 'success') {
-			toast.success(operationName, {
-				description: message,
-				id: key,
-			});
-		} else if (statusType === 'error') {
+		// For dropped AND final transactions, directly delete without modal
+		// For dropped but NOT final, show modal with Dismiss button
+		// For other error states (NotFound), show Inspect to open modal with more options
+		if (inclusion === 'Dropped' && isFinal) {
 			toast.error(operationName, {
 				description: message,
-				id: key,
+				id: toastId,
 				duration: Infinity,
 				action: {
 					label: 'Dismiss',
@@ -134,13 +144,79 @@ export function createToastConnector(params: {
 				},
 			});
 		} else {
-			toast.warning(operationName, {
+			toast.error(operationName, {
 				description: message,
-				id: key,
+				id: toastId,
+				duration: Infinity,
+				action: {
+					label: 'Inspect',
+					onClick: (event) => openModalAndKeepToast(key, operation, event),
+				},
 			});
 		}
+		operationToasts.set(key, toastId);
+	}
 
-		operationToasts.set(key, key);
+	function showToast(key: string, operation: OnchainOperation) {
+		const operationName = getOperationName(operation);
+		const statusType = getStatusType(operation.transactionIntent);
+		const message = getStatusMessage(operation.transactionIntent);
+		const currentInclusion = operation.transactionIntent.state?.inclusion ?? '';
+		const currentFinal = !!operation.transactionIntent.state?.final;
+
+		// Skip if status AND inclusion AND final haven't changed
+		// (prevents duplicate toasts but allows NotFound→Dropped transitions and Dropped non-final→final)
+		const lastStatus = operationLastStatus.get(key);
+		const lastInclusion = operationLastInclusion.get(key);
+		const lastFinal = operationLastFinal.get(key);
+
+		if (
+			lastStatus === statusType &&
+			lastInclusion === currentInclusion &&
+			lastFinal === currentFinal
+		) {
+			return;
+		}
+
+		operationLastStatus.set(key, statusType);
+		operationLastInclusion.set(key, currentInclusion);
+		operationLastFinal.set(key, currentFinal);
+
+		// Create unique toast ID based on current state
+		// For error states, include inclusion and final flag to ensure proper updates
+		const toastId =
+			statusType === 'error'
+				? `${key}-${currentInclusion}-${currentFinal ? 'final' : 'pending'}`
+				: `${key}-${statusType}`;
+
+		// Dismiss previous toast if ID changed
+		const previousToastId = operationToasts.get(key);
+		if (previousToastId && previousToastId !== toastId) {
+			toast.dismiss(previousToastId);
+		}
+
+		if (statusType === 'pending') {
+			toast.loading(operationName, {
+				description: message,
+				id: toastId,
+			});
+			operationToasts.set(key, toastId);
+		} else if (statusType === 'success') {
+			toast.success(operationName, {
+				description: message,
+				id: toastId,
+			});
+			operationToasts.set(key, toastId);
+		} else if (statusType === 'error') {
+			// Use shared error toast function which handles its own toast ID
+			showErrorToast(key, operation);
+		} else {
+			toast.warning(operationName, {
+				description: message,
+				id: toastId,
+			});
+			operationToasts.set(key, toastId);
+		}
 	}
 
 	function handleOperationRemoved(key: string) {
@@ -150,6 +226,8 @@ export function createToastConnector(params: {
 			operationToasts.delete(key);
 		}
 		operationLastStatus.delete(key);
+		operationLastInclusion.delete(key);
+		operationLastFinal.delete(key);
 	}
 
 	function clearAllToasts() {
@@ -158,6 +236,8 @@ export function createToastConnector(params: {
 		}
 		operationToasts.clear();
 		operationLastStatus.clear();
+		operationLastInclusion.clear();
+		operationLastFinal.clear();
 	}
 
 	let stopConnection: (() => void) | undefined;

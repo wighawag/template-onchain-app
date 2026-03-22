@@ -1,5 +1,9 @@
 import type {TrackedWalletClientType} from '@etherkit/viem-tx-tracker';
-import type {MultiAccountDataStore, TransactionMetadata} from './AccountData';
+import type {
+	ExtendedTransactionMetadata,
+	MultiAccountDataStore,
+	TransactionMetadata,
+} from './AccountData';
 import type {TransactionObserver} from '@etherkit/tx-observer';
 import {hookTxObserverToAccountData} from '$lib/core/utils/data/synqable-transactions';
 
@@ -16,12 +20,24 @@ export function createTrackedWalletConnector(params: {
 		disconnect();
 		unsubscribeFromBroadcastedTransaction = walletClient.on(
 			'transaction:broadcasted',
-			(tx) => accountData.addOperationFromTrackedTransaction(tx),
+			(tx) => {
+				// Check if this is a resubmit (has operationId in metadata)
+				const metadata = tx.metadata as ExtendedTransactionMetadata;
+				if (metadata.operationId) {
+					// Add transaction to existing operation
+					accountData.addTransactionToOperation(metadata.operationId, tx);
+				} else {
+					// Create new operation
+					accountData.addOperationFromTrackedTransaction(tx);
+				}
+			},
 		);
 		// if needed we can also update on getting the full tx data
 		unsubscribeFromFetchedTransaction = walletClient.on(
 			'transaction:fetched',
-			(tx) => accountData.updateOperationFromFetchedTransaction(tx),
+			(tx) => {
+				accountData.updateOperationFromFetchedTransaction(tx);
+			},
 		);
 	}
 
