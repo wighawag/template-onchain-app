@@ -6,6 +6,8 @@
 	import * as Drawer from '$lib/shadcn/ui/drawer/index.js';
 	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
 	import Address from '../../core/ui/ethereum/Address.svelte';
+	import Badge from '$lib/shadcn/ui/badge/badge.svelte';
+	import {formatBalance} from '$lib/core/utils/format/balance';
 	import {
 		MenuIcon,
 		GithubIcon,
@@ -22,7 +24,7 @@
 		communityUrl?: string;
 	} = $props();
 
-	const {connection} = getUserContext();
+	const {connection, accountData, balance} = getUserContext();
 
 	let showMenu = $state(false);
 	let accountsOpen = $state(false);
@@ -30,6 +32,18 @@
 	let hasMultipleAccounts = $derived(
 		$connection.wallet?.accounts && $connection.wallet.accounts.length > 1,
 	);
+
+	// Use the elegant API pattern: watchItemIds returns a reactive store
+	let operationIds = $derived(accountData.watchItemIds('operations'));
+	let transactionCount = $derived($operationIds.length);
+
+	// Derive formatted balance
+	let formattedBalance = $derived.by(() => {
+		if ($balance.step === 'Loaded') {
+			return formatBalance($balance.value, 18, 6);
+		}
+		return null;
+	});
 
 	function toggleMenu() {
 		showMenu = !showMenu;
@@ -101,7 +115,13 @@
 			</Button>
 		{:else if connection.isTargetStepReached($connection)}
 			<div class="m-1 hidden h-8 items-center space-x-2 sm:flex">
-				<Address value={$connection.account.address} />
+				{#if formattedBalance !== null}
+					<span class="text-sm text-muted-foreground"
+						>{formattedBalance} ETH</span
+					>
+					<!-- {:else}
+					<Address value={$connection.account.address} /> -->
+				{/if}
 			</div>
 		{:else}
 			<Button
@@ -114,7 +134,7 @@
 
 		<!-- Drawer Button - Avatar when connected, Menu icon when disconnected -->
 		<button
-			class="m-1 flex h-8 w-8 items-center justify-center rounded-md focus:outline-none {$connection.step !==
+			class="relative m-1 flex h-8 w-8 items-center justify-center rounded-md focus:outline-none {$connection.step !==
 			'SignedIn'
 				? 'border border-input bg-background hover:bg-accent hover:text-accent-foreground'
 				: ''}"
@@ -123,6 +143,13 @@
 		>
 			{#if connection.isTargetStepReached($connection)}
 				<BlockieAvatar address={$connection.account.address} />
+				{#if transactionCount > 0}
+					<span
+						class="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground"
+					>
+						{transactionCount > 99 ? '99+' : transactionCount}
+					</span>
+				{/if}
 			{:else}
 				<MenuIcon class="h-5 w-5" />
 			{/if}
@@ -209,14 +236,23 @@
 					</Button>
 				</div>
 
-				<!-- Transactions Section -->
+				<!-- Balance & Transactions Section -->
 				<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
+					{#if formattedBalance !== null}
+						<div class="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
+							<span class="text-sm text-muted-foreground">Balance</span>
+							<span class="font-medium">{formattedBalance} ETH</span>
+						</div>
+					{/if}
 					<a
 						href={route('/transactions/')}
-						class={buttonVariants({variant: 'outline'})}
+						class="{buttonVariants({variant: 'outline'})} justify-between"
 						onclick={() => (showMenu = false)}
 					>
-						Your Transactions
+						<span>Your Transactions</span>
+						{#if transactionCount > 0}
+							<Badge variant="secondary" class="ml-2">{transactionCount}</Badge>
+						{/if}
 					</a>
 				</div>
 			{:else}
