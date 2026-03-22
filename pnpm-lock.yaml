@@ -129,8 +129,8 @@ importers:
   web:
     devDependencies:
       '@etherkit/tx-observer':
-        specifier: 0.0.9
-        version: 0.0.9
+        specifier: 0.0.10
+        version: 0.0.10
       '@etherkit/viem-tx-tracker':
         specifier: ^0.0.9
         version: 0.0.9(viem@2.47.6(bufferutil@4.1.0)(typescript@5.9.3)(zod@4.3.6))
@@ -590,8 +590,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@etherkit/tx-observer@0.0.9':
-    resolution: {integrity: sha512-Z8HDtfClrRrOmXp/qmrW2Ul4271jT10B7HJlMSO56pZbdhNAgJiY7muBmyVM01wl98qdBTddt6Plc7j0P0uRlA==}
+  '@etherkit/tx-observer@0.0.10':
+    resolution: {integrity: sha512-xoevCS041syYrQLDVuwWMVMuC/gE7Nn0yaxH/w6tJ9ajgWU4RmS/FSSQ1+jM380PMnkqlPjd5skS1RIAQVOnLw==}
 
   '@etherkit/viem-tx-tracker@0.0.9':
     resolution: {integrity: sha512-ZcPSUSXpAEhI3lV6CDXxJobi0N3xq+83E6YHYq87SeT/vHrmKLXodnqOu7viTV60DBVIcuZDoI384t7VvZOlBQ==}
@@ -4703,7 +4703,7 @@ snapshots:
   '@esbuild/win32-x64@0.27.3':
     optional: true
 
-  '@etherkit/tx-observer@0.0.9':
+  '@etherkit/tx-observer@0.0.10':
     dependencies:
       lodash-es: 4.17.23
       named-logs: 0.4.1

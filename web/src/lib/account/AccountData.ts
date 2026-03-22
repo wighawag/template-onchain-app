@@ -20,6 +20,15 @@ import {
 
 export type TransactionMetadata = PopulatedMetadata;
 
+/**
+ * Extended metadata type that includes an optional operationId.
+ * When operationId is set, the transaction is added to an existing operation
+ * rather than creating a new one (used for resubmit functionality).
+ */
+export type ExtendedTransactionMetadata = TransactionMetadata & {
+	operationId?: string;
+};
+
 export type OnchainOperationMetadata = TransactionMetadata & {
 	tx: Omit<TrackedTransaction<PopulatedMetadata>, 'metadata'>;
 };
@@ -137,7 +146,6 @@ export function createAccountData(params: {
 						i === txFound.txIndex ? {...tx, nonce: transaction.nonce} : tx,
 					),
 				},
-				metadata: {...transaction.metadata, tx: transaction},
 			}));
 		} else {
 			throw new Error(`accountData not ready`);
@@ -162,9 +170,61 @@ export function createAccountData(params: {
 		}
 	}
 
+	/**
+	 * Add a new transaction to an existing operation (used for resubmit).
+	 * This adds the transaction to the operation's transactionIntent.transactions array.
+	 */
+	function addTransactionToOperation(
+		operationId: string,
+		transaction: TrackedTransaction<TransactionMetadata>,
+	) {
+		const accountData = store.get();
+		if (accountData) {
+			const currentData = accountData.get();
+			if (currentData?.status !== 'ready') {
+				throw new Error(`accountData not ready`);
+			}
+
+			// Check if operation exists
+			const operation = currentData.data.operations[operationId];
+			if (!operation) {
+				console.error(`Operation not found: ${operationId}`);
+				return;
+			}
+
+			accountData.patchItem('operations', operationId, (op) => {
+				console.log(
+					JSON.stringify(op, (k, v) =>
+						typeof v === 'bigint' ? v.toString() : v,
+					),
+				);
+				return {
+					...op,
+					transactionIntent: {
+						...op.transactionIntent,
+						// // Reset state since we're adding a new attempt ?
+						// state: undefined,
+						transactions: [
+							...op.transactionIntent.transactions,
+							{
+								broadcastTimestampMs: transaction.broadcastTimestampMs,
+								from: transaction.from,
+								hash: transaction.hash,
+								nonce: transaction.nonce,
+							},
+						],
+					},
+				};
+			});
+		} else {
+			throw new Error(`accountData not ready`);
+		}
+	}
+
 	return {
 		...store,
 		addOperationFromTrackedTransaction,
+		addTransactionToOperation,
 		updateOperationFromFetchedTransaction,
 		updateOperationFromTransactionStateUpdated,
 	};

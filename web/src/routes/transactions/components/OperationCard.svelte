@@ -118,6 +118,8 @@
 			state?.inclusion === 'Dropped'
 		);
 	}
+
+	$inspect($operationStore);
 </script>
 
 {#if $operationStore}
