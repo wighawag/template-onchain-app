@@ -72,8 +72,8 @@
 					</Empty.Media>
 					<Empty.Title>No Pending Transaction</Empty.Title>
 					<Empty.Description>
-						Note that Completed transactions are automatically removed once
-						finalized.
+						Note that Completed Successful transactions are automatically
+						removed once finalized.
 					</Empty.Description>
 				</Empty.Header>
 			</Empty.Root>
