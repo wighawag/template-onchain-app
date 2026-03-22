@@ -44,7 +44,9 @@ export interface TransactionListStoreOptions {
  * Create a transaction list store
  * @param options - Configuration options for the store including publicClient
  */
-export function createTransactionListStore(options: TransactionListStoreOptions) {
+export function createTransactionListStore(
+	options: TransactionListStoreOptions,
+) {
 	const {publicClient, useBlockIndex = false} = options;
 	const {subscribe, set, update} = writable<TransactionListState>(initialState);
 
@@ -69,7 +71,8 @@ export function createTransactionListStore(options: TransactionListStoreOptions)
 			update((state) => ({
 				...state,
 				transactions: txs,
-				lastBlockNumber: txs.length > 0 ? txs[0].blockNumber : state.lastBlockNumber,
+				lastBlockNumber:
+					txs.length > 0 ? txs[0].blockNumber : state.lastBlockNumber,
 				loading: false,
 			}));
 
@@ -93,7 +96,11 @@ export function createTransactionListStore(options: TransactionListStoreOptions)
 		summaries: TransactionSummary[],
 	): Promise<void> {
 		if (summaries.length === 0) {
-			update((state) => ({...state, detailedTransactions: [], loadingDetails: false}));
+			update((state) => ({
+				...state,
+				detailedTransactions: [],
+				loadingDetails: false,
+			}));
 			return;
 		}
 
@@ -103,7 +110,9 @@ export function createTransactionListStore(options: TransactionListStoreOptions)
 		if (newSummaries.length === 0) {
 			// All transactions already fetched, just reorder if needed
 			const currentState = get({subscribe});
-			const txMap = new Map(currentState.detailedTransactions.map((d) => [d.tx.hash, d]));
+			const txMap = new Map(
+				currentState.detailedTransactions.map((d) => [d.tx.hash, d]),
+			);
 			const reordered: DetailedTransaction[] = [];
 			for (const s of summaries) {
 				const tx = txMap.get(s.hash as `0x${string}`);

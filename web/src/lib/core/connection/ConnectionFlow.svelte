@@ -235,8 +235,18 @@
 	openWhen={($connection.wallet?.pendingRequests?.length ?? 0) > 0}
 >
 	<div class="flex flex-col items-center gap-4 py-4">
-		<svg class="h-12 w-12 animate-pulse text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+		<svg
+			class="h-12 w-12 animate-pulse text-primary"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+			stroke-width="1.5"
+		>
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+			/>
 		</svg>
 		<p class="text-center text-sm text-muted-foreground">
 			Please confirm the request in your wallet

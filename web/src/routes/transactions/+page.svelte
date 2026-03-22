@@ -39,7 +39,7 @@
 			</div>
 			<h1 class="text-3xl font-bold">Transactions</h1>
 			<p class="text-muted-foreground">
-				Track your pending and completed transactions
+				Track your pending transactions and those awaiting finality
 			</p>
 		</div>
 
@@ -70,10 +70,10 @@
 					<Empty.Media variant="icon">
 						<ListIcon />
 					</Empty.Media>
-					<Empty.Title>No Operations</Empty.Title>
+					<Empty.Title>No Pending Transaction</Empty.Title>
 					<Empty.Description>
-						You haven't performed any transactions yet. Once you interact with
-						contracts, your transactions will appear here.
+						Note that Completed transactions are automatically removed once
+						finalized.
 					</Empty.Description>
 				</Empty.Header>
 			</Empty.Root>
