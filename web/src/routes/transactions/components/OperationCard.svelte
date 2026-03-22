@@ -100,8 +100,6 @@
 		const date = new Date(timestampMs);
 		return date.toLocaleString();
 	}
-
-	$inspect($operationStore);
 </script>
 
 {#if $operationStore}
