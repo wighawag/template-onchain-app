@@ -53,7 +53,6 @@
 		const maxPriorityFeePerGas =
 			gasParams?.maxPriorityFeePerGas ?? gasParams?.gasPrice;
 
-		console.log({maxFeePerGas, maxPriorityFeePerGas});
 		if (maxFeePerGas === undefined || maxPriorityFeePerGas === undefined)
 			return undefined;
 		return {maxFeePerGas, maxPriorityFeePerGas};

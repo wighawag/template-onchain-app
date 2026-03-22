@@ -24,11 +24,9 @@ export function createTrackedWalletConnector(params: {
 				// Check if this is a resubmit (has operationId in metadata)
 				const metadata = tx.metadata as ExtendedTransactionMetadata;
 				if (metadata.operationId) {
-					console.log(`adding to ${metadata.operationId}`);
 					// Add transaction to existing operation
 					accountData.addTransactionToOperation(metadata.operationId, tx);
 				} else {
-					console.log(`new operation`);
 					// Create new operation
 					accountData.addOperationFromTrackedTransaction(tx);
 				}
@@ -38,12 +36,6 @@ export function createTrackedWalletConnector(params: {
 		unsubscribeFromFetchedTransaction = walletClient.on(
 			'transaction:fetched',
 			(tx) => {
-				console.log(
-					`transaction:fetche`,
-					JSON.stringify(tx, (k, v) =>
-						typeof v === 'bigint' ? v.toString() : v,
-					),
-				);
 				accountData.updateOperationFromFetchedTransaction(tx);
 			},
 		);

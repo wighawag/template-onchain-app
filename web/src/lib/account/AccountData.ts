@@ -220,11 +220,6 @@ export function createAccountData(params: {
 			}
 
 			accountData.patchItem('operations', operationId, (op) => {
-				console.log(
-					JSON.stringify(op, (k, v) =>
-						typeof v === 'bigint' ? v.toString() : v,
-					),
-				);
 				return {
 					...op,
 					transactionIntent: {

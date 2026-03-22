@@ -130,15 +130,6 @@ export function createToastConnector(params: {
 		// Include final flag so button changes from Inspect to Dismiss when Dropped becomes final
 		const toastId = `${key}-${inclusion}-${isFinal ? 'final' : 'pending'}`;
 
-		console.log('[toastConnector] showErrorToast:', {
-			key,
-			toastId,
-			operationName,
-			inclusion,
-			isFinal,
-			message,
-		});
-
 		// For dropped AND final transactions, directly delete without modal
 		// For dropped but NOT final, show modal with Dismiss button
 		// For other error states (NotFound), show Inspect to open modal with more options
@@ -179,27 +170,11 @@ export function createToastConnector(params: {
 		const lastInclusion = operationLastInclusion.get(key);
 		const lastFinal = operationLastFinal.get(key);
 
-		console.log('[toastConnector] showToast called:', {
-			key,
-			statusType,
-			currentInclusion,
-			currentFinal,
-			lastStatus,
-			lastInclusion,
-			lastFinal,
-			willUpdate: !(
-				lastStatus === statusType &&
-				lastInclusion === currentInclusion &&
-				lastFinal === currentFinal
-			),
-		});
-
 		if (
 			lastStatus === statusType &&
 			lastInclusion === currentInclusion &&
 			lastFinal === currentFinal
 		) {
-			console.log('[toastConnector] skipping - no change');
 			return;
 		}
 
