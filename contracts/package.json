@@ -18,7 +18,7 @@
 	"devDependencies": {
 		"@nomicfoundation/hardhat-keystore": "^3.0.5",
 		"@nomicfoundation/hardhat-network-helpers": "^3.0.4",
-		"@nomicfoundation/hardhat-node-test-runner": "^3.0.11",
+		"@nomicfoundation/hardhat-node-test-runner": "^3.0.12",
 		"@nomicfoundation/hardhat-viem": "^3.0.4",
 		"@rocketh/deploy": "^0.19.1",
 		"@rocketh/doc": "^0.19.3",
@@ -35,7 +35,7 @@
 		"cross-var": "^1.1.0",
 		"earl": "^2.0.0",
 		"forge-std": "github:foundry-rs/forge-std#v1.9.4",
-		"hardhat": "^3.1.12",
+		"hardhat": "^3.2.0",
 		"hardhat-deploy": "^2.0.3",
 		"hardhat-external-artifacts": "^0.0.6",
 		"ldenv": "^0.3.16",
@@ -47,7 +47,7 @@
 		"slippy": "^0.3.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
-		"viem": "^2.47.5",
+		"viem": "^2.47.6",
 		"wait-on": "^9.0.4",
 		"zellij-launcher": "^0.0.1"
 	},
