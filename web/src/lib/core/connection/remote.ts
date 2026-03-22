@@ -27,7 +27,7 @@ export async function establishRemoteConnection(): Promise<EstablishedConnection
 		// walletOnly: true,
 		targetStep: 'WalletConnected',
 		chainInfo,
-		prioritizeWalletProvider: false,
+		prioritizeWalletProvider: true,
 		// alwaysUseCurrentAccount: true,
 		autoConnect: true,
 		// requestSignatureAutomaticallyIfPossible: true,
