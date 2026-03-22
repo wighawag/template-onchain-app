@@ -163,8 +163,31 @@ export function createAccountData(params: {
 				// on Success we delete when inclusion is final
 				accountData.removeItem('operations', operationID);
 			} else {
-				accountData.updateItem('operations', operationID, {
-					transactionIntent: event.intent,
+				// Use patchItem to merge transactions instead of overwriting.
+				// This ensures we don't lose transactions added locally that the observer
+				// might not know about yet (e.g., in multi-tab scenarios or race conditions)
+				accountData.patchItem('operations', operationID, (operation) => {
+					const observerTxHashes = new Set(
+						event.intent.transactions.map((tx) => tx.hash),
+					);
+
+					// Start with observer's transactions (they have the latest state info)
+					const mergedTransactions = [...event.intent.transactions];
+
+					// Add any local transactions that the observer doesn't know about yet
+					for (const localTx of operation.transactionIntent.transactions) {
+						if (!observerTxHashes.has(localTx.hash)) {
+							mergedTransactions.push(localTx);
+						}
+					}
+
+					return {
+						...operation,
+						transactionIntent: {
+							...event.intent,
+							transactions: mergedTransactions,
+						},
+					};
 				});
 			}
 		}
