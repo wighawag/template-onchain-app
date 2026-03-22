@@ -6,7 +6,7 @@ import type {
 import {toast} from 'svelte-sonner';
 import type {TransactionIntent} from '@etherkit/tx-observer';
 import {subscribeToAccountDataMap} from '$lib/core/utils/data/account-data-subscription';
-import {pendingOperationModal} from '$lib/core/ui/pending-operation';
+import {pendingOperationModal} from '$lib/ui/pending-operation';
 
 /**
  * Gets a human-readable name for an operation from its metadata
@@ -170,8 +170,7 @@ export function createToastConnector(params: {
 		const operationName = getOperationName(operation);
 		const statusType = getStatusType(operation.transactionIntent);
 		const message = getStatusMessage(operation.transactionIntent);
-		const currentInclusion =
-			operation.transactionIntent.state?.inclusion ?? '';
+		const currentInclusion = operation.transactionIntent.state?.inclusion ?? '';
 		const currentFinal = !!operation.transactionIntent.state?.final;
 
 		// Skip if status AND inclusion AND final haven't changed

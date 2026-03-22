@@ -1,11 +1,11 @@
 <script lang="ts">
 	import {getUserContext, route} from '$lib';
 	import Button, {buttonVariants} from '$lib/shadcn/ui/button/button.svelte';
-	import BlockieAvatar from '../ethereum/BlockieAvatar.svelte';
+	import BlockieAvatar from '../../core/ui/ethereum/BlockieAvatar.svelte';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Drawer from '$lib/shadcn/ui/drawer/index.js';
 	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
-	import Address from '../ethereum/Address.svelte';
+	import Address from '../../core/ui/ethereum/Address.svelte';
 	import {
 		MenuIcon,
 		GithubIcon,

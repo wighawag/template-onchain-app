@@ -15,7 +15,7 @@
 	import type {OnchainOperation} from '$lib/account/AccountData';
 	import type {TransactionIntent} from '@etherkit/tx-observer';
 	import type {Readable} from 'svelte/store';
-	import {pendingOperationModal} from '$lib/core/ui/pending-operation';
+	import {pendingOperationModal} from '$lib/ui/pending-operation';
 
 	interface Props {
 		id: string;
