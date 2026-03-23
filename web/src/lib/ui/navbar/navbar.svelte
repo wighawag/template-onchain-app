@@ -33,9 +33,24 @@
 		$connection.wallet?.accounts && $connection.wallet.accounts.length > 1,
 	);
 
-	// Use the elegant API pattern: watchItemIds returns a reactive store
-	let operationIds = $derived(accountData.watchItemIds('operations'));
-	let transactionCount = $derived($operationIds.length);
+	// Watch all operations to filter and count them properly
+	let operations = $derived(accountData.watchField('operations'));
+	// Count only operations that are NOT (successfully included but not yet final)
+	// Successful final transactions are automatically removed from the store
+	// We don't want to count successful included tx that are not yet final in the badge
+	let transactionCount = $derived.by(() => {
+		let count = 0;
+		for (const id of Object.keys($operations)) {
+			const op = $operations[id];
+			const state = op.transactionIntent.state;
+			// Skip successfully included but not yet final transactions
+			if (state?.inclusion === 'Included' && state?.status === 'Success') {
+				continue;
+			}
+			count++;
+		}
+		return count;
+	});
 
 	// Derive formatted balance
 	let formattedBalance = $derived.by(() => {
@@ -239,7 +254,9 @@
 				<!-- Balance & Transactions Section -->
 				<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
 					{#if formattedBalance !== null}
-						<div class="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
+						<div
+							class="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
+						>
 							<span class="text-sm text-muted-foreground">Balance</span>
 							<span class="font-medium">{formattedBalance} ETH</span>
 						</div>
