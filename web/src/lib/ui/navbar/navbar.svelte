@@ -172,7 +172,7 @@
 	</div>
 	<Drawer.Root bind:open={showMenu} direction="right">
 		<Drawer.Portal to="#--layer-drawer" />
-		<Drawer.Content>
+		<Drawer.Content class="select-text **:select-text">
 			{#if connection.isTargetStepReached($connection)}
 				<!-- Account Section -->
 				<div class="flex flex-col gap-2 px-4 pt-4">
