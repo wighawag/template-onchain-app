@@ -8,12 +8,10 @@
 	import Address from '../../core/ui/ethereum/Address.svelte';
 	import Badge from '$lib/shadcn/ui/badge/badge.svelte';
 	import {formatBalance} from '$lib/core/utils/format/balance';
-	import {
-		MenuIcon,
-		GithubIcon,
-		MessageCircleIcon,
-		ChevronDownIcon,
-	} from '@o7/icon/lucide';
+	import MenuIcon from '@o7/icon/lucide/menu.svelte';
+	import GithubIcon from '@o7/icon/lucide/github.svelte';
+	import MessageCircleIcon from '@o7/icon/lucide/message-circle.svelte';
+	import ChevronDownIcon from '@o7/icon/lucide/chevron-down.svelte';
 	import {page} from '$app/state';
 
 	let {

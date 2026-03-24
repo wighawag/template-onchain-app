@@ -3,7 +3,7 @@
 	import {getUserContext} from '$lib';
 	import * as Empty from '$lib/shadcn/ui/empty';
 	import * as Separator from '$lib/shadcn/ui/separator';
-	import {ListIcon} from '@o7/icon/lucide';
+	import ListIcon from '@o7/icon/lucide/list.svelte';
 	import OperationCard from './components/OperationCard.svelte';
 
 	const {accountData} = getUserContext();

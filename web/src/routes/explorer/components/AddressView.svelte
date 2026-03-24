@@ -14,15 +14,13 @@
 		List as TabsList,
 		Trigger as TabsTrigger,
 	} from '$lib/shadcn/ui/tabs';
-	import {
-		ArrowLeftIcon,
-		WalletIcon,
-		FileCodeIcon,
-		CopyIcon,
-		ExpandIcon,
-		ChevronsDownIcon,
-		ExternalLinkIcon,
-	} from '@o7/icon/lucide';
+	import ArrowLeftIcon from '@o7/icon/lucide/arrow-left.svelte';
+	import WalletIcon from '@o7/icon/lucide/wallet.svelte';
+	import FileCodeIcon from '@o7/icon/lucide/file-code.svelte';
+	import CopyIcon from '@o7/icon/lucide/copy.svelte';
+	import ExpandIcon from '@o7/icon/lucide/expand.svelte';
+	import ChevronsDownIcon from '@o7/icon/lucide/chevrons-down.svelte';
+	import ExternalLinkIcon from '@o7/icon/lucide/external-link.svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import ContractFunction from '../../contracts/components/ContractFunction.svelte';
 	import {

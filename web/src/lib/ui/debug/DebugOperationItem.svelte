@@ -1,12 +1,10 @@
 <script lang="ts">
 	import {Badge} from '$lib/shadcn/ui/badge';
-	import {
-		ClockIcon,
-		CircleCheckIcon,
-		TriangleAlertIcon,
-		CircleXIcon,
-		CircleQuestionMarkIcon,
-	} from '@o7/icon/lucide';
+	import ClockIcon from '@o7/icon/lucide/clock.svelte';
+	import CircleCheckIcon from '@o7/icon/lucide/circle-check.svelte';
+	import TriangleAlertIcon from '@o7/icon/lucide/triangle-alert.svelte';
+	import CircleXIcon from '@o7/icon/lucide/circle-x.svelte';
+	import CircleQuestionMarkIcon from '@o7/icon/lucide/circle-question-mark.svelte';
 	import type {OnchainOperation} from '$lib/account/AccountData';
 	import type {TransactionIntent} from '@etherkit/tx-observer';
 	import type {Readable} from 'svelte/store';

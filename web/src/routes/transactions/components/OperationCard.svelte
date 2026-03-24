@@ -3,15 +3,13 @@
 	import * as Card from '$lib/shadcn/ui/card';
 	import {Badge} from '$lib/shadcn/ui/badge';
 	import {Button} from '$lib/shadcn/ui/button';
-	import {
-		ExternalLinkIcon,
-		ClockIcon,
-		CircleCheckIcon,
-		TriangleAlertIcon,
-		CircleXIcon,
-		CircleQuestionMarkIcon,
-		SearchIcon,
-	} from '@o7/icon/lucide';
+	import ExternalLinkIcon from '@o7/icon/lucide/external-link.svelte';
+	import ClockIcon from '@o7/icon/lucide/clock.svelte';
+	import CircleCheckIcon from '@o7/icon/lucide/circle-check.svelte';
+	import TriangleAlertIcon from '@o7/icon/lucide/triangle-alert.svelte';
+	import CircleXIcon from '@o7/icon/lucide/circle-x.svelte';
+	import CircleQuestionMarkIcon from '@o7/icon/lucide/circle-question-mark.svelte';
+	import SearchIcon from '@o7/icon/lucide/search.svelte';
 	import type {OnchainOperation} from '$lib/account/AccountData';
 	import type {TransactionIntent} from '@etherkit/tx-observer';
 	import type {Readable} from 'svelte/store';

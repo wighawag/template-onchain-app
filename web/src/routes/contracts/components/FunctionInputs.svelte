@@ -4,7 +4,7 @@
 	import Input from '$lib/shadcn/ui/input/input.svelte';
 	import AddressInput from '$lib/core/ui/ethereum/AddressInput.svelte';
 	import * as Alert from '$lib/shadcn/ui/alert';
-	import {CircleAlertIcon} from '@o7/icon/lucide';
+	import CircleAlertIcon from '@o7/icon/lucide/circle-alert.svelte';
 	import {
 		getInputFieldType,
 		getInputPlaceholder,
