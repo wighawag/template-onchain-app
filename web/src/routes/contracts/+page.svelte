@@ -125,12 +125,7 @@
 					<div class="rounded-lg bg-muted/50 p-4">
 						<h2 class="text-xl font-semibold">{selectedContract.name}</h2>
 
-						<a href={route(`/explorer/address/${selectedContract.address}`)}
-							><Address
-								value={selectedContract.address}
-								class="hover:underline"
-							/></a
-						>
+						<Address value={selectedContract.address} linkTo="auto" />
 					</div>
 
 					{#if selectedContract.viewFunctions.length === 0 && selectedContract.writeFunctions.length === 0}

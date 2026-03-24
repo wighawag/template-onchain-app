@@ -61,7 +61,7 @@
 								value={tx.hash}
 								truncate={{start: 6, end: 4}}
 								size="sm"
-								linkTo="internal"
+								linkTo="auto"
 							/>
 						</div>
 						<div class="flex items-center gap-3 text-xs text-muted-foreground">
@@ -79,7 +79,7 @@
 			<TransactionHash
 				value={transactions[0].hash}
 				truncate={{start: 8, end: 6}}
-				linkTo="internal"
+				linkTo="auto"
 			/>
 		</div>
 	</div>

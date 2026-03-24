@@ -112,7 +112,7 @@
 		{#if fromAddress}
 			<span class="text-muted-foreground">From:</span>
 			<span>
-				<Address value={fromAddress} linkTo="internal" />
+				<Address value={fromAddress} linkTo="auto" />
 			</span>
 		{/if}
 

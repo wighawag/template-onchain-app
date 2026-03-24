@@ -171,14 +171,6 @@
 					</div>
 					<div class="mt-2 flex items-center gap-2">
 						<Address value={address} />
-						<Button
-							onclick={() => copyToClipboard(address!)}
-							variant="ghost"
-							size="icon"
-							class="h-6 w-6"
-						>
-							<CopyIcon class="h-3 w-3" />
-						</Button>
 					</div>
 					{#if contractInfo}
 						<div class="mt-1 text-sm text-muted-foreground">

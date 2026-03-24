@@ -19,6 +19,7 @@
 	} from '@etherplay/connect';
 	import {route} from '$lib';
 	import type {WalletClient} from '$lib/context/types';
+	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
 
 	interface Props {
 		functionName: string;
@@ -194,7 +195,7 @@
 						href={route(`/explorer/tx/${transactionHash}`)}
 						class="text-primary hover:underline"
 					>
-						<Address value={transactionHash} />
+						<TransactionHash value={transactionHash} linkTo="auto" />
 					</a>
 				</Alert.Description>
 			</Alert.Root>

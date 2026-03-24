@@ -1,4 +1,10 @@
+import {PUBLIC_USE_INTERNAL_EXPLORER} from '$env/static/public';
 import deploymentsFromFiles from '$lib/deployments';
+
+/**
+ * Link destination options for address/transaction components
+ */
+export type LinkToOption = 'internal' | 'external' | 'both' | 'auto' | false;
 
 /**
  * Get the block explorer URL for a transaction hash
@@ -34,4 +40,39 @@ export function getBlockExplorerName(): string | null {
 export function hasBlockExplorer(): boolean {
 	const blockExplorers = (deploymentsFromFiles.chain as any).blockExplorers;
 	return !!blockExplorers?.default?.url;
+}
+
+/**
+ * Check if internal explorer is enabled via PUBLIC_USE_INTERNAL_EXPLORER env var
+ * Returns false if not set or empty
+ */
+export function hasInternalExplorer(): boolean {
+	return PUBLIC_USE_INTERNAL_EXPLORER === 'true';
+}
+
+/**
+ * Resolve 'auto' linkTo option based on available explorers
+ * - If internal + external available: 'both'
+ * - If only internal available: 'internal'
+ * - If only external available: 'external'
+ * - If neither available: false
+ */
+export function resolveAutoLinkTo(): 'internal' | 'external' | 'both' | false {
+	const hasInternal = hasInternalExplorer();
+	const hasExternal = hasBlockExplorer();
+
+	if (hasInternal && hasExternal) return 'both';
+	if (hasInternal) return 'internal';
+	if (hasExternal) return 'external';
+	return false;
+}
+
+/**
+ * Resolve linkTo option, handling 'auto' specially
+ */
+export function resolveLinkTo(
+	linkTo: LinkToOption,
+): 'internal' | 'external' | 'both' | false {
+	if (linkTo === 'auto') return resolveAutoLinkTo();
+	return linkTo;
 }

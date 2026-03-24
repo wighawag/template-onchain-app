@@ -31,7 +31,7 @@
 		size?: TxHashSize;
 		mono?: boolean;
 		showCopy?: boolean;
-		linkTo?: 'internal' | 'external' | 'both' | false;
+		linkTo?: 'internal' | 'external' | 'both' | 'auto' | false;
 		ref?: HTMLSpanElement | null;
 	}
 </script>
@@ -42,6 +42,7 @@
 	import {
 		getBlockExplorerTxUrl,
 		hasBlockExplorer,
+		resolveLinkTo,
 	} from '$lib/core/utils/ethereum/blockExplorer';
 
 	let {
@@ -75,10 +76,19 @@
 	const displayText = $derived(formatHash(value));
 	const internalUrl = $derived(route(`/explorer/tx/${value}`));
 	const externalUrl = $derived(getBlockExplorerTxUrl(value));
-	const showExternalLink = $derived(
-		(linkTo === 'external' || linkTo === 'both') && hasBlockExplorer(),
+	const resolvedLinkTo = $derived(resolveLinkTo(linkTo));
+	// When internal is available (internal or both), text links to internal
+	const showInternalLink = $derived(
+		resolvedLinkTo === 'internal' || resolvedLinkTo === 'both',
 	);
-	const showInternalLink = $derived(linkTo === 'internal' || linkTo === 'both');
+	// When external-only, text links directly to external (no icon)
+	const showExternalAsTextLink = $derived(
+		resolvedLinkTo === 'external' && hasBlockExplorer(),
+	);
+	// When both, show external icon as secondary action
+	const showExternalIcon = $derived(
+		resolvedLinkTo === 'both' && hasBlockExplorer(),
+	);
 </script>
 
 <span
@@ -90,6 +100,16 @@
 	{#if showInternalLink}
 		<a
 			href={internalUrl}
+			data-slot="tx-hash-link"
+			class="text-primary hover:underline"
+		>
+			{displayText}
+		</a>
+	{:else if showExternalAsTextLink && externalUrl}
+		<a
+			href={externalUrl}
+			target="_blank"
+			rel="noopener noreferrer"
 			data-slot="tx-hash-link"
 			class="text-primary hover:underline"
 		>
@@ -115,7 +135,7 @@
 		</button>
 	{/if}
 
-	{#if showExternalLink && externalUrl}
+	{#if showExternalIcon && externalUrl}
 		<a
 			href={externalUrl}
 			target="_blank"

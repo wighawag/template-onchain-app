@@ -32,7 +32,7 @@
 		mono?: boolean;
 		showCopy?: boolean;
 		resolveENS?: boolean;
-		linkTo?: 'internal' | 'external' | 'both' | false;
+		linkTo?: 'internal' | 'external' | 'both' | 'auto' | false;
 		ref?: HTMLSpanElement | null;
 	}
 </script>
@@ -49,6 +49,7 @@
 	import {
 		getBlockExplorerAddressUrl,
 		hasBlockExplorer,
+		resolveLinkTo,
 	} from '$lib/core/utils/ethereum/blockExplorer';
 
 	let {
@@ -109,11 +110,18 @@
 	const displayText = $derived(ensName || formatAddress(value));
 	const internalUrl = $derived(route(`/explorer/address/${value}`));
 	const externalUrl = $derived(getBlockExplorerAddressUrl(value));
-	const showExternalLink = $derived(
-		(linkTo === 'external' || linkTo === 'both') && hasBlockExplorer(),
-	);
+	const resolvedLinkTo = $derived(resolveLinkTo(linkTo));
+	// When internal is available (internal or both), text links to internal
 	const showInternalLink = $derived(
-		linkTo === 'internal' || linkTo === 'both',
+		resolvedLinkTo === 'internal' || resolvedLinkTo === 'both',
+	);
+	// When external-only, text links directly to external (no icon)
+	const showExternalAsTextLink = $derived(
+		resolvedLinkTo === 'external' && hasBlockExplorer(),
+	);
+	// When both, show external icon as secondary action
+	const showExternalIcon = $derived(
+		resolvedLinkTo === 'both' && hasBlockExplorer(),
 	);
 </script>
 
@@ -126,6 +134,16 @@
 	{#if showInternalLink}
 		<a
 			href={internalUrl}
+			data-slot="address-link"
+			class="text-primary hover:underline"
+		>
+			{displayText}
+		</a>
+	{:else if showExternalAsTextLink && externalUrl}
+		<a
+			href={externalUrl}
+			target="_blank"
+			rel="noopener noreferrer"
 			data-slot="address-link"
 			class="text-primary hover:underline"
 		>
@@ -155,7 +173,7 @@
 		</button>
 	{/if}
 
-	{#if showExternalLink && externalUrl}
+	{#if showExternalIcon && externalUrl}
 		<a
 			href={externalUrl}
 			target="_blank"
