@@ -41,7 +41,10 @@ export function createENSService(): ENSContext {
 	const cache: ENSCache = new Map();
 	const addressCache: ENSAddressCache = new Map();
 	const pendingRequests = new Map<`0x${string}`, Promise<string | null>>();
-	const pendingAddressRequests = new Map<string, Promise<`0x${string}` | null>>();
+	const pendingAddressRequests = new Map<
+		string,
+		Promise<`0x${string}` | null>
+	>();
 
 	/**
 	 * Get the current ENS state for an address (synchronous).
@@ -146,7 +149,9 @@ export function createENSService(): ENSContext {
 		const fetchPromise = (async (): Promise<`0x${string}` | null> => {
 			try {
 				logger.debug(`Resolving ENS address for ${name}`);
-				const address = await publicClient.getEnsAddress({name: normalizedName});
+				const address = await publicClient.getEnsAddress({
+					name: normalizedName,
+				});
 				logger.debug(`ENS address resolved for ${name}: ${address}`);
 
 				addressCache.set(normalizedName, {address, loading: false});

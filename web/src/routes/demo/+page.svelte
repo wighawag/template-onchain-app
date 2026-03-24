@@ -8,6 +8,7 @@
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import ImgBlockie from '$lib/core/ui/ethereum/ImgBlockie.svelte';
+	import BlockieAvatar from '$lib/core/ui/ethereum/BlockieAvatar.svelte';
 
 	let dependencies = getUserContext();
 
@@ -118,9 +119,10 @@
 					<div
 						class="flex items-center gap-3 rounded-lg border px-4 py-3 sm:gap-4"
 					>
-						<ImgBlockie
+						<BlockieAvatar
 							address={message.account}
 							class="h-8 w-8 shrink-0 rounded-full"
+							showAddressOnTap
 						/>
 						<Address
 							value={message.account}
