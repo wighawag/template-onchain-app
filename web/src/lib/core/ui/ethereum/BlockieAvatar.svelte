@@ -70,6 +70,7 @@
 		</Popover.Trigger>
 		<Popover.Content 
 			class="w-auto min-w-64 p-4" 
+			side="top"
 			interactOutsideBehavior="defer-otherwise-close"
 			onInteractOutside={(e) => {
 				const target = e.target as HTMLElement;
