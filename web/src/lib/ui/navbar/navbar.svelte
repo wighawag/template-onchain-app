@@ -13,7 +13,7 @@
 		GithubIcon,
 		MessageCircleIcon,
 		ChevronDownIcon,
-	} from '@lucide/svelte';
+	} from '@o7/icon/lucide';
 	import {page} from '$app/state';
 
 	let {

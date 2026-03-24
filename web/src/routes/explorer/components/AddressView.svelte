@@ -22,7 +22,7 @@
 		ExpandIcon,
 		ChevronsDownIcon,
 		ExternalLinkIcon,
-	} from '@lucide/svelte';
+	} from '@o7/icon/lucide';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import ContractFunction from '../../contracts/components/ContractFunction.svelte';
 	import {

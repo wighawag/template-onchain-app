@@ -37,7 +37,7 @@
 </script>
 
 <script lang="ts">
-	import {CheckIcon, CopyIcon, ExternalLinkIcon} from '@lucide/svelte';
+	import {CheckIcon, CopyIcon, ExternalLinkIcon} from '@o7/icon/lucide';
 	import {route} from '$lib';
 	import {
 		getBlockExplorerTxUrl,
