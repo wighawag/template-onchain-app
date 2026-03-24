@@ -131,7 +131,7 @@
 				<div class="flex flex-wrap items-center gap-2">
 					<TransactionHash
 						value={tx.hash}
-						linkTo="internal"
+						linkTo="both"
 						size="sm"
 						showCopy={false}
 					/>
@@ -180,7 +180,7 @@
 								<span class="text-muted-foreground">Created:</span>
 								<Address
 									value={contractAddress}
-									linkTo="internal"
+									linkTo="both"
 									showCopy={false}
 								/>
 							</div>
@@ -199,12 +199,12 @@
 				<div class="flex flex-wrap items-center gap-3 text-xs">
 					<div class="flex items-center gap-1">
 						<span class="text-muted-foreground">From:</span>
-						<Address value={tx.from} linkTo="internal" size="xs" />
+						<Address value={tx.from} linkTo="both" size="xs" />
 					</div>
 					{#if tx.to}
 						<div class="flex items-center gap-1">
 							<span class="text-muted-foreground">To:</span>
-							<Address value={tx.to} linkTo="internal" size="xs" />
+							<Address value={tx.to} linkTo="both" size="xs" />
 						</div>
 					{/if}
 				</div>

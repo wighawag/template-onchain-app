@@ -170,7 +170,7 @@
 						{/if}
 					</div>
 					<div class="mt-2 flex items-center gap-2">
-						<Address value={address} />
+						<Address value={address} linkTo="both" />
 					</div>
 					{#if contractInfo}
 						<div class="mt-1 text-sm text-muted-foreground">

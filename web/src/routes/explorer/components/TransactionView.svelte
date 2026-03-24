@@ -212,7 +212,7 @@
 
 					<!-- Transaction Hash -->
 					<div class="mt-1 flex items-center gap-2">
-						<TransactionHash value={txHash} />
+						<TransactionHash value={txHash} linkTo="both" />
 					</div>
 
 					<!-- Transaction Status -->
@@ -384,14 +384,14 @@
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">From</div>
 							<div class="font-mono">
-								<Address value={tx.from} linkTo="internal" />
+								<Address value={tx.from} linkTo="both" />
 							</div>
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">To</div>
 							{#if tx.to}
 								<div class="font-mono">
-									<Address value={tx.to} linkTo="internal" />
+									<Address value={tx.to} linkTo="both" />
 								</div>
 							{:else}
 								<div class="font-mono text-muted-foreground">
@@ -405,7 +405,7 @@
 									Created Contract
 								</div>
 								<div class="font-mono">
-									<Address value={receipt.contractAddress} linkTo="internal" />
+									<Address value={receipt.contractAddress} linkTo="both" />
 								</div>
 							</div>
 						{/if}
@@ -499,10 +499,7 @@
 													>Address:</span
 												>
 												<span class="ml-2 font-mono"
-													><Address
-														value={log.address}
-														linkTo="internal"
-													/></span
+													><Address value={log.address} linkTo="both" /></span
 												>
 											</div>
 											<div>
@@ -543,7 +540,7 @@
 													</div>
 												{/if}
 											</div>
-											<Address value={event.address} linkTo="internal" />
+											<Address value={event.address} linkTo="both" />
 										</div>
 										<Separator.Root class="my-3" />
 										<div class="grid gap-3">
@@ -562,7 +559,7 @@
 												<span class="ml-2 font-mono"
 													><TransactionHash
 														value={event.txHash as `0x${string}`}
-														linkTo="internal"
+														linkTo="both"
 													/></span
 												>
 											</div>
