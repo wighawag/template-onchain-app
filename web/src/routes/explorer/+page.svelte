@@ -5,7 +5,7 @@
 	import * as Separator from '$lib/shadcn/ui/separator';
 	import {Input} from '$lib/shadcn/ui/input';
 	import {Button} from '$lib/shadcn/ui/button';
-	import {SearchIcon} from '@lucide/svelte';
+	import {SearchIcon} from '@o7/icon/lucide';
 	import TransactionList from './components/TransactionList.svelte';
 	import {route} from '$lib';
 

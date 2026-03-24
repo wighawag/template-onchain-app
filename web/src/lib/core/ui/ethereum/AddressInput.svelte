@@ -59,7 +59,7 @@
 		LoaderCircleIcon,
 		CheckCircleIcon,
 		AlertCircleIcon,
-	} from '@lucide/svelte';
+	} from '@o7/icon/lucide';
 	import type {ENSContext} from '$lib/core/ens';
 	import ImgBlockie from './ImgBlockie.svelte';
 	import Address from './Address.svelte';

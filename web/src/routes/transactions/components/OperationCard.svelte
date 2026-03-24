@@ -11,7 +11,7 @@
 		CircleXIcon,
 		CircleQuestionMarkIcon,
 		SearchIcon,
-	} from '@lucide/svelte';
+	} from '@o7/icon/lucide';
 	import type {OnchainOperation} from '$lib/account/AccountData';
 	import type {TransactionIntent} from '@etherkit/tx-observer';
 	import type {Readable} from 'svelte/store';
