@@ -43,7 +43,7 @@
 		CopyIcon,
 		LoaderCircleIcon,
 		ExternalLinkIcon,
-	} from '@lucide/svelte';
+	} from '@o7/icon/lucide';
 	import {getContext, onMount} from 'svelte';
 	import {route} from '$lib';
 	import {

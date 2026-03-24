@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import {Button} from '$lib/shadcn/ui/button/index.js';
-	import {AlertTriangleIcon, InfoIcon} from '@lucide/svelte';
+	import {AlertTriangleIcon, InfoIcon} from '@o7/icon/lucide';
 
 	interface Props {
 		open: boolean;
