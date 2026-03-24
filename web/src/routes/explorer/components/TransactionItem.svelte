@@ -9,6 +9,7 @@
 		ZapIcon,
 	} from '@lucide/svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
+	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
 	import type {PublicClient, Transaction, TransactionReceipt} from 'viem';
 	import {formatGwei} from 'viem';
 	import {
@@ -128,13 +129,12 @@
 			<div class="min-w-0 flex-1 space-y-2">
 				<!-- Transaction Hash and Status -->
 				<div class="flex flex-wrap items-center gap-2">
-					<button
-						type="button"
-						class="font-mono text-sm font-medium text-primary hover:underline"
-						onclick={viewTransaction}
-					>
-						{truncateTxHash(tx.hash)}
-					</button>
+					<TransactionHash
+						value={tx.hash}
+						linkTo="both"
+						size="sm"
+						showCopy={false}
+					/>
 
 					<!-- Status Indicator -->
 					<div class="flex items-center gap-1">
@@ -178,13 +178,11 @@
 						{#if contractAddress}
 							<div class="flex items-center gap-1 text-xs">
 								<span class="text-muted-foreground">Created:</span>
-								<button
-									type="button"
-									class="text-primary hover:underline"
-									onclick={(e) => viewAddress(contractAddress, e)}
-								>
-									<Address value={contractAddress} showCopy={false} />
-								</button>
+								<Address
+									value={contractAddress}
+									linkTo="both"
+									showCopy={false}
+								/>
 							</div>
 						{:else if loading}
 							<div
@@ -201,12 +199,12 @@
 				<div class="flex flex-wrap items-center gap-3 text-xs">
 					<div class="flex items-center gap-1">
 						<span class="text-muted-foreground">From:</span>
-						<Address value={tx.from} />
+						<Address value={tx.from} linkTo="both" size="xs" />
 					</div>
 					{#if tx.to}
 						<div class="flex items-center gap-1">
 							<span class="text-muted-foreground">To:</span>
-							<Address value={tx.to} />
+							<Address value={tx.to} linkTo="both" size="xs" />
 						</div>
 					{/if}
 				</div>

@@ -2,6 +2,7 @@
 	import type {AbiParameter} from 'viem';
 	import Label from '$lib/shadcn/ui/label/label.svelte';
 	import Input from '$lib/shadcn/ui/input/input.svelte';
+	import AddressInput from '$lib/core/ui/ethereum/AddressInput.svelte';
 	import * as Alert from '$lib/shadcn/ui/alert';
 	import {CircleAlertIcon} from '@lucide/svelte';
 	import {
@@ -21,9 +22,15 @@
 	let {inputs, values, errors}: Props = $props();
 
 	// Watch for changes in values and validate
+	// Skip validation for address types since AddressInput handles its own validation
 	$effect(() => {
 		for (const [index, input] of inputs.entries()) {
 			const key = getInputKey(input, index);
+			// Skip address type validation - AddressInput handles it
+			if (input.type === 'address') {
+				delete errors[key];
+				continue;
+			}
 			if (values[key] !== undefined) {
 				const validation = validateInputValue(input.type, String(values[key]));
 				if (!validation.valid && validation.error) {
@@ -46,7 +53,13 @@
 				>
 			</Label>
 
-			{#if getInputFieldType(input.type) === 'select'}
+			{#if input.type === 'address'}
+				<AddressInput
+					id={`input-${index}`}
+					bind:value={values[getInputKey(input, index)]}
+					class="text-sm"
+				/>
+			{:else if getInputFieldType(input.type) === 'select'}
 				<select
 					id={`input-${index}`}
 					class="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"

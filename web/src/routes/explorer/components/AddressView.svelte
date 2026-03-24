@@ -21,6 +21,7 @@
 		CopyIcon,
 		ExpandIcon,
 		ChevronsDownIcon,
+		ExternalLinkIcon,
 	} from '@lucide/svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import ContractFunction from '../../contracts/components/ContractFunction.svelte';
@@ -33,6 +34,8 @@
 		findContractByAddress,
 		isContract,
 		formatBytecode,
+		getBlockExplorerAddressUrl,
+		hasBlockExplorer,
 	} from '../lib/utils';
 	import {formatEther} from 'viem';
 
@@ -167,15 +170,7 @@
 						{/if}
 					</div>
 					<div class="mt-2 flex items-center gap-2">
-						<Address value={address} />
-						<Button
-							onclick={() => copyToClipboard(address!)}
-							variant="ghost"
-							size="icon"
-							class="h-6 w-6"
-						>
-							<CopyIcon class="h-3 w-3" />
-						</Button>
+						<Address value={address} linkTo="both" />
 					</div>
 					{#if contractInfo}
 						<div class="mt-1 text-sm text-muted-foreground">
@@ -183,14 +178,31 @@
 						</div>
 					{/if}
 				</div>
-				<Button
-					onclick={() => window.history.back()}
-					variant="outline"
-					size="sm"
-				>
-					<ArrowLeftIcon class="mr-2 h-4 w-4" />
-					Back
-				</Button>
+				<div class="flex gap-2">
+					{#if hasBlockExplorer() && address}
+						{@const explorerUrl = getBlockExplorerAddressUrl(address)}
+						{#if explorerUrl}
+							<Button
+								href={explorerUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								variant="outline"
+								size="sm"
+							>
+								<ExternalLinkIcon class="mr-2 h-4 w-4" />
+								View in Explorer
+							</Button>
+						{/if}
+					{/if}
+					<Button
+						onclick={() => window.history.back()}
+						variant="outline"
+						size="sm"
+					>
+						<ArrowLeftIcon class="mr-2 h-4 w-4" />
+						Back
+					</Button>
+				</div>
 			</div>
 
 			<Separator.Root />

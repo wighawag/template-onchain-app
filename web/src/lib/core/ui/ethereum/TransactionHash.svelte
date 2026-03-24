@@ -3,7 +3,7 @@
 	import type {HTMLAttributes} from 'svelte/elements';
 	import {type VariantProps, tv} from 'tailwind-variants';
 
-	export const addressVariants = tv({
+	export const txHashVariants = tv({
 		base: 'inline-flex items-center gap-1',
 		variants: {
 			size: {
@@ -19,35 +19,28 @@
 		},
 		defaultVariants: {
 			size: 'default',
-			mono: false,
+			mono: true,
 		},
 	});
 
-	export type AddressSize = VariantProps<typeof addressVariants>['size'];
+	export type TxHashSize = VariantProps<typeof txHashVariants>['size'];
 
-	export interface AddressProps extends HTMLAttributes<HTMLSpanElement> {
+	export interface TransactionHashProps extends HTMLAttributes<HTMLSpanElement> {
 		value: `0x${string}`;
 		truncate?: {start: number; end: number} | false;
-		size?: AddressSize;
+		size?: TxHashSize;
 		mono?: boolean;
 		showCopy?: boolean;
-		resolveENS?: boolean;
 		linkTo?: 'internal' | 'external' | 'both' | 'auto' | false;
 		ref?: HTMLSpanElement | null;
 	}
 </script>
 
 <script lang="ts">
-	import {
-		CheckIcon,
-		CopyIcon,
-		LoaderCircleIcon,
-		ExternalLinkIcon,
-	} from '@lucide/svelte';
-	import {getContext, onMount} from 'svelte';
+	import {CheckIcon, CopyIcon, ExternalLinkIcon} from '@lucide/svelte';
 	import {route} from '$lib';
 	import {
-		getBlockExplorerAddressUrl,
+		getBlockExplorerTxUrl,
 		hasBlockExplorer,
 		resolveLinkTo,
 	} from '$lib/core/utils/ethereum/blockExplorer';
@@ -55,51 +48,24 @@
 	let {
 		class: className,
 		value,
-		truncate = {start: 4, end: 4},
+		truncate = {start: 6, end: 4},
 		size = 'default',
-		mono = false,
+		mono = true,
 		showCopy = true,
-		resolveENS = true,
 		linkTo = false,
 		ref = $bindable(null),
 		...restProps
-	}: AddressProps = $props();
+	}: TransactionHashProps = $props();
 
-	// Get ENS context if available - component works without it
-	const ensContext = getContext<
-		{fetchENS: (address: `0x${string}`) => Promise<string | null>} | undefined
-	>('ens');
-
-	let ensName: string | null = $state(null);
-	let loading = $state(false);
 	let copied = $state(false);
 
-	onMount(() => {
-		if (value && ensContext && resolveENS) {
-			loadENS();
-		}
-	});
-
-	async function loadENS() {
-		if (!value || !ensContext) {
-			return;
-		}
-		loading = true;
-		ensName = null;
-		try {
-			ensName = await ensContext.fetchENS(value);
-		} finally {
-			loading = false;
-		}
+	function formatHash(hash: string): string {
+		if (!hash) return '';
+		if (truncate === false) return hash;
+		return `${hash.slice(0, 2 + truncate.start)}...${hash.slice(-truncate.end)}`;
 	}
 
-	function formatAddress(addr: string): string {
-		if (!addr) return '';
-		if (truncate === false) return addr;
-		return `${addr.slice(0, 2 + truncate.start)}...${addr.slice(-truncate.end)}`;
-	}
-
-	async function copyAddress(event: MouseEvent) {
+	async function copyHash(event: MouseEvent) {
 		event.stopPropagation();
 		event.preventDefault();
 		await navigator.clipboard.writeText(value);
@@ -107,9 +73,9 @@
 		setTimeout(() => (copied = false), 1000);
 	}
 
-	const displayText = $derived(ensName || formatAddress(value));
-	const internalUrl = $derived(route(`/explorer/address/${value}`));
-	const externalUrl = $derived(getBlockExplorerAddressUrl(value));
+	const displayText = $derived(formatHash(value));
+	const internalUrl = $derived(route(`/explorer/tx/${value}`));
+	const externalUrl = $derived(getBlockExplorerTxUrl(value));
 	const resolvedLinkTo = $derived(resolveLinkTo(linkTo));
 	// When internal is available (internal or both), text links to internal
 	const showInternalLink = $derived(
@@ -127,14 +93,14 @@
 
 <span
 	bind:this={ref}
-	data-slot="address"
-	class={cn(addressVariants({size, mono}), className)}
+	data-slot="transaction-hash"
+	class={cn(txHashVariants({size, mono}), className)}
 	{...restProps}
 >
 	{#if showInternalLink}
 		<a
 			href={internalUrl}
-			data-slot="address-link"
+			data-slot="tx-hash-link"
 			class="text-primary hover:underline"
 		>
 			{displayText}
@@ -144,26 +110,22 @@
 			href={externalUrl}
 			target="_blank"
 			rel="noopener noreferrer"
-			data-slot="address-link"
+			data-slot="tx-hash-link"
 			class="text-primary hover:underline"
 		>
 			{displayText}
 		</a>
 	{:else}
-		<span data-slot="address-text">{displayText}</span>
-	{/if}
-
-	{#if loading}
-		<LoaderCircleIcon class="size-3 shrink-0 animate-spin opacity-50" />
+		<span data-slot="tx-hash-text">{displayText}</span>
 	{/if}
 
 	{#if showCopy}
 		<button
 			type="button"
 			class="inline-flex size-4 shrink-0 cursor-copy items-center justify-center rounded opacity-50 transition-opacity hover:opacity-100 focus:opacity-100"
-			title="Copy address"
-			onclick={copyAddress}
-			aria-label="Copy address"
+			title="Copy transaction hash"
+			onclick={copyHash}
+			aria-label="Copy transaction hash"
 		>
 			{#if copied}
 				<CheckIcon class="size-3 text-green-500" />
