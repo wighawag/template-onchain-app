@@ -1,6 +1,6 @@
 <script lang="ts">
 	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
-	import Address from '$lib/core/ui/ethereum/Address.svelte';
+	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
 	import {ChevronDownIcon} from '@lucide/svelte';
 	import type {BroadcastedTransaction} from '@etherkit/tx-observer';
 
@@ -57,11 +57,11 @@
 					>
 						<div class="flex items-center gap-2">
 							<span class="text-muted-foreground">#{i + 1}</span>
-							<Address
+							<TransactionHash
 								value={tx.hash}
 								truncate={{start: 6, end: 4}}
 								size="sm"
-								mono
+								linkTo="internal"
 							/>
 						</div>
 						<div class="flex items-center gap-3 text-xs text-muted-foreground">
@@ -76,10 +76,10 @@
 	<div class="text-sm">
 		<span class="text-muted-foreground">Transaction Hash:</span>
 		<div class="mt-1">
-			<Address
+			<TransactionHash
 				value={transactions[0].hash}
 				truncate={{start: 8, end: 6}}
-				mono
+				linkTo="internal"
 			/>
 		</div>
 	</div>

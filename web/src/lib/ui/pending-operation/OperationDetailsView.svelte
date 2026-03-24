@@ -96,7 +96,9 @@
 		{#if transactionResult}
 			<span class="text-muted-foreground">Result:</span>
 			<span>
-				<Badge variant={transactionResult === 'Success' ? 'default' : 'destructive'}>
+				<Badge
+					variant={transactionResult === 'Success' ? 'default' : 'destructive'}
+				>
 					{transactionResult}
 				</Badge>
 			</span>
@@ -110,7 +112,7 @@
 		{#if fromAddress}
 			<span class="text-muted-foreground">From:</span>
 			<span>
-				<Address value={fromAddress} />
+				<Address value={fromAddress} linkTo="internal" />
 			</span>
 		{/if}
 

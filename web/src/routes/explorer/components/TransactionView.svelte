@@ -14,8 +14,10 @@
 		FileCodeIcon,
 		HashIcon,
 		AlertTriangleIcon,
+		ExternalLinkIcon,
 	} from '@lucide/svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
+	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
 	import type {PublicClient} from 'viem';
 	import {formatGwei} from 'viem';
 	import {
@@ -28,6 +30,8 @@
 		formatPreciseTimestamp,
 		formatTimestamp,
 		formatTransactionType,
+		getBlockExplorerTxUrl,
+		hasBlockExplorer,
 	} from '../lib/utils';
 	import {route} from '$lib';
 	import {goto} from '$app/navigation';
@@ -208,7 +212,7 @@
 
 					<!-- Transaction Hash -->
 					<div class="mt-1 flex items-center gap-2">
-						<Address value={txHash} />
+						<TransactionHash value={txHash} />
 					</div>
 
 					<!-- Transaction Status -->
@@ -236,14 +240,31 @@
 						{/if}
 					</div>
 				</div>
-				<Button
-					onclick={() => window.history.back()}
-					variant="outline"
-					size="sm"
-				>
-					<ArrowLeftIcon class="mr-2 h-4 w-4" />
-					Back
-				</Button>
+				<div class="flex gap-2">
+					{#if hasBlockExplorer() && txHash}
+						{@const explorerUrl = getBlockExplorerTxUrl(txHash)}
+						{#if explorerUrl}
+							<Button
+								href={explorerUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								variant="outline"
+								size="sm"
+							>
+								<ExternalLinkIcon class="mr-2 h-4 w-4" />
+								View in Explorer
+							</Button>
+						{/if}
+					{/if}
+					<Button
+						onclick={() => window.history.back()}
+						variant="outline"
+						size="sm"
+					>
+						<ArrowLeftIcon class="mr-2 h-4 w-4" />
+						Back
+					</Button>
+				</div>
 			</div>
 
 			<Separator.Root />
@@ -362,12 +383,16 @@
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">From</div>
-							<div class="font-mono"><Address value={tx.from} /></div>
+							<div class="font-mono">
+								<Address value={tx.from} linkTo="internal" />
+							</div>
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">To</div>
 							{#if tx.to}
-								<div class="font-mono"><Address value={tx.to} /></div>
+								<div class="font-mono">
+									<Address value={tx.to} linkTo="internal" />
+								</div>
 							{:else}
 								<div class="font-mono text-muted-foreground">
 									Contract Creation
@@ -380,16 +405,7 @@
 									Created Contract
 								</div>
 								<div class="font-mono">
-									<button
-										type="button"
-										class="text-primary hover:underline"
-										onclick={() =>
-											goto(
-												route(`/explorer/address/${receipt!.contractAddress}`),
-											)}
-									>
-										<Address value={receipt.contractAddress} />
-									</button>
+									<Address value={receipt.contractAddress} linkTo="internal" />
 								</div>
 							</div>
 						{/if}
@@ -483,7 +499,10 @@
 													>Address:</span
 												>
 												<span class="ml-2 font-mono"
-													><Address value={log.address} /></span
+													><Address
+														value={log.address}
+														linkTo="internal"
+													/></span
 												>
 											</div>
 											<div>
@@ -524,7 +543,7 @@
 													</div>
 												{/if}
 											</div>
-											<Address value={event.address} />
+											<Address value={event.address} linkTo="internal" />
 										</div>
 										<Separator.Root class="my-3" />
 										<div class="grid gap-3">
@@ -541,8 +560,9 @@
 													>Transaction:</span
 												>
 												<span class="ml-2 font-mono"
-													><Address
+													><TransactionHash
 														value={event.txHash as `0x${string}`}
+														linkTo="internal"
 													/></span
 												>
 											</div>
