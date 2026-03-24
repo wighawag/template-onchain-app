@@ -16,6 +16,7 @@
 	import type {TransactionIntent} from '@etherkit/tx-observer';
 	import type {Readable} from 'svelte/store';
 	import {pendingOperationModal} from '$lib/ui/pending-operation';
+	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
 
 	interface Props {
 		id: string;
@@ -72,7 +73,7 @@
 	}
 
 	// Get the main transaction hash
-	function getMainTxHash(intent: TransactionIntent): string | undefined {
+	function getMainTxHash(intent: TransactionIntent): `0x${string}` | undefined {
 		if (intent.transactions.length === 0) return undefined;
 
 		const state = intent.state;
@@ -140,18 +141,9 @@
 				{#if $operationStore.transactionIntent.transactions.length === 1 && txHash}
 					<div class="flex items-center gap-2 text-sm">
 						<span class="text-muted-foreground">Transaction:</span>
-						<code class="rounded bg-muted px-2 py-1 font-mono text-xs">
-							{txHash.slice(0, 10)}...{txHash.slice(-8)}
-						</code>
-						{#if state?.inclusion === 'Included'}
-							<a
-								href={getExplorerTxUrl(txHash)}
-								class="inline-flex items-center gap-1 text-primary hover:underline"
-							>
-								<ExternalLinkIcon class="h-4 w-4" />
-								View
-							</a>
-						{/if}
+						<span class="ml-2 font-mono"
+							><TransactionHash value={txHash} linkTo="auto" /></span
+						>
 					</div>
 				{:else if $operationStore.transactionIntent.transactions.length > 1}
 					<div class="text-sm text-muted-foreground">
