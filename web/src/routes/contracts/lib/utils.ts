@@ -113,6 +113,16 @@ export function convertInputValues(
 }
 
 /**
+ * Custom JSON replacer that converts BigInt values to strings
+ */
+function bigIntReplacer(_key: string, value: unknown): unknown {
+	if (typeof value === 'bigint') {
+		return value.toString();
+	}
+	return value;
+}
+
+/**
  * Format output as pretty JSON
  */
 export function formatOutputJSON(output: any): string {
@@ -120,7 +130,7 @@ export function formatOutputJSON(output: any): string {
 		return 'null';
 	}
 	try {
-		return JSON.stringify(output, null, 2);
+		return JSON.stringify(output, bigIntReplacer, 2);
 	} catch {
 		return String(output);
 	}
