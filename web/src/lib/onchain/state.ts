@@ -3,7 +3,7 @@ import {logs} from 'named-logs';
 import {writable, type Readable} from 'svelte/store';
 import type {PublicClient} from 'viem';
 
-const console = logs('onchain:state');
+const logger = logs('onchain:state');
 
 export type Message = {
 	readonly account: `0x${string}`;
@@ -72,11 +72,28 @@ export function createOnchainState(params: {
 		});
 
 		try {
+			// DEBUG failure cases:
+			// await (() =>
+			// 	new Promise((resolve, reject) => {
+			// 		if ($state.step === 'Loaded' || Math.random() > 0.5) {
+			// 			setTimeout(() => reject('Failed'), 1000);
+			// 		} else {
+			// 			setTimeout(resolve, 2000);
+			// 		}
+			// 		// if (Math.random() > 0.5) {
+			// 		// 	setTimeout(() => reject('Failed'), 1000);
+			// 		// } else {
+			// 		// 	setTimeout(resolve, 45000);
+			// 		// }
+			// 	}))();
+
+			// console.log(`fetching...`);
 			const valueFromContracts = await publicClient.readContract({
 				...deployments.contracts.GreetingsRegistry,
 				functionName: 'getLastMessages',
 				args: [BigInt(config.maxMessages)],
 			});
+			// console.log(`...fetched`);
 			const messages = valueFromContracts.map((v) => ({
 				...v,
 				timestamp: Number(v.timestamp) * 1000,
