@@ -22,6 +22,7 @@ export const {isParentRoute, isSameRoute, route, params} = createRouteHandler(
 			'traceLevel',
 			'debugLabel',
 			'eruda',
+			'tx-observer',
 		] as const,
 		// Dynamic routes that need hash-based URLs on path-based IPFS gateways
 		dynamicRoutes: [
