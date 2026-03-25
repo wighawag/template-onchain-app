@@ -12,28 +12,32 @@ export type GasPriceEstimates = {
 	higherThanExpected: boolean;
 };
 
-export type LoadedGasFee = {
-	step: 'Loaded';
-} & GasPriceEstimates;
-export type GasFee = {error?: {message: string; cause?: any}} & (
-	| {
-			step: 'Idle';
-	  }
-	| {
-			step: 'Loading';
-	  }
-	| LoadedGasFee
-);
+// New dual-store types
+export type GasFeeValue =
+	| { step: 'Unloaded' }
+	| ({ step: 'Loaded' } & GasPriceEstimates);
 
-export type GasFeeStore = Readable<GasFee> & {
-	update(): void;
-	value: LoadedGasFee | undefined;
+export type GasFeeStatus = {
+	loading: boolean;
+	error?: { message: string; cause?: any };
+	lastSuccessfulFetch?: number;
 };
 
-function defaultState() {
-	return {
-		step: 'Idle',
-	} as const;
+export type GasFeeStore = {
+	subscribe: Readable<GasFeeValue>['subscribe'];
+	status: Readable<GasFeeStatus>;
+	update(): void;
+};
+
+// Helper type for when loaded
+export type LoadedGasFee = Extract<GasFeeValue, { step: 'Loaded' }>;
+
+function defaultState(): GasFeeValue {
+	return { step: 'Unloaded' };
+}
+
+function defaultStatus(): GasFeeStatus {
+	return { loading: false };
 }
 
 function avg(arr: bigint[]) {
@@ -49,13 +53,22 @@ export function createGasFeeStore(
 	const {publicClient, deployments} = params;
 	const fetchInterval = options?.fetchInterval || 10 * 60 * 1000; // 10 minute
 
-	let $state: GasFee = defaultState();
+	// Main store - discriminated union
+	let $state: GasFeeValue = defaultState();
+	const _mainStore = writable<GasFeeValue>($state, start);
 
-	const _store = writable<GasFee>($state, start);
-	function set(state: GasFee) {
+	// Status store - loading/error
+	let $status: GasFeeStatus = defaultStatus();
+	const _statusStore = writable<GasFeeStatus>($status);
+
+	function setState(state: GasFeeValue) {
 		$state = state;
-		_store.set($state);
-		return $state;
+		_mainStore.set($state);
+	}
+
+	function setStatus(status: GasFeeStatus) {
+		$status = status;
+		_statusStore.set($status);
 	}
 
 	async function fetchGasPriceEstimates(): Promise<GasPriceEstimates> {
@@ -159,30 +172,25 @@ export function createGasFeeStore(
 	}
 
 	async function fetchState(): Promise<boolean> {
-		if ($state.step !== 'Loaded') {
-			set({
-				step: 'Loading',
-			});
-		}
+		// Preserve lastSuccessfulFetch when setting loading state
+		setStatus({ loading: true, error: undefined, lastSuccessfulFetch: $status.lastSuccessfulFetch });
 
-		let gasPriceEstimates: GasPriceEstimates;
 		try {
-			gasPriceEstimates = await fetchGasPriceEstimates();
+			const gasPriceEstimates = await fetchGasPriceEstimates();
+			setState({ step: 'Loaded', ...gasPriceEstimates });
+			// Set lastSuccessfulFetch on success
+			setStatus({ loading: false, lastSuccessfulFetch: Date.now() });
+			return true;
 		} catch (err: any) {
 			console.error(`failed to fetch fee history`, err);
-			set({
-				step: 'Loading',
+			// Preserve lastSuccessfulFetch on error
+			setStatus({
+				loading: false,
 				error: {message: `failed to fetch fee history`, cause: err},
+				lastSuccessfulFetch: $status.lastSuccessfulFetch,
 			});
 			return false;
 		}
-
-		set({
-			step: 'Loaded',
-			...gasPriceEstimates,
-		});
-
-		return true;
 	}
 
 	async function fetchContinuously() {
@@ -217,7 +225,8 @@ export function createGasFeeStore(
 	}
 
 	function stop() {
-		set(defaultState());
+		setState(defaultState());
+		setStatus(defaultStatus());
 
 		if (timeout) {
 			clearTimeout(timeout);
@@ -226,10 +235,8 @@ export function createGasFeeStore(
 	}
 
 	return {
-		subscribe: _store.subscribe,
+		subscribe: _mainStore.subscribe,
+		status: { subscribe: _statusStore.subscribe },
 		update,
-		get value() {
-			return $state.step === 'Loaded' ? $state : undefined;
-		},
 	};
 }

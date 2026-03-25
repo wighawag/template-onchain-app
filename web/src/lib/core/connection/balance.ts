@@ -2,28 +2,29 @@ import type {AccountStore} from '$lib/core/connection/types';
 import {get, writable, type Readable} from 'svelte/store';
 import type {PublicClient} from 'viem';
 
-export type Balance = {error?: {message: string}} & (
-	| {
-			step: 'Idle';
-	  }
-	| {
-			step: 'Loading';
-	  }
-	| {
-			step: 'Loaded';
-			value: bigint;
-	  }
-);
+// New dual-store types
+export type BalanceValue =
+	| { step: 'Unloaded' }
+	| { step: 'Loaded'; value: bigint };
 
-export type BalanceStore = Readable<Balance> & {
-	update(): void;
-	value: Balance | undefined;
+export type BalanceStatus = {
+	loading: boolean;
+	error?: { message: string };
+	lastSuccessfulFetch?: number;
 };
 
-function defaultState() {
-	return {
-		step: 'Idle',
-	} as const;
+export type BalanceStore = {
+	subscribe: Readable<BalanceValue>['subscribe'];
+	status: Readable<BalanceStatus>;
+	update(): void;
+};
+
+function defaultState(): BalanceValue {
+	return { step: 'Unloaded' };
+}
+
+function defaultStatus(): BalanceStatus {
+	return { loading: false };
 }
 
 export function createBalanceStore(
@@ -36,48 +37,52 @@ export function createBalanceStore(
 	},
 ): BalanceStore {
 	const {publicClient, account} = params;
-	const fetchInterval = options?.fetchInterval || 5 * 1000; // 5 seconds
+	const fetchInterval = options?.fetchInterval || 5 * 1000;
 
-	let $state: Balance = defaultState();
+	// Main store - discriminated union
+	let $state: BalanceValue = defaultState();
 	let $account = get(account);
+	const _mainStore = writable<BalanceValue>($state, start);
 
-	const _store = writable<Balance>($state, start);
-	function set(state: Balance) {
+	// Status store - loading/error
+	let $status: BalanceStatus = defaultStatus();
+	const _statusStore = writable<BalanceStatus>($status);
+
+	function setState(state: BalanceValue) {
 		$state = state;
-		_store.set($state);
-		return $state;
+		_mainStore.set($state);
+	}
+
+	function setStatus(status: BalanceStatus) {
+		$status = status;
+		_statusStore.set($status);
 	}
 
 	async function fetchState($account: `0x${string}`): Promise<boolean> {
-		if ($state.step !== 'Loaded') {
-			set({
-				step: 'Loading',
-			});
-		}
+		// Preserve lastSuccessfulFetch when setting loading state
+		setStatus({ loading: true, error: undefined, lastSuccessfulFetch: $status.lastSuccessfulFetch });
 
-		let balance: bigint;
 		try {
-			balance = await publicClient.getBalance({address: $account});
+			const balance = await publicClient.getBalance({address: $account});
+			setState({ step: 'Loaded', value: balance });
+			// Set lastSuccessfulFetch on success
+			setStatus({ loading: false, lastSuccessfulFetch: Date.now() });
+			return true;
 		} catch (err) {
-			set({
-				step: 'Loading',
+			// Preserve lastSuccessfulFetch on error
+			setStatus({
+				loading: false,
 				error: {message: `failed to fetch balance for ${$account}`},
+				lastSuccessfulFetch: $status.lastSuccessfulFetch,
 			});
 			return false;
 		}
-
-		set({
-			step: 'Loaded',
-			value: balance,
-		});
-		return true;
 	}
 
 	async function fetchContinuously() {
 		if (!$account) {
-			set({
-				step: 'Idle',
-			});
+			setState({ step: 'Unloaded' });
+			setStatus({ loading: false });
 		}
 		if (timeout) {
 			clearTimeout(timeout);
@@ -104,6 +109,7 @@ export function createBalanceStore(
 
 	let unsubscribeFromAccount: (() => void) | undefined;
 	let timeout: NodeJS.Timeout | undefined;
+	
 	function start() {
 		unsubscribeFromAccount = account.subscribe(async (newAccount) => {
 			const signerChanged = $account != newAccount;
@@ -113,13 +119,13 @@ export function createBalanceStore(
 					$account = newAccount;
 					fetchContinuously();
 				} else {
-					set({step: 'Idle'});
+					setState({ step: 'Unloaded' });
+					setStatus({ loading: false });
 				}
 			}
 		});
 
 		fetchContinuously();
-
 		return stop;
 	}
 
@@ -129,7 +135,8 @@ export function createBalanceStore(
 	}
 
 	function stop() {
-		set(defaultState());
+		setState(defaultState());
+		setStatus(defaultStatus());
 
 		if (unsubscribeFromAccount) {
 			unsubscribeFromAccount();
@@ -143,10 +150,8 @@ export function createBalanceStore(
 	}
 
 	return {
-		subscribe: _store.subscribe,
+		subscribe: _mainStore.subscribe,
+		status: { subscribe: _statusStore.subscribe },
 		update,
-		get value() {
-			return $state.step == 'Loaded' ? $state : undefined;
-		},
 	};
 }
