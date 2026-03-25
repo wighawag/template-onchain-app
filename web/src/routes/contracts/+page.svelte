@@ -11,7 +11,7 @@
 	import * as Select from '$lib/shadcn/ui/select';
 	import * as Empty from '$lib/shadcn/ui/empty';
 	import * as Separator from '$lib/shadcn/ui/separator';
-	import {FileCodeIcon} from '@o7/icon/lucide';
+	import {FileCodeIcon} from '@lucide/svelte';
 	import ContractFunction from './components/ContractFunction.svelte';
 	import {getContractFunctions, isViewFunction} from './lib/utils';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';

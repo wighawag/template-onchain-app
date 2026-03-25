@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
-	import {ChevronDownIcon} from '@o7/icon/lucide';
+	import {ChevronDownIcon} from '@lucide/svelte';
 	import type {BroadcastedTransaction} from '@etherkit/tx-observer';
 
 	interface Props {

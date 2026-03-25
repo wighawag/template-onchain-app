@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ChevronUpIcon from "@o7/icon/lucide/chevron-up";
+	import ChevronUpIcon from "@lucide/svelte/icons/chevron-up";
 	import { Select as SelectPrimitive } from "bits-ui";
 	import { cn, type WithoutChildrenOrChild } from "$lib/shadcn/utils.js";
 

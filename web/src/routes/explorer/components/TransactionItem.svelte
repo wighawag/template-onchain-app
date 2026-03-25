@@ -7,7 +7,7 @@
 		LoaderIcon,
 		FileTextIcon,
 		ZapIcon,
-	} from '@o7/icon/lucide';
+	} from '@lucide/svelte';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
 	import type {PublicClient, Transaction, TransactionReceipt} from 'viem';

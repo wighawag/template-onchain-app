@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import {Button} from '$lib/shadcn/ui/button/index.js';
-	import {XCircleIcon} from '@o7/icon/lucide';
+	import {XCircleIcon} from '@lucide/svelte';
 
 	interface Props {
 		open: boolean;

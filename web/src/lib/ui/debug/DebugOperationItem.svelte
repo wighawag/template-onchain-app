@@ -6,7 +6,7 @@
 		TriangleAlertIcon,
 		CircleXIcon,
 		CircleQuestionMarkIcon,
-	} from '@o7/icon/lucide';
+	} from '@lucide/svelte';
 	import type {OnchainOperation} from '$lib/account/AccountData';
 	import type {TransactionIntent} from '@etherkit/tx-observer';
 	import type {Readable} from 'svelte/store';

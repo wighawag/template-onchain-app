@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {getUserContext} from '$lib';
 	import {Badge} from '$lib/shadcn/ui/badge';
-	import {ChevronUpIcon, ChevronDownIcon} from '@o7/icon/lucide';
+	import {ChevronUpIcon, ChevronDownIcon} from '@lucide/svelte';
 	import DebugOperationItem from './DebugOperationItem.svelte';
 
 	const {accountData} = getUserContext();

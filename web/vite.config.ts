@@ -4,7 +4,6 @@ import tailwindcss from '@tailwindcss/vite';
 import {execSync} from 'node:child_process';
 import devtoolsJson from 'vite-plugin-devtools-json';
 import {sveltekit} from '@sveltejs/kit/vite';
-import {o7Icon} from '@o7/icon/vite';
 
 let FIRST_COMMIT: string | undefined;
 
@@ -23,7 +22,6 @@ export default defineConfig({
 		devtoolsJson(FIRST_COMMIT ? {uuid: FIRST_COMMIT} : undefined),
 		tailwindcss(),
 		sveltekit(),
-		o7Icon(),
 	],
 	build: {emptyOutDir: true, minify: false, sourcemap: true},
 	test: {
