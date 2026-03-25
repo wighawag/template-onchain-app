@@ -7,15 +7,13 @@
 	import {Button} from '$lib/shadcn/ui/button';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Empty from '$lib/shadcn/ui/empty';
-	import {
-		ArrowLeftIcon,
-		CheckCircleIcon,
-		XCircleIcon,
-		FileCodeIcon,
-		HashIcon,
-		AlertTriangleIcon,
-		ExternalLinkIcon,
-	} from '@lucide/svelte';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
+	import XCircleIcon from '@lucide/svelte/icons/x-circle';
+	import FileCodeIcon from '@lucide/svelte/icons/file-code';
+	import HashIcon from '@lucide/svelte/icons/hash';
+	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
 	import type {PublicClient} from 'viem';

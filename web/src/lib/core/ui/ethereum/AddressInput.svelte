@@ -55,11 +55,9 @@
 
 <script lang="ts">
 	import {getContext, onMount, tick} from 'svelte';
-	import {
-		LoaderCircleIcon,
-		CheckCircleIcon,
-		AlertCircleIcon,
-	} from '@lucide/svelte';
+	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
+	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
+	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import type {ENSContext} from '$lib/core/ens';
 	import ImgBlockie from './ImgBlockie.svelte';
 	import Address from './Address.svelte';

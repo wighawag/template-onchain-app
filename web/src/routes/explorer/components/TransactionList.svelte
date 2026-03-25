@@ -4,7 +4,9 @@
 	import * as Separator from '$lib/shadcn/ui/separator';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Empty from '$lib/shadcn/ui/empty';
-	import {RefreshCwIcon, ClockIcon, HashIcon} from '@lucide/svelte';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import ClockIcon from '@lucide/svelte/icons/clock';
+	import HashIcon from '@lucide/svelte/icons/hash';
 	import {PUBLIC_EXPLORER_BLOCK_INDEX_ENABLED} from '$env/static/public';
 	import {getTransactionListStore} from '../lib/stores/transactionList';
 	import {getUserContext} from '$lib';

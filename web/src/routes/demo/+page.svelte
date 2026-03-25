@@ -4,7 +4,8 @@
 	import {Button} from '$lib/shadcn/ui/button';
 	import {Input} from '$lib/shadcn/ui/input';
 	import {Spinner} from '$lib/shadcn/ui/spinner';
-	import {MessageSquareIcon, SendIcon} from '@lucide/svelte';
+	import MessageSquareIcon from '@lucide/svelte/icons/message-square';
+	import SendIcon from '@lucide/svelte/icons/send';
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import ImgBlockie from '$lib/core/ui/ethereum/ImgBlockie.svelte';

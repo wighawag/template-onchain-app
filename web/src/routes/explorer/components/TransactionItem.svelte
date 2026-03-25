@@ -1,13 +1,11 @@
 <script lang="ts">
 	import {goto} from '$app/navigation';
 	import * as Card from '$lib/shadcn/ui/card';
-	import {
-		CheckCircleIcon,
-		XCircleIcon,
-		LoaderIcon,
-		FileTextIcon,
-		ZapIcon,
-	} from '@lucide/svelte';
+	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
+	import XCircleIcon from '@lucide/svelte/icons/x-circle';
+	import LoaderIcon from '@lucide/svelte/icons/loader';
+	import FileTextIcon from '@lucide/svelte/icons/file-text';
+	import ZapIcon from '@lucide/svelte/icons/zap';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
 	import type {PublicClient, Transaction, TransactionReceipt} from 'viem';

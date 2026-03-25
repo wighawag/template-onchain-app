@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {Button} from '$lib/shadcn/ui/button';
-	import {CopyIcon, CheckIcon} from '@lucide/svelte';
+	import CopyIcon from '@lucide/svelte/icons/copy';
+	import CheckIcon from '@lucide/svelte/icons/check';
 	import {toast} from 'svelte-sonner';
 
 	interface Props {
