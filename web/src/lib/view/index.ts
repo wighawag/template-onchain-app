@@ -5,9 +5,21 @@ import type {FieldReadable} from 'synqable';
 
 export type MessageView = Message & {pending?: boolean};
 
-export type ViewState = MessageView[];
+// New types for dual-store architecture
+export type ViewStateValue =
+	| { step: 'Unloaded' }
+	| { step: 'Loaded'; messages: MessageView[] };
 
-export type ViewStateStore = Readable<ViewState>;
+export type ViewStateStatus = {
+	loading: boolean;
+	error?: { message: string };
+	lastSuccessfulFetch?: number;
+};
+
+export type ViewStateStore = {
+	subscribe: Readable<ViewStateValue>['subscribe'];
+	status: Readable<ViewStateStatus>;
+};
 
 export function createViewState(params: {
 	onchainState: OnchainStateStore;
@@ -15,13 +27,19 @@ export function createViewState(params: {
 	config: {
 		maxMessages: number;
 	};
-}) {
+}): ViewStateStore {
 	const {onchainState, operations, config} = params;
-	const viewState = derived(
-		[onchainState, operations],
-		([$onchainState, $operations]): ViewState => {
-			const messageViews: ViewState = [];
-			for (const message of $onchainState) {
+	
+	// Main store - derives from onchainState + operations
+	const _mainStore = derived(
+		[{ subscribe: onchainState.subscribe }, operations],
+		([$onchainState, $operations]): ViewStateValue => {
+			if ($onchainState.step === 'Unloaded') {
+				return { step: 'Unloaded' };
+			}
+
+			const messageViews: MessageView[] = [];
+			for (const message of $onchainState.messages) {
 				messageViews.push({...message});
 			}
 
@@ -47,7 +65,6 @@ export function createViewState(params: {
 			}
 
 			// Group operations by account and find the latest for each account
-			// Latest is determined by: highest nonce, or latest broadcastTimestamp if nonces are equal
 			const latestOperationByAccount = new Map<
 				string,
 				(typeof validOperations)[number]
@@ -65,7 +82,6 @@ export function createViewState(params: {
 					const currentTimestamp =
 						entry.operation.metadata.tx.broadcastTimestampMs;
 
-					// Compare by nonce first, then by broadcastTimestamp if nonces are equal
 					if (
 						currentNonce > existingNonce ||
 						(currentNonce === existingNonce &&
@@ -90,15 +106,12 @@ export function createViewState(params: {
 
 				if (existingMessageIndex >= 0) {
 					const existingMessageObject = messageViews[existingMessageIndex];
-					// If onchain message matches and onchain timestamp is newer, operation is complete
 					if (
 						existingMessageObject.message === message &&
 						existingMessageObject.timestamp > time
 					) {
-						// Onchain state already reflects this operation, no pending needed
 						continue;
 					}
-					// Otherwise, replace with pending operation
 					messageViews.splice(existingMessageIndex, 1);
 				}
 
@@ -112,9 +125,18 @@ export function createViewState(params: {
 
 			messageViews.splice(config.maxMessages);
 
-			return messageViews;
+			return { step: 'Loaded', messages: messageViews };
 		},
 	);
 
-	return viewState;
+	// Status store - pass through from onchainState.status
+	const _statusStore = derived(
+		onchainState.status,
+		($status): ViewStateStatus => ({ ...$status })
+	);
+
+	return {
+		subscribe: _mainStore.subscribe,
+		status: { subscribe: _statusStore.subscribe },
+	};
 }
