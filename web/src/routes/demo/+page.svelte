@@ -1,6 +1,5 @@
 <script lang="ts">
 	import DefaultHead from '../../lib/metadata/DefaultHead.svelte';
-	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
 	import {Button} from '$lib/shadcn/ui/button';
 	import {Input} from '$lib/shadcn/ui/input';
 	import {Spinner} from '$lib/shadcn/ui/spinner';
@@ -9,16 +8,18 @@
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
-	import ImgBlockie from '$lib/core/ui/ethereum/ImgBlockie.svelte';
 	import BlockieAvatar from '$lib/core/ui/ethereum/BlockieAvatar.svelte';
 
-	let dependencies = getUserContext();
+	const {
+		connection,
+		onchainState,
+		viewState,
+		walletClient,
+		deployments,
+		clock,
+	} = getUserContext();
 
-	let {connection, onchainState, viewState, walletClient, deployments, clock} =
-		$derived(dependencies);
-
-	// Separate subscriptions - use $derived to track viewState changes
-	let viewStatus = $derived(viewState.status);
+	const viewStatus = viewState.status;
 
 	// Derive stale message so it updates when status store updates
 	// Note: clock will become a store that updates every second in the future
@@ -28,11 +29,6 @@
 
 	let greetingInput = $state('');
 	let isSubmitting = $state(false);
-
-	// Fetch messages on mount
-	$effect(() => {
-		onchainState.update();
-	});
 
 	async function setGreeting() {
 		if (!greetingInput.trim() || isSubmitting) return;

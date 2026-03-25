@@ -43,8 +43,7 @@
 
 	let {address}: Props = $props();
 
-	let dependencies = getUserContext();
-	let {publicClient, walletClient, connection} = $derived(dependencies);
+	let {publicClient, walletClient, connection} = getUserContext();
 
 	let balance = $state<bigint>(0n);
 	let nonce = $state<number>(0);

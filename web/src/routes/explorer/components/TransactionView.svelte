@@ -45,8 +45,7 @@
 
 	let {txHash}: Props = $props();
 
-	let dependencies = getUserContext();
-	let {publicClient, connection} = $derived(dependencies);
+	let {publicClient} = getUserContext();
 
 	let tx = $state<Awaited<ReturnType<PublicClient['getTransaction']>> | null>(
 		null,

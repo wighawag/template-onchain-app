@@ -1,7 +1,6 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
-	import {getUserContext, route} from '$lib';
+	import {getUserContext} from '$lib';
 	import {
 		Root as Tabs,
 		Content as TabsContent,
@@ -16,10 +15,7 @@
 	import {getContractFunctions, isViewFunction} from './lib/utils';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 
-	let dependencies = getUserContext();
-
-	let {publicClient, walletClient, connection, account, deployments} =
-		$derived(dependencies);
+	let {publicClient, walletClient, connection, deployments} = getUserContext();
 
 	// Get all contract names
 	let contractNames = $derived(Object.keys($deployments.contracts));
