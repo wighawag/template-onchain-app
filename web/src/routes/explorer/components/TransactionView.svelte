@@ -101,9 +101,9 @@
 			receipt = txReceipt;
 
 			// Fetch block for timestamp
-			if (transaction.blockNumber) {
+			if (txReceipt) {
 				const txBlock = await publicClient.getBlock({
-					blockNumber: transaction.blockNumber,
+					blockNumber: txReceipt.blockNumber,
 				});
 				block = txBlock;
 			}
@@ -356,7 +356,11 @@
 							<div class="text-sm font-medium text-muted-foreground">
 								Block Number
 							</div>
-							<div class="font-mono">{Number(tx.blockNumber)}</div>
+							{#if receipt}
+								<div class="font-mono">{Number(receipt.blockNumber)}</div>
+							{:else}
+								<div class="font-mono text-yellow-600">Pending</div>
+							{/if}
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">
@@ -369,15 +373,21 @@
 								<div class="text-xs text-muted-foreground">
 									({formatTimestamp(Number(block.timestamp))})
 								</div>
-							{:else}
+							{:else if !receipt}
 								<div class="font-mono text-muted-foreground">Loading...</div>
+							{:else}
+								<div class="font-mono text-yellow-600">Pending</div>
 							{/if}
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">
 								Status
 							</div>
-							<div class="font-mono">{formatTxStatus(receipt.status)}</div>
+							{#if receipt}
+								<div class="font-mono">{formatTxStatus(receipt.status)}</div>
+							{:else}
+								<div class="font-mono text-yellow-600">Pending</div>
+							{/if}
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">From</div>
