@@ -207,11 +207,11 @@
 				{/if}
 
 				<!-- Refresh indicator -->
-				{#if $viewStatus.loading}
+				<!-- {#if $viewStatus.loading}
 					<div class="py-2 text-center text-sm text-muted-foreground">
 						Refreshing...
 					</div>
-				{/if}
+				{/if} -->
 
 				<!-- Refresh error -->
 				{#if $viewStatus.error}

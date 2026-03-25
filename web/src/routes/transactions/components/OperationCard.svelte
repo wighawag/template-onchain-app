@@ -151,9 +151,12 @@
 						{#each $operationStore.transactionIntent.transactions as tx, i}
 							<div class="flex items-center gap-2 text-sm">
 								<span class="text-muted-foreground">#{i + 1}:</span>
-								<code class="rounded bg-muted px-2 py-1 font-mono text-xs">
-									{tx.hash.slice(0, 10)}...{tx.hash.slice(-8)}
-								</code>
+								<TransactionHash
+									value={tx.hash}
+									truncate={{start: 6, end: 4}}
+									size="sm"
+									linkTo="auto"
+								/>
 								{#if state?.inclusion === 'Included' && state.attemptIndex === i}
 									<Badge variant="default" class="text-xs">Included</Badge>
 									<a
