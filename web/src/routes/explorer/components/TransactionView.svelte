@@ -7,15 +7,13 @@
 	import {Button} from '$lib/shadcn/ui/button';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Empty from '$lib/shadcn/ui/empty';
-	import {
-		ArrowLeftIcon,
-		CheckCircleIcon,
-		XCircleIcon,
-		FileCodeIcon,
-		HashIcon,
-		AlertTriangleIcon,
-		ExternalLinkIcon,
-	} from '@lucide/svelte';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
+	import XCircleIcon from '@lucide/svelte/icons/x-circle';
+	import FileCodeIcon from '@lucide/svelte/icons/file-code';
+	import HashIcon from '@lucide/svelte/icons/hash';
+	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
 	import type {PublicClient} from 'viem';
@@ -47,8 +45,7 @@
 
 	let {txHash}: Props = $props();
 
-	let dependencies = getUserContext();
-	let {publicClient, connection} = $derived(dependencies);
+	let {publicClient} = getUserContext();
 
 	let tx = $state<Awaited<ReturnType<PublicClient['getTransaction']>> | null>(
 		null,
@@ -103,9 +100,9 @@
 			receipt = txReceipt;
 
 			// Fetch block for timestamp
-			if (transaction.blockNumber) {
+			if (txReceipt) {
 				const txBlock = await publicClient.getBlock({
-					blockNumber: transaction.blockNumber,
+					blockNumber: txReceipt.blockNumber,
 				});
 				block = txBlock;
 			}
@@ -358,7 +355,11 @@
 							<div class="text-sm font-medium text-muted-foreground">
 								Block Number
 							</div>
-							<div class="font-mono">{Number(tx.blockNumber)}</div>
+							{#if receipt}
+								<div class="font-mono">{Number(receipt.blockNumber)}</div>
+							{:else}
+								<div class="font-mono text-yellow-600">Pending</div>
+							{/if}
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">
@@ -371,15 +372,21 @@
 								<div class="text-xs text-muted-foreground">
 									({formatTimestamp(Number(block.timestamp))})
 								</div>
-							{:else}
+							{:else if !receipt}
 								<div class="font-mono text-muted-foreground">Loading...</div>
+							{:else}
+								<div class="font-mono text-yellow-600">Pending</div>
 							{/if}
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">
 								Status
 							</div>
-							<div class="font-mono">{formatTxStatus(receipt.status)}</div>
+							{#if receipt}
+								<div class="font-mono">{formatTxStatus(receipt.status)}</div>
+							{:else}
+								<div class="font-mono text-yellow-600">Pending</div>
+							{/if}
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">From</div>

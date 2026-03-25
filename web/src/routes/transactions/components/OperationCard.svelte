@@ -3,15 +3,13 @@
 	import * as Card from '$lib/shadcn/ui/card';
 	import {Badge} from '$lib/shadcn/ui/badge';
 	import {Button} from '$lib/shadcn/ui/button';
-	import {
-		ExternalLinkIcon,
-		ClockIcon,
-		CircleCheckIcon,
-		TriangleAlertIcon,
-		CircleXIcon,
-		CircleQuestionMarkIcon,
-		SearchIcon,
-	} from '@lucide/svelte';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
+	import ClockIcon from '@lucide/svelte/icons/clock';
+	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
+	import TriangleAlertIcon from '@lucide/svelte/icons/triangle-alert';
+	import CircleXIcon from '@lucide/svelte/icons/circle-x';
+	import CircleQuestionMarkIcon from '@lucide/svelte/icons/circle-help';
+	import SearchIcon from '@lucide/svelte/icons/search';
 	import type {OnchainOperation} from '$lib/account/AccountData';
 	import type {TransactionIntent} from '@etherkit/tx-observer';
 	import type {Readable} from 'svelte/store';
@@ -153,9 +151,12 @@
 						{#each $operationStore.transactionIntent.transactions as tx, i}
 							<div class="flex items-center gap-2 text-sm">
 								<span class="text-muted-foreground">#{i + 1}:</span>
-								<code class="rounded bg-muted px-2 py-1 font-mono text-xs">
-									{tx.hash.slice(0, 10)}...{tx.hash.slice(-8)}
-								</code>
+								<TransactionHash
+									value={tx.hash}
+									truncate={{start: 6, end: 4}}
+									size="sm"
+									linkTo="auto"
+								/>
 								{#if state?.inclusion === 'Included' && state.attemptIndex === i}
 									<Badge variant="default" class="text-xs">Included</Badge>
 									<a

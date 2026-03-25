@@ -14,15 +14,13 @@
 		List as TabsList,
 		Trigger as TabsTrigger,
 	} from '$lib/shadcn/ui/tabs';
-	import {
-		ArrowLeftIcon,
-		WalletIcon,
-		FileCodeIcon,
-		CopyIcon,
-		ExpandIcon,
-		ChevronsDownIcon,
-		ExternalLinkIcon,
-	} from '@lucide/svelte';
+	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
+	import WalletIcon from '@lucide/svelte/icons/wallet';
+	import FileCodeIcon from '@lucide/svelte/icons/file-code';
+	import CopyIcon from '@lucide/svelte/icons/copy';
+	import ExpandIcon from '@lucide/svelte/icons/expand';
+	import ChevronsDownIcon from '@lucide/svelte/icons/chevrons-down';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import ContractFunction from '../../contracts/components/ContractFunction.svelte';
 	import {
@@ -45,8 +43,7 @@
 
 	let {address}: Props = $props();
 
-	let dependencies = getUserContext();
-	let {publicClient, walletClient, connection} = $derived(dependencies);
+	let {publicClient, walletClient, connection} = getUserContext();
 
 	let balance = $state<bigint>(0n);
 	let nonce = $state<number>(0);

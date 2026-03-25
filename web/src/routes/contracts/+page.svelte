@@ -1,7 +1,6 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
-	import {getUserContext, route} from '$lib';
+	import {getUserContext} from '$lib';
 	import {
 		Root as Tabs,
 		Content as TabsContent,
@@ -11,15 +10,12 @@
 	import * as Select from '$lib/shadcn/ui/select';
 	import * as Empty from '$lib/shadcn/ui/empty';
 	import * as Separator from '$lib/shadcn/ui/separator';
-	import {FileCodeIcon} from '@lucide/svelte';
+	import FileCodeIcon from '@lucide/svelte/icons/file-code';
 	import ContractFunction from './components/ContractFunction.svelte';
 	import {getContractFunctions, isViewFunction} from './lib/utils';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 
-	let dependencies = getUserContext();
-
-	let {publicClient, walletClient, connection, account, deployments} =
-		$derived(dependencies);
+	let {publicClient, walletClient, connection, deployments} = getUserContext();
 
 	// Get all contract names
 	let contractNames = $derived(Object.keys($deployments.contracts));

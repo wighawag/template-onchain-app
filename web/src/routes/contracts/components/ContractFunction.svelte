@@ -11,7 +11,9 @@
 	} from '../lib/utils';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Alert from '$lib/shadcn/ui/alert';
-	import {CircleAlertIcon, CircleCheckIcon, InfoIcon} from '@lucide/svelte';
+	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
+	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
+	import InfoIcon from '@lucide/svelte/icons/info';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import type {
 		AnyConnectionStore,

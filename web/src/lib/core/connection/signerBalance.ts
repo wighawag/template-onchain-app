@@ -2,29 +2,29 @@ import type {OptionalSigner, Signer} from '$lib/core/connection/types';
 import {get, writable, type Readable} from 'svelte/store';
 import type {PublicClient} from 'viem';
 
-export type SignerBalance = {error?: {message: string}} & (
-	| {
-			step: 'Idle';
-	  }
-	| {
-			step: 'Loading';
-	  }
-	| {
-			step: 'Loaded';
-			signer: bigint;
-			owner: bigint;
-	  }
-);
+// New dual-store types
+export type SignerBalanceValue =
+	| {step: 'Unloaded'}
+	| {step: 'Loaded'; signer: bigint; owner: bigint};
 
-export type SignedBalanceStore = Readable<SignerBalance> & {
-	update(): void;
-	value: SignerBalance | undefined;
+export type SignerBalanceStatus = {
+	loading: boolean;
+	error?: {message: string};
+	lastSuccessfulFetch?: number;
 };
 
-function defaultState() {
-	return {
-		step: 'Idle',
-	} as const;
+export type SignerBalanceStore = {
+	subscribe: Readable<SignerBalanceValue>['subscribe'];
+	status: Readable<SignerBalanceStatus>;
+	update(): void;
+};
+
+function defaultState(): SignerBalanceValue {
+	return {step: 'Unloaded'};
+}
+
+function defaultStatus(): SignerBalanceStatus {
+	return {loading: false};
 }
 
 export function createSignerBalanceStore(
@@ -35,34 +35,46 @@ export function createSignerBalanceStore(
 	options?: {
 		fetchInterval?: number;
 	},
-): SignedBalanceStore {
+): SignerBalanceStore {
 	const {publicClient, signer} = params;
 	const fetchInterval = options?.fetchInterval || 5 * 1000; // 5 seconds
 
-	let $state: SignerBalance = defaultState();
+	// Main store - discriminated union
+	let $state: SignerBalanceValue = defaultState();
 	let $signer = get(signer);
+	const _mainStore = writable<SignerBalanceValue>($state, start);
 
-	const _store = writable<SignerBalance>($state, start);
-	function set(state: SignerBalance) {
+	// Status store - loading/error
+	let $status: SignerBalanceStatus = defaultStatus();
+	const _statusStore = writable<SignerBalanceStatus>($status);
+
+	function setState(state: SignerBalanceValue) {
 		$state = state;
-		_store.set($state);
-		return $state;
+		_mainStore.set($state);
+	}
+
+	function setStatus(status: SignerBalanceStatus) {
+		$status = status;
+		_statusStore.set($status);
 	}
 
 	async function fetchState($signer: Signer): Promise<boolean> {
-		if ($state.step !== 'Loaded') {
-			set({
-				step: 'Loading',
-			});
-		}
+		// Preserve lastSuccessfulFetch when setting loading state
+		setStatus({
+			loading: true,
+			error: undefined,
+			lastSuccessfulFetch: $status.lastSuccessfulFetch,
+		});
 
 		let signerBalance: bigint;
 		try {
 			signerBalance = await publicClient.getBalance({address: $signer.address});
 		} catch (err) {
-			set({
-				step: 'Loading',
+			// Preserve lastSuccessfulFetch on error
+			setStatus({
+				loading: false,
 				error: {message: `failed to fetch balance for ${$signer.address}`},
+				lastSuccessfulFetch: $status.lastSuccessfulFetch,
 			});
 			return false;
 		}
@@ -71,26 +83,29 @@ export function createSignerBalanceStore(
 		try {
 			ownerBalance = await publicClient.getBalance({address: $signer.owner});
 		} catch (err) {
-			set({
-				step: 'Loading',
+			// Preserve lastSuccessfulFetch on error
+			setStatus({
+				loading: false,
 				error: {message: `failed to fetch balance for ${$signer.owner}`},
+				lastSuccessfulFetch: $status.lastSuccessfulFetch,
 			});
 			return false;
 		}
 
-		set({
+		setState({
 			step: 'Loaded',
 			signer: signerBalance,
 			owner: ownerBalance,
 		});
+		// Set lastSuccessfulFetch on success
+		setStatus({loading: false, lastSuccessfulFetch: Date.now()});
 		return true;
 	}
 
 	async function fetchContinuously() {
 		if (!$signer) {
-			set({
-				step: 'Idle',
-			});
+			setState({step: 'Unloaded'});
+			setStatus({loading: false});
 		}
 		if (timeout) {
 			clearTimeout(timeout);
@@ -116,8 +131,8 @@ export function createSignerBalanceStore(
 	}
 
 	let unsubscribeFromAccount: (() => void) | undefined;
-	let unsubscribeFromCost: (() => void) | undefined;
 	let timeout: NodeJS.Timeout | undefined;
+
 	function start() {
 		unsubscribeFromAccount = signer.subscribe(async (newSigner) => {
 			const signerChanged = $signer?.address != newSigner?.address;
@@ -127,13 +142,13 @@ export function createSignerBalanceStore(
 					$signer = {...newSigner};
 					fetchContinuously();
 				} else {
-					set({step: 'Idle'});
+					setState({step: 'Unloaded'});
+					setStatus({loading: false});
 				}
 			}
 		});
 
 		fetchContinuously();
-
 		return stop;
 	}
 
@@ -143,7 +158,8 @@ export function createSignerBalanceStore(
 	}
 
 	function stop() {
-		set(defaultState());
+		setState(defaultState());
+		setStatus(defaultStatus());
 
 		if (unsubscribeFromAccount) {
 			unsubscribeFromAccount();
@@ -157,10 +173,8 @@ export function createSignerBalanceStore(
 	}
 
 	return {
-		subscribe: _store.subscribe,
+		subscribe: _mainStore.subscribe,
+		status: {subscribe: _statusStore.subscribe},
 		update,
-		get value() {
-			return $state.step == 'Loaded' ? $state : undefined;
-		},
 	};
 }

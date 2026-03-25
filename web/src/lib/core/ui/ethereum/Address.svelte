@@ -38,12 +38,10 @@
 </script>
 
 <script lang="ts">
-	import {
-		CheckIcon,
-		CopyIcon,
-		LoaderCircleIcon,
-		ExternalLinkIcon,
-	} from '@lucide/svelte';
+	import CheckIcon from '@lucide/svelte/icons/check';
+	import CopyIcon from '@lucide/svelte/icons/copy';
+	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import {getContext, onMount} from 'svelte';
 	import {route} from '$lib';
 	import {
