@@ -14,12 +14,12 @@ export type GasPriceEstimates = {
 
 // New dual-store types
 export type GasFeeValue =
-	| { step: 'Unloaded' }
-	| ({ step: 'Loaded' } & GasPriceEstimates);
+	| {step: 'Unloaded'}
+	| ({step: 'Loaded'} & GasPriceEstimates);
 
 export type GasFeeStatus = {
 	loading: boolean;
-	error?: { message: string; cause?: any };
+	error?: {message: string; cause?: any};
 	lastSuccessfulFetch?: number;
 };
 
@@ -30,14 +30,14 @@ export type GasFeeStore = {
 };
 
 // Helper type for when loaded
-export type LoadedGasFee = Extract<GasFeeValue, { step: 'Loaded' }>;
+export type LoadedGasFee = Extract<GasFeeValue, {step: 'Loaded'}>;
 
 function defaultState(): GasFeeValue {
-	return { step: 'Unloaded' };
+	return {step: 'Unloaded'};
 }
 
 function defaultStatus(): GasFeeStatus {
-	return { loading: false };
+	return {loading: false};
 }
 
 function avg(arr: bigint[]) {
@@ -173,13 +173,17 @@ export function createGasFeeStore(
 
 	async function fetchState(): Promise<boolean> {
 		// Preserve lastSuccessfulFetch when setting loading state
-		setStatus({ loading: true, error: undefined, lastSuccessfulFetch: $status.lastSuccessfulFetch });
+		setStatus({
+			loading: true,
+			error: undefined,
+			lastSuccessfulFetch: $status.lastSuccessfulFetch,
+		});
 
 		try {
 			const gasPriceEstimates = await fetchGasPriceEstimates();
-			setState({ step: 'Loaded', ...gasPriceEstimates });
+			setState({step: 'Loaded', ...gasPriceEstimates});
 			// Set lastSuccessfulFetch on success
-			setStatus({ loading: false, lastSuccessfulFetch: Date.now() });
+			setStatus({loading: false, lastSuccessfulFetch: Date.now()});
 			return true;
 		} catch (err: any) {
 			console.error(`failed to fetch fee history`, err);
@@ -236,7 +240,7 @@ export function createGasFeeStore(
 
 	return {
 		subscribe: _mainStore.subscribe,
-		status: { subscribe: _statusStore.subscribe },
+		status: {subscribe: _statusStore.subscribe},
 		update,
 	};
 }

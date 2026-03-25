@@ -3,13 +3,11 @@ import {get, writable, type Readable} from 'svelte/store';
 import type {PublicClient} from 'viem';
 
 // New dual-store types
-export type BalanceValue =
-	| { step: 'Unloaded' }
-	| { step: 'Loaded'; value: bigint };
+export type BalanceValue = {step: 'Unloaded'} | {step: 'Loaded'; value: bigint};
 
 export type BalanceStatus = {
 	loading: boolean;
-	error?: { message: string };
+	error?: {message: string};
 	lastSuccessfulFetch?: number;
 };
 
@@ -20,11 +18,11 @@ export type BalanceStore = {
 };
 
 function defaultState(): BalanceValue {
-	return { step: 'Unloaded' };
+	return {step: 'Unloaded'};
 }
 
 function defaultStatus(): BalanceStatus {
-	return { loading: false };
+	return {loading: false};
 }
 
 export function createBalanceStore(
@@ -60,13 +58,17 @@ export function createBalanceStore(
 
 	async function fetchState($account: `0x${string}`): Promise<boolean> {
 		// Preserve lastSuccessfulFetch when setting loading state
-		setStatus({ loading: true, error: undefined, lastSuccessfulFetch: $status.lastSuccessfulFetch });
+		setStatus({
+			loading: true,
+			error: undefined,
+			lastSuccessfulFetch: $status.lastSuccessfulFetch,
+		});
 
 		try {
 			const balance = await publicClient.getBalance({address: $account});
-			setState({ step: 'Loaded', value: balance });
+			setState({step: 'Loaded', value: balance});
 			// Set lastSuccessfulFetch on success
-			setStatus({ loading: false, lastSuccessfulFetch: Date.now() });
+			setStatus({loading: false, lastSuccessfulFetch: Date.now()});
 			return true;
 		} catch (err) {
 			// Preserve lastSuccessfulFetch on error
@@ -81,8 +83,8 @@ export function createBalanceStore(
 
 	async function fetchContinuously() {
 		if (!$account) {
-			setState({ step: 'Unloaded' });
-			setStatus({ loading: false });
+			setState({step: 'Unloaded'});
+			setStatus({loading: false});
 		}
 		if (timeout) {
 			clearTimeout(timeout);
@@ -109,7 +111,7 @@ export function createBalanceStore(
 
 	let unsubscribeFromAccount: (() => void) | undefined;
 	let timeout: NodeJS.Timeout | undefined;
-	
+
 	function start() {
 		unsubscribeFromAccount = account.subscribe(async (newAccount) => {
 			const signerChanged = $account != newAccount;
@@ -119,8 +121,8 @@ export function createBalanceStore(
 					$account = newAccount;
 					fetchContinuously();
 				} else {
-					setState({ step: 'Unloaded' });
-					setStatus({ loading: false });
+					setState({step: 'Unloaded'});
+					setStatus({loading: false});
 				}
 			}
 		});
@@ -151,7 +153,7 @@ export function createBalanceStore(
 
 	return {
 		subscribe: _mainStore.subscribe,
-		status: { subscribe: _statusStore.subscribe },
+		status: {subscribe: _statusStore.subscribe},
 		update,
 	};
 }

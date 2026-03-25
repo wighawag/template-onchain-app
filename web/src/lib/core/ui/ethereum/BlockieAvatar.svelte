@@ -68,14 +68,16 @@
 				<Avatar.AvatarImage src={uri} alt={address} style={blockieImageStyle} />
 			</Avatar.Root>
 		</Popover.Trigger>
-		<Popover.Content 
-			class="w-auto min-w-64 p-4" 
+		<Popover.Content
+			class="w-auto min-w-64 p-4"
 			side="top"
 			interactOutsideBehavior="defer-otherwise-close"
 			onInteractOutside={(e) => {
 				const target = e.target as HTMLElement;
 				// Check if the target is a popover trigger - let defer-otherwise-close handle it
-				const isPopoverTrigger = target?.closest('[data-slot="popover-trigger"]');
+				const isPopoverTrigger = target?.closest(
+					'[data-slot="popover-trigger"]',
+				);
 				if (!isPopoverTrigger && target) {
 					// For non-popover elements, re-dispatch the click after a tick
 					setTimeout(() => {

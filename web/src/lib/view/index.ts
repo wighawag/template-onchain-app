@@ -7,12 +7,12 @@ export type MessageView = Message & {pending?: boolean};
 
 // New types for dual-store architecture
 export type ViewStateValue =
-	| { step: 'Unloaded' }
-	| { step: 'Loaded'; messages: MessageView[] };
+	| {step: 'Unloaded'}
+	| {step: 'Loaded'; messages: MessageView[]};
 
 export type ViewStateStatus = {
 	loading: boolean;
-	error?: { message: string };
+	error?: {message: string};
 	lastSuccessfulFetch?: number;
 };
 
@@ -29,13 +29,13 @@ export function createViewState(params: {
 	};
 }): ViewStateStore {
 	const {onchainState, operations, config} = params;
-	
+
 	// Main store - derives from onchainState + operations
 	const _mainStore = derived(
-		[{ subscribe: onchainState.subscribe }, operations],
+		[{subscribe: onchainState.subscribe}, operations],
 		([$onchainState, $operations]): ViewStateValue => {
 			if ($onchainState.step === 'Unloaded') {
-				return { step: 'Unloaded' };
+				return {step: 'Unloaded'};
 			}
 
 			const messageViews: MessageView[] = [];
@@ -125,18 +125,18 @@ export function createViewState(params: {
 
 			messageViews.splice(config.maxMessages);
 
-			return { step: 'Loaded', messages: messageViews };
+			return {step: 'Loaded', messages: messageViews};
 		},
 	);
 
 	// Status store - pass through from onchainState.status
 	const _statusStore = derived(
 		onchainState.status,
-		($status): ViewStateStatus => ({ ...$status })
+		($status): ViewStateStatus => ({...$status}),
 	);
 
 	return {
 		subscribe: _mainStore.subscribe,
-		status: { subscribe: _statusStore.subscribe },
+		status: {subscribe: _statusStore.subscribe},
 	};
 }

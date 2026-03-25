@@ -98,7 +98,9 @@
 		addEvent('sync', {synced: count, ids: Object.keys(intentsToAdd)});
 
 		if (count > 0) {
-			txObserver.addMultiple(intentsToAdd as Parameters<typeof txObserver.addMultiple>[0]);
+			txObserver.addMultiple(
+				intentsToAdd as Parameters<typeof txObserver.addMultiple>[0],
+			);
 		}
 	}
 
@@ -193,7 +195,7 @@
 </script>
 
 <div
-	class="fixed right-4 bottom-4 z-[9999] max-h-[70vh] w-[420px] overflow-hidden rounded-lg border border-gray-700 bg-gray-900 text-xs text-gray-100 shadow-xl"
+	class="fixed right-4 bottom-4 z-9999 max-h-[70vh] w-105 overflow-hidden rounded-lg border border-gray-700 bg-gray-900 text-xs text-gray-100 shadow-xl"
 	transition:slide
 >
 	<!-- Header -->
@@ -201,21 +203,21 @@
 		<div class="flex items-center gap-2">
 			<span class="font-bold text-yellow-400">🔍 TX Debug</span>
 			{#if lastProcessTime}
-				<span class="text-gray-400 text-[10px]">
+				<span class="text-[10px] text-gray-400">
 					Process: {formatTimeAgo(lastProcessTime)} (#{processCount})
 				</span>
 			{/if}
 		</div>
 		<div class="flex items-center gap-1">
 			<button
-				class="rounded px-2 py-1 hover:bg-gray-700 text-[10px]"
+				class="rounded px-2 py-1 text-[10px] hover:bg-gray-700"
 				title="Sync operations to observer"
 				onclick={() => manualSyncToObserver()}
 			>
 				⚡ Sync
 			</button>
 			<button
-				class="rounded px-2 py-1 hover:bg-gray-700 text-[10px]"
+				class="rounded px-2 py-1 text-[10px] hover:bg-gray-700"
 				title="Trigger observer.process()"
 				onclick={() => manualProcess()}
 			>
@@ -266,7 +268,7 @@
 								};
 							}}
 							<div class="rounded border border-gray-700 bg-gray-800 p-2">
-								<div class="flex items-center justify-between mb-1">
+								<div class="mb-1 flex items-center justify-between">
 									<span class="font-mono text-[10px] text-gray-400">{id}</span>
 									<div class="flex gap-1">
 										<span
@@ -274,7 +276,8 @@
 												operation.transactionIntent.state?.inclusion,
 											)}"
 										>
-											{operation.transactionIntent.state?.inclusion ?? 'No State'}
+											{operation.transactionIntent.state?.inclusion ??
+												'No State'}
 										</span>
 										{#if operation.transactionIntent.state?.status}
 											<span
@@ -286,13 +289,15 @@
 											</span>
 										{/if}
 										{#if operation.transactionIntent.state?.final}
-											<span class="rounded bg-purple-500 px-1.5 py-0.5 text-[10px] font-bold">
+											<span
+												class="rounded bg-purple-500 px-1.5 py-0.5 text-[10px] font-bold"
+											>
 												Final
 											</span>
 										{/if}
 									</div>
 								</div>
-								<div class="text-gray-400 text-[10px] mb-1">
+								<div class="mb-1 text-[10px] text-gray-400">
 									{operation.metadata.functionName ?? 'unknown'}
 								</div>
 								{#each operation.transactionIntent.transactions as tx}
@@ -334,12 +339,15 @@
 						{#each eventLog as event}
 							<div class="rounded border border-gray-700 bg-gray-800 p-1.5">
 								<div class="flex items-center gap-2">
-									<span class="text-gray-500 text-[9px]">
+									<span class="text-[9px] text-gray-500">
 										{formatTimestamp(event.timestamp)}
 									</span>
-									<span class="font-bold text-yellow-400 text-[10px]">{event.type}</span>
+									<span class="text-[10px] font-bold text-yellow-400"
+										>{event.type}</span
+									>
 								</div>
-								<pre class="mt-0.5 overflow-x-auto text-[9px] text-gray-400">{event.data}</pre>
+								<pre
+									class="mt-0.5 overflow-x-auto text-[9px] text-gray-400">{event.data}</pre>
 							</div>
 						{/each}
 					</div>

@@ -225,7 +225,11 @@
 						<div class="flex items-center gap-2">
 							<AlertCircleIcon class="h-5 w-5 shrink-0" />
 							<span class="text-sm">Refresh failed, will retry</span>
-							<Button variant="outline" size="sm" onclick={() => onchainState.update()}>
+							<Button
+								variant="outline"
+								size="sm"
+								onclick={() => onchainState.update()}
+							>
 								Retry Now
 							</Button>
 						</div>
