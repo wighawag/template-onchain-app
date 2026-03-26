@@ -1,2 +1,2 @@
 - [ ] splash screen
-- [ ] not enough balance check + modal
+- [ ] refresh onchain state on tx being included (tx observer?)

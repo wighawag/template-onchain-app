@@ -5,6 +5,8 @@
 	import {PendingOperationModal} from '$lib/ui/pending-operation';
 	import TxObserverDebugOverlay from '$lib/debug/TxObserverDebugOverlay.svelte';
 
+	import InsufficientFundsModal from '$lib/core/transaction/InsufficientFundsModal.svelte';
+
 	const {connection} = getUserContext();
 </script>
 
@@ -18,3 +20,5 @@
 
 <ConnectionFlow {connection} />
 <PendingOperationModal />
+
+<InsufficientFundsModal />
