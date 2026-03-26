@@ -87,10 +87,25 @@
 			icon: undefined,
 			getLink: (url: string) => `rainbow://dapp?url=${encodeURIComponent(url)}`,
 		},
+		{
+			name: 'Rabby',
+			description: 'Open in Rabby',
+			icon: undefined,
+			getLink: (url: string) => `rabby://dapp/${url.replace(/^https?:\/\//, '')}`,
+		},
 	];
 
-	function handleMobileRedirect(wallet: (typeof mobileWallets)[0]) {
-		const deepLink = wallet.getLink(window.location.href);
+	async function handleMobileRedirect(wallet: (typeof mobileWallets)[0]) {
+		const currentUrl = window.location.href;
+
+		// Copy URL to clipboard first (user already informed via modal text)
+		try {
+			await navigator.clipboard.writeText(currentUrl);
+		} catch {
+			// Clipboard API may fail on some browsers, continue anyway
+		}
+
+		const deepLink = wallet.getLink(currentUrl);
 		window.location.href = deepLink;
 	}
 </script>
@@ -220,7 +235,9 @@
 	onCancel={() => (showMobileModal = false)}
 >
 	<p class="text-sm text-muted-foreground mb-3">
-		Open this site in your wallet's browser:
+		Open this site in your wallet's browser.
+		<span class="text-primary font-medium">The URL will be copied to your clipboard</span>
+		so you can paste it manually if needed.
 	</p>
 	<div
 		class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
