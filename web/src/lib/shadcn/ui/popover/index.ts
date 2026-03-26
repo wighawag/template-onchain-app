@@ -1,4 +1,5 @@
 import Root from "./popover.svelte";
+import Arrow from "./popover-arrow.svelte";
 import Close from "./popover-close.svelte";
 import Content from "./popover-content.svelte";
 import Description from "./popover-description.svelte";
@@ -9,6 +10,7 @@ import Portal from "./popover-portal.svelte";
 
 export {
 	Root,
+	Arrow,
 	Content,
 	Description,
 	Header,
@@ -18,6 +20,7 @@ export {
 	Portal,
 	//
 	Root as Popover,
+	Arrow as PopoverArrow,
 	Content as PopoverContent,
 	Description as PopoverDescription,
 	Header as PopoverHeader,
