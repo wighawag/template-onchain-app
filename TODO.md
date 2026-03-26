@@ -1,3 +1,2 @@
-- [ ] add a copy url button to handle case where user have a different wallet than those listed
 - [ ] splash screen
 - [ ] not enough balance check + modal

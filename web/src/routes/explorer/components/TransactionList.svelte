@@ -84,7 +84,7 @@
 				<p>{error}</p>
 			</Alert.Root>
 		{:else if transactions.length === 0}
-			<Empty.Root class="min-h-[200px]">
+			<Empty.Root class="min-h-50">
 				<Empty.Header>
 					<Empty.Media variant="icon">
 						<HashIcon />
