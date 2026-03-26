@@ -17,13 +17,17 @@ try {
 	console.error(e);
 }
 
-export default defineConfig({
+export default defineConfig(({mode}) => ({
 	plugins: [
 		devtoolsJson(FIRST_COMMIT ? {uuid: FIRST_COMMIT} : undefined),
 		tailwindcss(),
 		sveltekit(),
 	],
 	build: {emptyOutDir: true, minify: false, sourcemap: true},
+	server: {
+		// Allow all hosts in dev mode so tunnels work instantly
+		allowedHosts: mode === 'development' ? true : [],
+	},
 	test: {
 		expect: {requireAssertions: true},
 		projects: [
@@ -52,4 +56,4 @@ export default defineConfig({
 			},
 		],
 	},
-});
+}));
