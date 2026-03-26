@@ -9,7 +9,7 @@
 	import Badge from '$lib/shadcn/ui/badge/badge.svelte';
 	import {formatBalance} from '$lib/core/utils/format/balance';
 	import MenuIcon from '@lucide/svelte/icons/menu';
-	import GithubIcon from '@lucide/svelte/icons/github';
+	import GitGraphIcon from '@lucide/svelte/icons/git-graph';
 	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import {page} from '$app/state';
@@ -111,7 +111,7 @@
 					class="text-muted-foreground hover:text-foreground"
 					aria-label="GitHub"
 				>
-					<GithubIcon class="h-5 w-5" />
+					<GitGraphIcon class="h-5 w-5" />
 				</a>
 			{/if}
 			{#if communityUrl}

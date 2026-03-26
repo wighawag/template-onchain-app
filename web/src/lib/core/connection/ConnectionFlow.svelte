@@ -8,6 +8,7 @@
 	} from '@etherplay/connect';
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import BasicModal from '../ui/modal/basic-modal.svelte';
+	import NoWalletFlow from './NoWalletFlow.svelte';
 
 	interface Props {
 		connection: AnyConnectionStore<UnderlyingEthereumProvider>;
@@ -34,17 +35,17 @@
 	elementToFocus={emailInput}
 >
 	{#if connection.targetStep == 'SignedIn' && !connection.walletOnly}
-		<Modal.Title>Choose Connection Type...</Modal.Title>
+		<Modal.Title>Sign In</Modal.Title>
 		<!-- Email option first -->
-		<div class="mb-6 flex flex-col gap-2">
+		<div class="mb-4 flex flex-col gap-3">
 			<input
 				bind:this={emailInput}
 				bind:value={email}
 				placeholder="Enter your email"
-				class="w-full rounded-md border border-zinc-700 bg-zinc-800 p-2 text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-zinc-500 focus:outline-none"
+				class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
 			/>
 			<Button
-				class="rounded bg-zinc-700 px-4 py-2 text-zinc-100 transition hover:bg-zinc-600"
+				class="w-full"
 				onclick={() =>
 					connection.connect({
 						type: 'email',
@@ -99,46 +100,17 @@
 			</Button>
 		</div>
 	{:else}
-		{#if !(connection.targetStep == 'SignedIn' && !connection.walletOnly)}
-			<Modal.Title>No Wallet Detected</Modal.Title>
-		{/if}
-		<div class="flex flex-col gap-3 py-2">
-			<div
-				class="flex flex-col gap-2 rounded-md border border-input bg-muted/50 p-2"
-			>
-				<p class="px-3 py-2 text-sm text-muted-foreground">
-					You need a web3 wallet to continue
-				</p>
-				<a
-					href="https://metamask.io/download/"
-					target="_blank"
-					rel="noopener noreferrer"
-					class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
-				>
-					<div class="h-6 w-6 shrink-0 overflow-hidden rounded-full">
-						<img
-							src="/wallets/metamask/MetaMask-icon-fox.svg"
-							alt="MetaMask"
-							class="h-full w-full object-contain"
-						/>
-					</div>
-					<span class="text-sm font-medium">Download MetaMask</span>
-				</a>
-			</div>
-			<Button
-				variant="outline"
-				class="w-full"
-				onclick={() => connection.cancel()}
-			>
-				Cancel
-			</Button>
-		</div>
+		<NoWalletFlow
+			onCancel={() => connection.cancel()}
+			secondary={connection.targetStep == 'SignedIn' && !connection.walletOnly}
+		/>
 	{/if}
 
 	{#if connection.targetStep == 'SignedIn' && !connection.walletOnly}
 		<!-- Dev option -->
 		<Button
-			class="rounded bg-zinc-700 px-4 py-2 text-zinc-100 transition hover:bg-zinc-600"
+			variant="ghost"
+			class="w-full mt-2 text-xs text-muted-foreground"
 			onclick={() =>
 				connection.connect({
 					type: 'mnemonic',
@@ -147,7 +119,7 @@
 					index: undefined,
 				})}
 		>
-			Dev
+			Dev Mode
 		</Button>
 	{/if}
 </Modal.Root>
