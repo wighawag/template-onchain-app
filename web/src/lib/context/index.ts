@@ -11,6 +11,7 @@ import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
 import {
 	createTrackedWalletConnector,
 	createTransactionObserverConnector,
+	createOnchainStateRefreshConnector,
 } from '$lib/account/connectors.js';
 import {createToastConnector} from '$lib/account/toastConnector.js';
 
@@ -92,6 +93,11 @@ export async function createContext(): Promise<{
 		accountData,
 	});
 
+	const onchainStateRefreshConnector = createOnchainStateRefreshConnector({
+		txObserver,
+		onchainState,
+	});
+
 	// ----------------------------------------------------------------------------
 	// BALANCE AND COSTS
 	// ----------------------------------------------------------------------------
@@ -142,11 +148,13 @@ export async function createContext(): Promise<{
 			trackedWalletConnector.connect();
 			txObserverConnector.connect();
 			toastConnector.connect();
+			onchainStateRefreshConnector.connect();
 
 			return () => {
 				trackedWalletConnector.disconnect();
 				txObserverConnector.disconnect();
 				toastConnector.disconnect();
+				onchainStateRefreshConnector.disconnect();
 				clearInterval(txObserverInterval);
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();

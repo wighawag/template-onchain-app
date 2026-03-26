@@ -22,6 +22,9 @@
 	import {route} from '$lib';
 	import type {WalletClient} from '$lib/context/types';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
+	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
+	import type {BalanceStore} from '$lib/core/connection/balance';
+	import type {GasFeeStore} from '$lib/core/connection/gasFee';
 
 	interface Props {
 		functionName: string;
@@ -30,6 +33,8 @@
 		connection: AnyConnectionStore<UnderlyingEthereumProvider>;
 		publicClient: PublicClient;
 		walletClient: WalletClient;
+		balance: BalanceStore;
+		gasFee: GasFeeStore;
 	}
 
 	let {
@@ -39,6 +44,8 @@
 		connection,
 		publicClient,
 		walletClient,
+		balance,
+		gasFee,
 	}: Props = $props();
 
 	let inputValues = $state<Record<string, string>>({});
@@ -100,20 +107,31 @@
 
 			const currentConnection = await connection.ensureConnected();
 
-			// Use walletClient (which is now TrackedWalletClient) with metadata for tracking
-			const hash = await walletClient.writeContract({
-				address: contractAddress as `0x${string}`,
-				abi: [abiItem],
-				functionName: abiItem.name,
-				args: args as any,
-				account: currentConnection.account.address,
-				chain: null as any,
+			// Check balance before executing transaction
+			const contractRequest = await ensureCanAfford({
+				publicClient,
+				balance,
+				gasFee,
+				contract: {
+					address: contractAddress as `0x${string}`,
+					abi: [abiItem],
+					functionName: abiItem.name,
+					args: args as any,
+					account: currentConnection.account.address,
+				},
 			});
+
+			// Use walletClient (which is now TrackedWalletClient) with metadata for tracking
+			const hash = await walletClient.writeContract(contractRequest);
 
 			transactionHash = hash;
 			result = null;
 			error = null;
 		} catch (e: any) {
+			if (e instanceof InsufficientFundsError) {
+				// User dismissed the modal - silently cancel
+				return;
+			}
 			error = e.message || 'Failed to execute transaction';
 			console.error('Error executing transaction:', e);
 		} finally {

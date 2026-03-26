@@ -43,7 +43,13 @@
 
 	let {address}: Props = $props();
 
-	let {publicClient, walletClient, connection} = getUserContext();
+	let {
+		publicClient,
+		walletClient,
+		connection,
+		balance: balanceStore,
+		gasFee,
+	} = getUserContext();
 
 	let balance = $state<bigint>(0n);
 	let nonce = $state<number>(0);
@@ -293,6 +299,8 @@
 												{connection}
 												{publicClient}
 												{walletClient}
+												balance={balanceStore}
+												{gasFee}
 											/>
 										{/each}
 									</div>
@@ -322,6 +330,8 @@
 												{connection}
 												{publicClient}
 												{walletClient}
+												balance={balanceStore}
+												{gasFee}
 											/>
 										{/each}
 									</div>

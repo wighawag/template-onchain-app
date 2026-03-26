@@ -69,8 +69,10 @@
 			</Avatar.Root>
 		</Popover.Trigger>
 		<Popover.Content
-			class="w-auto min-w-64 p-4"
+			class="w-auto min-w-64 border border-muted bg-popover p-4 text-popover-foreground shadow-xl shadow-black/25"
 			side="top"
+			sideOffset={8}
+			collisionPadding={16}
 			interactOutsideBehavior="defer-otherwise-close"
 			onInteractOutside={(e) => {
 				const target = e.target as HTMLElement;
@@ -89,9 +91,10 @@
 				}
 			}}
 		>
+			<Popover.Arrow class="blockie-popover-arrow" />
 			<div class="flex items-center gap-3">
 				<!-- Larger blockie avatar in the popover -->
-				<Avatar.Root class="size-12">
+				<Avatar.Root class="size-12 ring-2 ring-border">
 					<Avatar.AvatarImage
 						src={uri}
 						alt={address}
@@ -102,8 +105,7 @@
 					{#if ensLoading}
 						<div class="h-5 w-24 animate-pulse rounded bg-muted"></div>
 					{:else if ensName}
-						<span class="truncate font-semibold text-foreground">{ensName}</span
-						>
+						<span class="truncate font-semibold text-foreground">{ensName}</span>
 					{/if}
 					<Address
 						value={address}
@@ -122,3 +124,15 @@
 		<Avatar.AvatarImage src={uri} alt={address} style={blockieImageStyle} />
 	</Avatar.Root>
 {/if}
+
+<style>
+	:global(.blockie-popover-arrow) {
+		fill: var(--muted) !important;
+	}
+	:global(.blockie-popover-arrow svg) {
+		fill: var(--muted) !important;
+	}
+	:global(.blockie-popover-arrow polygon) {
+		fill: var(--muted) !important;
+	}
+</style>

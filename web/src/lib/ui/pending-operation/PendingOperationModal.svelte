@@ -12,8 +12,10 @@
 	import type {GasPrice} from '$lib/core/connection/gasFee';
 	import type {ExtendedTransactionMetadata} from '$lib/account/AccountData';
 	import deployments from '$lib/deployments';
+	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
 
-	const {walletClient, accountData, gasFee} = getUserContext();
+	const {walletClient, accountData, gasFee, publicClient, balance} =
+		getUserContext();
 
 	// Modal state
 	let showDismissConfirm = $state(false);
@@ -97,6 +99,20 @@
 			resubmitError = null;
 
 			const originalTx = operation.metadata.tx;
+
+			// Check balance before resubmitting
+			const txRequest = await ensureCanAfford({
+				publicClient,
+				balance,
+				gasFee,
+				transaction: {
+					account: originalTx.from,
+					to: originalTx.to as `0x${string}`,
+					data: originalTx.data,
+					value: originalTx.value,
+				},
+			});
+
 			// Create metadata with operationId to link this resubmit to the existing operation
 			const resubmitMetadata: ExtendedTransactionMetadata = {
 				type: 'unknown',
@@ -105,11 +121,8 @@
 				operationId: operationKey,
 			};
 			await walletClient.sendTransaction({
-				account: originalTx.from,
+				...txRequest,
 				chain: deployments.chain, // TODO? tx.chain ?
-				to: originalTx.to as `0x${string}`,
-				data: originalTx.data,
-				value: originalTx.value,
 				nonce: originalTx.nonce,
 				maxFeePerGas: gasPrice.maxFeePerGas,
 				maxPriorityFeePerGas: gasPrice.maxPriorityFeePerGas,
@@ -118,6 +131,10 @@
 
 			handleClose();
 		} catch (err: unknown) {
+			if (err instanceof InsufficientFundsError) {
+				// User dismissed the modal - silently cancel
+				return;
+			}
 			const error = err as {code?: number; message?: string};
 			if (error.code === 4001) {
 				resubmitError = 'Transaction rejected by user';
@@ -157,11 +174,21 @@
 			const cancelGasPrice =
 				originalGasPrice >= fastPrice ? originalGasPrice + 1n : fastPrice;
 
+			// Check balance before cancelling
+			const txRequest = await ensureCanAfford({
+				publicClient,
+				balance,
+				gasFee,
+				transaction: {
+					account: originalTx.from,
+					to: originalTx.from,
+					value: 0n,
+				},
+			});
+
 			await walletClient.sendTransaction({
-				account: originalTx.from,
+				...txRequest,
 				chain: deployments.chain,
-				to: originalTx.from,
-				value: 0n,
 				nonce: originalTx.nonce,
 				maxFeePerGas: cancelGasPrice,
 				maxPriorityFeePerGas: cancelGasPrice,
@@ -174,6 +201,10 @@
 
 			handleClose();
 		} catch (err: unknown) {
+			if (err instanceof InsufficientFundsError) {
+				// User dismissed the modal - silently cancel
+				return;
+			}
 			const error = err as {code?: number; message?: string};
 			if (error.code === 4001) {
 				cancelError = 'Transaction rejected by user';

@@ -9,6 +9,7 @@
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import BlockieAvatar from '$lib/core/ui/ethereum/BlockieAvatar.svelte';
+	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
 
 	const {
 		connection,
@@ -17,6 +18,9 @@
 		walletClient,
 		deployments,
 		clock,
+		publicClient,
+		balance,
+		gasFee,
 	} = getUserContext();
 
 	const viewStatus = viewState.status;
@@ -37,17 +41,25 @@
 		try {
 			const currentConnection = await connection.ensureConnected();
 
-			await walletClient.writeContract({
-				...deployments.current.contracts.GreetingsRegistry,
-				functionName: 'setMessage',
-				args: [greetingInput],
-				account: currentConnection.account.address,
-				chain: null as any,
+			const contractRequest = await ensureCanAfford({
+				publicClient,
+				balance,
+				gasFee,
+				contract: {
+					...deployments.current.contracts.GreetingsRegistry,
+					functionName: 'setMessage',
+					args: [greetingInput],
+					account: currentConnection.account.address,
+				},
 			});
+
+			await walletClient.writeContract(contractRequest as any);
 			greetingInput = '';
-			// Refresh messages after a short delay to allow transaction to be mined
-			setTimeout(() => onchainState.update(), 2000);
 		} catch (error) {
+			if (error instanceof InsufficientFundsError) {
+				// User dismissed the modal - silently cancel
+				return;
+			}
 			console.error('Failed to set greeting:', error);
 		} finally {
 			isSubmitting = false;

@@ -135,8 +135,8 @@ importers:
         specifier: ^0.0.9
         version: 0.0.9(viem@2.47.6(bufferutil@4.1.0)(typescript@6.0.2)(zod@4.3.6))
       '@etherplay/connect':
-        specifier: ^0.0.43
-        version: 0.0.43(@types/node@25.5.0)(lightningcss@1.32.0)(svelte@5.55.0)
+        specifier: ^0.0.44
+        version: 0.0.44(@types/node@25.5.0)(lightningcss@1.32.0)(svelte@5.55.0)
       '@internationalized/date':
         specifier: ^3.12.0
         version: 3.12.0
@@ -601,13 +601,13 @@ packages:
   '@etherplay/connect-core@0.0.0':
     resolution: {integrity: sha512-ztcQaybfcpjxmy6U12ZaQ1+E4WbFwdtJNyWg3bSbhB62r13fiLmJoTs95RmN86U3dEZVn3jRexjacq7G40Yx8g==}
 
-  '@etherplay/connect@0.0.43':
-    resolution: {integrity: sha512-y/8r1x+JyHSgrR2u2X/pMHBElaD2pBudtO96hDDCh8VfLvSwgPp8jM/OIt3fCYTwwN+5kK/HvE+p+BDQjxMqhQ==}
+  '@etherplay/connect@0.0.44':
+    resolution: {integrity: sha512-PQZCOGfah1CLkeBEr7IBV/APdLTvY6KuYFTST+PCfz6ghrfIxqRhGWQF1eGrDsevzGlMeliW6ubedv4somc8og==}
     peerDependencies:
       svelte: ^5.0.0
 
-  '@etherplay/wallet-connector-ethereum@0.0.7':
-    resolution: {integrity: sha512-/V3mZc3eX/7yhmqsmVMmxZFPd8rUnhi5X3kXqV/XjQwQkIE2KyJ0Hf5aPzjgIateE0HApAAjjRd4ZHAloF1EXA==}
+  '@etherplay/wallet-connector-ethereum@0.0.8':
+    resolution: {integrity: sha512-R3tmMytDVNVcXo42LgrcLifJXGxrvBooGRDrB98JfE6Lm7AYKgEGXAygBuu3X4Im2Vbfqeth3Z2agU+nRVo6HQ==}
 
   '@etherplay/wallet-connector@0.0.5':
     resolution: {integrity: sha512-P9wMxN4HelrL+/56g4IjkVAjuIhz0Bhq/CFxAOWUQ2cwpFsdrVSQ0s1PCxR2+gsBca+RTxgsfQhOcYqjTbEhOQ==}
@@ -4727,11 +4727,11 @@ snapshots:
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
 
-  '@etherplay/connect@0.0.43(@types/node@25.5.0)(lightningcss@1.32.0)(svelte@5.55.0)':
+  '@etherplay/connect@0.0.44(@types/node@25.5.0)(lightningcss@1.32.0)(svelte@5.55.0)':
     dependencies:
       '@etherplay/connect-core': 0.0.0
       '@etherplay/wallet-connector': 0.0.5
-      '@etherplay/wallet-connector-ethereum': 0.0.7(@types/node@25.5.0)(lightningcss@1.32.0)
+      '@etherplay/wallet-connector-ethereum': 0.0.8(@types/node@25.5.0)(lightningcss@1.32.0)
       svelte: 5.55.0
     transitivePeerDependencies:
       - '@edge-runtime/vm'
@@ -4750,7 +4750,7 @@ snapshots:
       - supports-color
       - terser
 
-  '@etherplay/wallet-connector-ethereum@0.0.7(@types/node@25.5.0)(lightningcss@1.32.0)':
+  '@etherplay/wallet-connector-ethereum@0.0.8(@types/node@25.5.0)(lightningcss@1.32.0)':
     dependencies:
       '@etherplay/wallet-connector': 0.0.5
       '@noble/curves': 1.8.1
