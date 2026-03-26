@@ -3,7 +3,7 @@
 	import {Button} from '$lib/shadcn/ui/button';
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import BasicModal from '$lib/core/ui/modal/basic-modal.svelte';
-	import {Download, ExternalLink, Smartphone} from '@lucide/svelte';
+	import {Download, ExternalLink, Smartphone, Copy, Check} from '@lucide/svelte';
 
 	interface Props {
 		onCancel?: () => void;
@@ -16,6 +16,7 @@
 	let showDownloadModal = $state(false);
 	let showMobileModal = $state(false);
 	let isMobile = $state(false);
+	let urlCopied = $state(false);
 
 	onMount(() => {
 		const ua = navigator.userAgent;
@@ -107,6 +108,19 @@
 
 		const deepLink = wallet.getLink(currentUrl);
 		window.location.href = deepLink;
+	}
+
+	async function handleCopyUrl() {
+		const currentUrl = window.location.href;
+		try {
+			await navigator.clipboard.writeText(currentUrl);
+			urlCopied = true;
+			setTimeout(() => {
+				urlCopied = false;
+			}, 2000);
+		} catch {
+			// Clipboard API may fail on some browsers
+		}
 	}
 </script>
 
@@ -267,5 +281,24 @@
 				<ExternalLink class="h-4 w-4 opacity-30" />
 			</button>
 		{/each}
+	</div>
+	
+	<!-- Copy URL for unlisted wallets -->
+	<div class="mt-4 pt-3 border-t border-input">
+		<p class="text-xs text-muted-foreground mb-2">
+			Wallet not listed? Copy this page's URL and paste it in your wallet's browser:
+		</p>
+		<button
+			onclick={handleCopyUrl}
+			class="flex w-full items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90"
+		>
+			{#if urlCopied}
+				<Check class="h-4 w-4" />
+				<span>URL Copied!</span>
+			{:else}
+				<Copy class="h-4 w-4" />
+				<span>Copy URL to Clipboard</span>
+			{/if}
+		</button>
 	</div>
 </BasicModal>
