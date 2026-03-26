@@ -1,2 +1,1 @@
 - [ ] splash screen
-- [ ] refresh onchain state on tx being included (tx observer?)

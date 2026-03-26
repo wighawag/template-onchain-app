@@ -55,8 +55,6 @@
 
 			await walletClient.writeContract(contractRequest as any);
 			greetingInput = '';
-			// Refresh messages after a short delay to allow transaction to be mined
-			setTimeout(() => onchainState.update(), 2000);
 		} catch (error) {
 			if (error instanceof InsufficientFundsError) {
 				// User dismissed the modal - silently cancel

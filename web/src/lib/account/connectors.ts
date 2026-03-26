@@ -6,6 +6,7 @@ import type {
 } from './AccountData';
 import type {TransactionObserver} from '@etherkit/tx-observer';
 import {hookTxObserverToAccountData} from '$lib/core/utils/data/synqable-transactions';
+import type {OnchainStateStore} from '$lib/onchain/state';
 
 /// Listen for broadcasted transaction and save them in the Account Data
 export function createTrackedWalletConnector(params: {
@@ -84,6 +85,35 @@ export function createTransactionObserverConnector(params: {
 	function disconnect() {
 		stopListeningForTransactions?.();
 		unsubscribeFromTransactionUpdates?.();
+	}
+
+	return {
+		connect,
+		disconnect,
+	};
+}
+
+/// Listen for tx observer events and refresh onchain state when transactions are included
+export function createOnchainStateRefreshConnector(params: {
+	txObserver: TransactionObserver;
+	onchainState: OnchainStateStore;
+}) {
+	const {txObserver, onchainState} = params;
+
+	let unsubscribe: (() => void) | undefined;
+
+	function connect() {
+		disconnect();
+		unsubscribe = txObserver.on('intent:status', (event) => {
+			// Refresh onchain state when a transaction is included
+			if (event.intent.state?.inclusion === 'Included') {
+				onchainState.update();
+			}
+		});
+	}
+
+	function disconnect() {
+		unsubscribe?.();
 	}
 
 	return {
