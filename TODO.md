@@ -1,0 +1,5 @@
+- [ ] copy link so can easily manually launch wallet manually
+- [ ] does rabby have no deep linking capavbility
+- [ ] rainbow linkimg does not launc the url, if we copy on click, user can simply navigate manually, but we need to let them know somehow before clicking
+- [ ] splash screen
+- [ ] not enough balance check + modal
