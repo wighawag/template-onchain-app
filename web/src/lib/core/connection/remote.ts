@@ -23,6 +23,7 @@ export async function establishRemoteConnection(): Promise<EstablishedConnection
 
 	const connection = createConnection({
 		targetStep: 'WalletConnected',
+		useCurrentAccount: 'whenSingle',
 		chainInfo,
 		prioritizeWalletProvider: true,
 		autoConnect: true,

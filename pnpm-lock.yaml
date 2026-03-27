@@ -135,8 +135,8 @@ importers:
         specifier: ^0.0.9
         version: 0.0.9(viem@2.47.6(bufferutil@4.1.0)(typescript@6.0.2)(zod@4.3.6))
       '@etherplay/connect':
-        specifier: ^0.0.44
-        version: 0.0.44(@types/node@25.5.0)(lightningcss@1.32.0)(svelte@5.55.0)
+        specifier: ^0.0.46
+        version: 0.0.46(@types/node@25.5.0)(lightningcss@1.32.0)(svelte@5.55.0)
       '@internationalized/date':
         specifier: ^3.12.0
         version: 3.12.0
@@ -601,8 +601,8 @@ packages:
   '@etherplay/connect-core@0.0.0':
     resolution: {integrity: sha512-ztcQaybfcpjxmy6U12ZaQ1+E4WbFwdtJNyWg3bSbhB62r13fiLmJoTs95RmN86U3dEZVn3jRexjacq7G40Yx8g==}
 
-  '@etherplay/connect@0.0.44':
-    resolution: {integrity: sha512-PQZCOGfah1CLkeBEr7IBV/APdLTvY6KuYFTST+PCfz6ghrfIxqRhGWQF1eGrDsevzGlMeliW6ubedv4somc8og==}
+  '@etherplay/connect@0.0.46':
+    resolution: {integrity: sha512-bl1bS8Rqrcqy8fPWNlI6YNgqTe59iEFZ2yDS+uFfE/T6XH/702UksxIX1S/+T4TnvlF0tqo+iy0aiLFkgytoCw==}
     peerDependencies:
       svelte: ^5.0.0
 
@@ -4727,7 +4727,7 @@ snapshots:
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
 
-  '@etherplay/connect@0.0.44(@types/node@25.5.0)(lightningcss@1.32.0)(svelte@5.55.0)':
+  '@etherplay/connect@0.0.46(@types/node@25.5.0)(lightningcss@1.32.0)(svelte@5.55.0)':
     dependencies:
       '@etherplay/connect-core': 0.0.0
       '@etherplay/wallet-connector': 0.0.5
