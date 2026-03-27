@@ -1,15 +1,13 @@
 <script lang="ts">
-	import {
-		RocketIcon,
-		LayersIcon,
-		RefreshCwIcon,
-		GlobeIcon,
-		CodeIcon,
-		SplitIcon,
-		MonitorIcon,
-		TerminalIcon,
-		ZapIcon,
-	} from '@lucide/svelte';
+	import RocketIcon from '@lucide/svelte/icons/rocket';
+	import LayersIcon from '@lucide/svelte/icons/layers';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+	import GlobeIcon from '@lucide/svelte/icons/globe';
+	import CodeIcon from '@lucide/svelte/icons/code';
+	import SplitIcon from '@lucide/svelte/icons/split';
+	import MonitorIcon from '@lucide/svelte/icons/monitor';
+	import TerminalIcon from '@lucide/svelte/icons/terminal';
+	import ZapIcon from '@lucide/svelte/icons/zap';
 
 	const features = [
 		{
@@ -78,7 +76,9 @@
 			<div
 				class="mx-auto w-full max-w-[500px] rounded-lg border bg-card p-6 shadow-sm lg:mx-0 lg:max-w-none"
 			>
-				<div class="mb-4 flex items-center justify-center gap-3 lg:justify-start">
+				<div
+					class="mb-4 flex items-center justify-center gap-3 lg:justify-start"
+				>
 					<feature.icon class="h-6 w-6 text-primary" />
 					<h3 class="text-lg font-semibold text-primary">{feature.title}</h3>
 				</div>

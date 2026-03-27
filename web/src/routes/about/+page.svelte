@@ -2,14 +2,12 @@
 	import DefaultHead from '../../lib/metadata/DefaultHead.svelte';
 	import {Button} from '$lib/shadcn/ui/button';
 	import {CopyCommand} from '$lib/core/ui/copy-command';
-	import {
-		GithubIcon,
-		TwitterIcon,
-		GlobeIcon,
-		HeartIcon,
-		CodeIcon,
-		UsersIcon,
-	} from '@lucide/svelte';
+	import GlobeIcon from '@lucide/svelte/icons/globe';
+	import HeartIcon from '@lucide/svelte/icons/heart';
+	import CodeIcon from '@lucide/svelte/icons/code';
+	import UsersIcon from '@lucide/svelte/icons/users';
+	import TwitterIcon from '$lib/icons/TwitterIcon.svelte';
+	import GithubIcon from '$lib/icons/GithubIcon.svelte';
 </script>
 
 <DefaultHead title={'About - Jolly Roger'} />
@@ -137,7 +135,7 @@
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							<TwitterIcon class="h-4 w-4" />
+							<TwitterIcon class="h-4 w-4 fill-white" />
 							Twitter
 						</Button>
 						<Button
@@ -147,7 +145,7 @@
 							target="_blank"
 							rel="noopener noreferrer"
 						>
-							<GithubIcon class="h-4 w-4" />
+							<GithubIcon class="h-4 w-4 fill-white" />
 							GitHub
 						</Button>
 						<Button
