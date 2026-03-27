@@ -33,35 +33,49 @@ export function createRpcHealthStore(params: {
 	const {balance, gasFee} = params;
 
 	let errorSince: number | undefined;
+	let lastError: RpcError | null = null;
 
 	return derived<[Readable<BalanceStatus>, Readable<GasFeeStatus>], RpcHealthValue>(
 		[balance.status, gasFee.status],
 		([$balanceStatus, $gasFeeStatus]) => {
 			const balanceError = $balanceStatus.error;
 			const gasFeeError = $gasFeeStatus.error;
+			const isLoading = $balanceStatus.loading || $gasFeeStatus.loading;
 
-			// Healthy if neither has errors
-			if (!balanceError && !gasFeeError) {
-				errorSince = undefined;
-				return {healthy: true, error: null};
-			}
+			// If either has an error, we're unhealthy
+			if (balanceError || gasFeeError) {
+				const errorMessage = balanceError?.message || gasFeeError?.message || 'Unknown RPC error';
+				const category = categorizeError(errorMessage);
 
-			// Use the first available error for categorization
-			const errorMessage = balanceError?.message || gasFeeError?.message || 'Unknown RPC error';
-			const category = categorizeError(errorMessage);
+				if (!errorSince) {
+					errorSince = Date.now();
+				}
 
-			if (!errorSince) {
-				errorSince = Date.now();
-			}
-
-			return {
-				healthy: false,
-				error: {
+				lastError = {
 					category,
 					message: errorMessage,
 					since: errorSince,
-				},
-			};
+				};
+
+				return {
+					healthy: false,
+					error: lastError,
+				};
+			}
+
+			// If loading and we had a previous error, maintain unhealthy state
+			// This prevents blinking during retry attempts
+			if (isLoading && lastError) {
+				return {
+					healthy: false,
+					error: lastError,
+				};
+			}
+
+			// Healthy: no errors and not loading with a previous error
+			errorSince = undefined;
+			lastError = null;
+			return {healthy: true, error: null};
 		},
 	);
 }

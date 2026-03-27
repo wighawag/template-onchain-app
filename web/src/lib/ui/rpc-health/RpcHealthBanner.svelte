@@ -3,7 +3,7 @@
 	import Button from '$lib/shadcn/ui/button/button.svelte';
 	import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
 
-	const {connection, rpcHealth} = getUserContext();
+	const {connection, rpcHealth, offline} = getUserContext();
 
 	let isConnected = $derived(connection.isTargetStepReached($connection));
 
@@ -23,7 +23,7 @@
 	}
 </script>
 
-{#if !$rpcHealth.healthy && $rpcHealth.error}
+{#if !$rpcHealth.healthy && $rpcHealth.error && !$offline.offline}
 	<div
 		class="flex w-full items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2"
 	>

@@ -154,7 +154,9 @@
 				>
 					<AlertCircleIcon class="mb-3 h-10 w-10" />
 					<p class="text-base">Failed to load messages</p>
-					<p class="text-sm text-muted-foreground">
+					<p
+						class="line-clamp-3 max-w-full overflow-hidden text-sm wrap-break-word text-ellipsis text-muted-foreground"
+					>
 						{$viewStatus.error.message}
 					</p>
 					<Button

@@ -117,7 +117,9 @@ export async function createContext(): Promise<{
 	window.gasFee = gasFee;
 
 	const rpcHealth = createRpcHealthStore({balance, gasFee});
+	window.rpcHealth = rpcHealth;
 	const offline = createOfflineStore();
+	window.offline = offline;
 	// ----------------------------------------------------------------------------
 
 	const viewState = createViewState({

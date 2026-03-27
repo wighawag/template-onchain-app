@@ -16,10 +16,22 @@ import type {
 	OptionalSigner,
 	TypedDeployments,
 } from './types';
+import {PUBLIC_NODE_URL} from '$env/static/public';
 
 // TODO allow to specify the expected DeploymentStore type
 export async function establishRemoteConnection(): Promise<EstablishedConnection> {
-	const chainInfo = deploymentsFromFiles.chain;
+	const chainInfo = PUBLIC_NODE_URL
+		? {
+				...deploymentsFromFiles.chain,
+				rpcUrls: {
+					...deploymentsFromFiles.chain.rpcUrls,
+					default: {
+						...deploymentsFromFiles.chain.rpcUrls.default,
+						http: [PUBLIC_NODE_URL],
+					},
+				},
+			}
+		: deploymentsFromFiles.chain;
 
 	const connection = createConnection({
 		targetStep: 'WalletConnected',
