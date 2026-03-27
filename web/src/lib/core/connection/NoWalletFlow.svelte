@@ -255,7 +255,7 @@
 							class="h-full w-full object-contain"
 						/>
 					{:else}
-						<span class="text-xs font-bold">{wallet.name[0]}</span>
+						<span class="text-xs font-bold">{(wallet as any).name[0]}</span>
 					{/if}
 				</div>
 				<div class="flex-1">

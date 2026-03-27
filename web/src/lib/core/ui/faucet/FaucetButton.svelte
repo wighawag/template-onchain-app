@@ -1,10 +1,21 @@
 <script lang="ts">
-	import {PUBLIC_FAUCET_LINK} from '$env/static/public';
 	import {Button} from '$lib/shadcn/ui/button/index.js';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
+	import {getFaucetLink} from '.';
+	import {getUserContext} from '$lib';
+
+	const {account} = getUserContext();
 
 	function openFaucet() {
-		window.open(PUBLIC_FAUCET_LINK, 'faucet', 'width=600,height=700,scrollbars=yes,resizable=yes');
+		const address = $account;
+		if (!address) {
+			throw new Error(`no account for faucet`);
+		}
+		window.open(
+			getFaucetLink(address),
+			'faucet',
+			'width=600,height=700,scrollbars=yes,resizable=yes',
+		);
 	}
 </script>
 
