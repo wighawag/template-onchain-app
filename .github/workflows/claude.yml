@@ -30,6 +30,9 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Install Markplane
+        run: curl -fsSL https://raw.githubusercontent.com/zerowand01/markplane/master/install.sh | sh
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
