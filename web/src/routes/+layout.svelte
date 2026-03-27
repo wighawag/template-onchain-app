@@ -10,6 +10,7 @@
 	import AsyncContext from '$lib/context/AsyncContext.svelte';
 	import Navbar from '$lib/ui/navbar/navbar.svelte';
 	import RpcHealthBanner from '$lib/ui/rpc-health/RpcHealthBanner.svelte';
+	import OfflineBanner from '$lib/ui/offline/OfflineBanner.svelte';
 	import {createENSService} from '$lib/core/ens';
 	import {setContext} from 'svelte';
 	import {Toaster} from '$lib/shadcn/ui/sonner';
@@ -26,6 +27,7 @@
 		<!-- TODO SplashScreen -->
 	{/snippet}
 	<Navbar />
+	<OfflineBanner />
 	<RpcHealthBanner />
 
 	{@render children()}
