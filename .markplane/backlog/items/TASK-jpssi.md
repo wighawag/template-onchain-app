@@ -1,7 +1,7 @@
 ---
 id: TASK-jpssi
 title: Create offline detection store using navigator.onLine and fetch heartbeat
-status: draft
+status: done
 priority: medium
 type: feature
 effort: small

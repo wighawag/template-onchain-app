@@ -5,6 +5,7 @@ import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance.js';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
 import {createRpcHealthStore} from '$lib/core/connection/rpcHealth';
+import {createOfflineStore} from '$lib/core/connection/offline';
 import {createOnchainState} from '$lib/onchain/state.js';
 import {createViewState} from '$lib/view/index.js';
 import {createTransactionObserver} from '@etherkit/tx-observer';
@@ -116,6 +117,7 @@ export async function createContext(): Promise<{
 	window.gasFee = gasFee;
 
 	const rpcHealth = createRpcHealthStore({balance, gasFee});
+	const offline = createOfflineStore();
 	// ----------------------------------------------------------------------------
 
 	const viewState = createViewState({
@@ -130,6 +132,7 @@ export async function createContext(): Promise<{
 			gasFee,
 			balance,
 			rpcHealth,
+			offline,
 			connection,
 			walletClient,
 			publicClient,
