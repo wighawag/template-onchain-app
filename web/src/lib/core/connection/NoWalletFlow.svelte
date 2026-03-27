@@ -3,7 +3,11 @@
 	import {Button} from '$lib/shadcn/ui/button';
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import BasicModal from '$lib/core/ui/modal/basic-modal.svelte';
-	import {Download, ExternalLink, Smartphone, Copy, Check} from '@lucide/svelte';
+	import DownloadIcon from '@lucide/svelte/icons/download';
+	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
+	import SmartphoneIcon from '@lucide/svelte/icons/smartphone';
+	import CopyIcon from '@lucide/svelte/icons/copy';
+	import CheckIcon from '@lucide/svelte/icons/check';
 
 	interface Props {
 		onCancel?: () => void;
@@ -30,7 +34,8 @@
 			(window as Window & {ethereum?: unknown}).ethereum;
 
 		// Show mobile option only if on mobile/tablet AND not already in a dApp browser
-		isMobile = isSmallScreen && (hasTouch || isMobileOS) && !hasInjectedProvider;
+		isMobile =
+			isSmallScreen && (hasTouch || isMobileOS) && !hasInjectedProvider;
 	});
 
 	const downloadWallets = [
@@ -92,7 +97,8 @@
 			name: 'Rabby',
 			description: 'Open in Rabby',
 			icon: undefined,
-			getLink: (url: string) => `rabby://dapp/${url.replace(/^https?:\/\//, '')}`,
+			getLink: (url: string) =>
+				`rabby://dapp/${url.replace(/^https?:\/\//, '')}`,
 		},
 	];
 
@@ -132,7 +138,9 @@
 			<span class="w-full border-t border-input"></span>
 		</div>
 		<div class="relative flex justify-center text-xs uppercase">
-			<span class="bg-background px-2 text-muted-foreground">or use a wallet</span>
+			<span class="bg-background px-2 text-muted-foreground"
+				>or use a wallet</span
+			>
 		</div>
 	</div>
 	<div class="flex flex-col gap-2">
@@ -141,7 +149,7 @@
 			class="w-full justify-start gap-3"
 			onclick={() => (showDownloadModal = true)}
 		>
-			<Download class="h-4 w-4" />
+			<DownloadIcon class="h-4 w-4" />
 			<span>Get a Wallet</span>
 		</Button>
 		{#if isMobile}
@@ -150,7 +158,7 @@
 				class="w-full justify-start gap-3"
 				onclick={() => (showMobileModal = true)}
 			>
-				<Smartphone class="h-4 w-4" />
+				<SmartphoneIcon class="h-4 w-4" />
 				<span>Open in Wallet App</span>
 			</Button>
 		{/if}
@@ -168,10 +176,10 @@
 				class="h-14 justify-start gap-4 px-4"
 				onclick={() => (showDownloadModal = true)}
 			>
-				<Download class="h-5 w-5" />
+				<DownloadIcon class="h-5 w-5" />
 				<div class="flex-1 text-left">
 					<div class="font-medium">Download a Wallet</div>
-					<div class="text-xs text-muted-foreground font-normal">
+					<div class="text-xs font-normal text-muted-foreground">
 						Install a browser extension
 					</div>
 				</div>
@@ -182,10 +190,10 @@
 					class="h-14 justify-start gap-4 px-4"
 					onclick={() => (showMobileModal = true)}
 				>
-					<Smartphone class="h-5 w-5" />
+					<SmartphoneIcon class="h-5 w-5" />
 					<div class="flex-1 text-left">
 						<div class="font-medium">Open in Wallet App</div>
-						<div class="text-xs text-muted-foreground font-normal">
+						<div class="text-xs font-normal text-muted-foreground">
 							Use your existing mobile wallet
 						</div>
 					</div>
@@ -206,7 +214,7 @@
 	openWhen={showDownloadModal}
 	onCancel={() => (showDownloadModal = false)}
 >
-	<p class="text-sm text-muted-foreground mb-3">
+	<p class="mb-3 text-sm text-muted-foreground">
 		Install a wallet extension to connect:
 	</p>
 	<div
@@ -220,7 +228,7 @@
 				class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
 			>
 				<div
-					class="h-6 w-6 shrink-0 overflow-hidden rounded-full flex items-center justify-center bg-muted"
+					class="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted"
 				>
 					{#if wallet.icon}
 						<img
@@ -236,7 +244,7 @@
 					<div class="text-sm font-medium">{wallet.name}</div>
 					<div class="text-xs text-muted-foreground">{wallet.description}</div>
 				</div>
-				<ExternalLink class="h-4 w-4 opacity-30" />
+				<ExternalLinkIcon class="h-4 w-4 opacity-30" />
 			</a>
 		{/each}
 	</div>
@@ -248,9 +256,11 @@
 	openWhen={showMobileModal}
 	onCancel={() => (showMobileModal = false)}
 >
-	<p class="text-sm text-muted-foreground mb-3">
+	<p class="mb-3 text-sm text-muted-foreground">
 		Open this site in your wallet's browser.
-		<span class="text-primary font-medium">The URL will be copied to your clipboard</span>
+		<span class="font-medium text-primary"
+			>The URL will be copied to your clipboard</span
+		>
 		so you can paste it manually if needed.
 	</p>
 	<div
@@ -262,7 +272,7 @@
 				class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
 			>
 				<div
-					class="h-6 w-6 shrink-0 overflow-hidden rounded-full flex items-center justify-center bg-muted"
+					class="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted"
 				>
 					{#if wallet.icon}
 						<img
@@ -278,25 +288,26 @@
 					<div class="text-sm font-medium">{wallet.name}</div>
 					<div class="text-xs text-muted-foreground">{wallet.description}</div>
 				</div>
-				<ExternalLink class="h-4 w-4 opacity-30" />
+				<ExternalLinkIcon class="h-4 w-4 opacity-30" />
 			</button>
 		{/each}
 	</div>
-	
+
 	<!-- Copy URL for unlisted wallets -->
-	<div class="mt-4 pt-3 border-t border-input">
-		<p class="text-xs text-muted-foreground mb-2">
-			Wallet not listed? Copy this page's URL and paste it in your wallet's browser:
+	<div class="mt-4 border-t border-input pt-3">
+		<p class="mb-2 text-xs text-muted-foreground">
+			Wallet not listed? Copy this page's URL and paste it in your wallet's
+			browser:
 		</p>
 		<button
 			onclick={handleCopyUrl}
-			class="flex w-full items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90"
+			class="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
 		>
 			{#if urlCopied}
-				<Check class="h-4 w-4" />
+				<CheckIcon class="h-4 w-4" />
 				<span>URL Copied!</span>
 			{:else}
-				<Copy class="h-4 w-4" />
+				<CopyIcon class="h-4 w-4" />
 				<span>Copy URL to Clipboard</span>
 			{/if}
 		</button>
