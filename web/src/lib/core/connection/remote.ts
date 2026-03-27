@@ -21,16 +21,11 @@ import type {
 export async function establishRemoteConnection(): Promise<EstablishedConnection> {
 	const chainInfo = deploymentsFromFiles.chain;
 
-	// console.log(`chainInfo`, chainInfo);
-
 	const connection = createConnection({
-		// walletOnly: true,
 		targetStep: 'WalletConnected',
 		chainInfo,
 		prioritizeWalletProvider: true,
-		// alwaysUseCurrentAccount: true,
 		autoConnect: true,
-		// requestSignatureAutomaticallyIfPossible: true,
 	});
 
 	const walletClient = createWalletClient({
@@ -64,8 +59,6 @@ export async function establishRemoteConnection(): Promise<EstablishedConnection
 	);
 
 	let lastDeployments: TypedDeployments = deploymentsFromFiles;
-
-	// console.log(lastDeployments);
 
 	// TODO
 	// we can specify LinkedData type for each contracts
