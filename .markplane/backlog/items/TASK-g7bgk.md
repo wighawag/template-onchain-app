@@ -1,7 +1,7 @@
 ---
 id: TASK-g7bgk
 title: Create RPC health indicator banner with wallet connect suggestion
-status: draft
+status: done
 priority: medium
 type: feature
 effort: small

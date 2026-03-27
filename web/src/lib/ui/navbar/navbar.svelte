@@ -156,7 +156,7 @@
 			<div class="m-1 hidden h-8 items-center space-x-2 sm:flex">
 				{#if $balanceStatus.error && formattedBalance !== null}
 					<span class="flex items-center gap-1 text-sm text-muted-foreground">
-						<AlertCircleIcon class="h-3 w-3 text-warning" />
+						<AlertCircleIcon class="h-3 w-3 text-amber-500" />
 						{formattedBalance} ETH
 					</span>
 				{:else if formattedBalance !== null}
