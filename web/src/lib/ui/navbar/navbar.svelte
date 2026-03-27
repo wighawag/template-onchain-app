@@ -9,17 +9,17 @@
 	import Badge from '$lib/shadcn/ui/badge/badge.svelte';
 	import {formatBalance} from '$lib/core/utils/format/balance';
 	import MenuIcon from '@lucide/svelte/icons/menu';
-	import GitGraphIcon from '@lucide/svelte/icons/git-graph';
 	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import {page} from '$app/state';
+	import GitIcon from '$lib/icons/GitIcon.svelte';
 
 	let {
-		githubUrl,
-		communityUrl,
+		repoURL,
+		communityURL,
 	}: {
-		githubUrl?: string;
-		communityUrl?: string;
+		repoURL?: string;
+		communityURL?: string;
 	} = $props();
 
 	const {connection, accountData, balance} = getUserContext();
@@ -95,20 +95,20 @@
 			</a>
 		</span>
 		<div class="flex items-center space-x-2">
-			{#if githubUrl}
+			{#if repoURL}
 				<a
-					href={githubUrl}
+					href={repoURL}
 					target="_blank"
 					rel="noopener noreferrer"
 					class="text-muted-foreground hover:text-foreground"
 					aria-label="GitHub"
 				>
-					<GitGraphIcon class="h-5 w-5" />
+					<GitIcon class="h-5 w-5 fill-white" />
 				</a>
 			{/if}
-			{#if communityUrl}
+			{#if communityURL}
 				<a
-					href={communityUrl}
+					href={communityURL}
 					target="_blank"
 					rel="noopener noreferrer"
 					class="text-muted-foreground hover:text-foreground"
