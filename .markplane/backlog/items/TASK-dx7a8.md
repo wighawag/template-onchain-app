@@ -1,7 +1,7 @@
 ---
 id: TASK-dx7a8
 title: Create TabLeaderService with BroadcastChannel communication
-status: backlog
+status: done
 priority: medium
 type: feature
 effort: medium
