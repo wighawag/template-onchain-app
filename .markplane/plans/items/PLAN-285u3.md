@@ -1,7 +1,7 @@
 ---
 id: PLAN-285u3
 title: Faucet Link Implementation Plan
-status: draft
+status: done
 implements:
 - TASK-d8jdn
 related: []

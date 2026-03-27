@@ -5,6 +5,7 @@
 	import {balanceCheckStore} from './balance-check-store';
 	import {formatBalance} from '$lib/core/utils/format/balance';
 	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+	import {FaucetButton, hasFaucetLink} from '$lib/core/ui/faucet/index.js';
 
 	const state = balanceCheckStore;
 
@@ -47,10 +48,9 @@
 				</div>
 			</div>
 
-			<!-- Future: Add link to purchase ETH -->
-			<!-- <a href="..." class="text-primary hover:underline">
-        Get more ETH →
-      </a> -->
+			{#if hasFaucetLink}
+				<FaucetButton />
+			{/if}
 		</div>
 
 		<Modal.Footer>
