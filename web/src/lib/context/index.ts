@@ -14,6 +14,8 @@ import {
 	createOnchainStateRefreshConnector,
 } from '$lib/account/connectors.js';
 import {createToastConnector} from '$lib/account/toastConnector.js';
+import {createTabLeaderService} from '$lib/core/tab-leader';
+import {get} from 'svelte/store';
 
 export async function createContext(): Promise<{
 	context: Context;
@@ -98,6 +100,8 @@ export async function createContext(): Promise<{
 		onchainState,
 	});
 
+	const tabLeader = createTabLeaderService();
+
 	// ----------------------------------------------------------------------------
 	// BALANCE AND COSTS
 	// ----------------------------------------------------------------------------
@@ -142,8 +146,12 @@ export async function createContext(): Promise<{
 			// we trigger it so it is always availabe
 			const unsubscribeFromGasFee = gasFee.subscribe(() => {});
 
+			tabLeader.start();
+
 			const txObserverInterval = setInterval(() => {
-				txObserver.process();
+				if (get(tabLeader.isLeader)) {
+					txObserver.process();
+				}
 			}, 2 * 1000); // TODO delay or use onNewBlock hook
 			trackedWalletConnector.connect();
 			txObserverConnector.connect();
@@ -155,6 +163,7 @@ export async function createContext(): Promise<{
 				txObserverConnector.disconnect();
 				toastConnector.disconnect();
 				onchainStateRefreshConnector.disconnect();
+				tabLeader.stop();
 				clearInterval(txObserverInterval);
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();
