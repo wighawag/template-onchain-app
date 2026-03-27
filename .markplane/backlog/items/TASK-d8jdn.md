@@ -6,7 +6,7 @@ priority: medium
 type: feature
 effort: small
 epic: EPIC-7jrfm
-plan: null
+plan: PLAN-285u3
 depends_on: []
 blocks: []
 related: []
@@ -24,30 +24,28 @@ updated: 2026-03-27
 
 ## Description
 
-When users connect to a testnet, they need test tokens to interact with the app. Currently there's no easy way to find the faucet. Add a visible link to the appropriate faucet based on the connected chain.
+Add a faucet button that opens our custom faucet link in a popup window. The faucet URL is configurable via `PUBLIC_FAUCET_LINK` environment variable.
 
-This is especially important for:
-- New users testing the app
-- Developers working with testnets
-- Anyone who runs out of test ETH
+Key requirements:
+- Link provided via `PUBLIC_FAUCET_LINK` env variable
+- If empty/undefined, no faucet button shown anywhere
+- Opens in popup window (not new tab)
 
 ## Acceptance Criteria
 
-- [ ] Faucet link is displayed when connected to a testnet
-- [ ] Link points to the correct faucet for the current chain
-- [ ] Link is hidden when connected to mainnet
-- [ ] Opens in new tab to preserve app state
-- [ ] Link is easily discoverable (sidebar, header, or balance area)
+- [ ] Faucet link configurable via `PUBLIC_FAUCET_LINK` env variable
+- [ ] No faucet button shown when env var is empty/undefined
+- [ ] Faucet button shows in sidebar below balance **only when balance is zero**
+- [ ] Faucet button shows in InsufficientFundsModal whenever modal appears
+- [ ] Faucet button does NOT appear anywhere else
+- [ ] Link opens in popup window (not new tab)
 
 ## Notes
 
-**Chain-specific Faucets:**
-- Sepolia: https://sepoliafaucet.com/ or https://www.alchemy.com/faucets/ethereum-sepolia
-- Localhost: N/A (use hardhat funding)
-
-**Placement Options:**
-- Near balance display (contextually relevant when balance is low)
-- Sidebar network info section
-- Inline with "Insufficient funds" errors
+**Locations (only these two):**
+1. Sidebar (drawer) - below balance display, only when `balance === 0`
+2. InsufficientFundsModal - always visible when modal is open
 
 ## References
+
+- [[PLAN-285u3]] - Implementation plan
