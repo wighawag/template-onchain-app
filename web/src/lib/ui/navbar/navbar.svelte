@@ -22,7 +22,7 @@
 		communityURL?: string;
 	} = $props();
 
-	const {connection, accountData, balance} = getUserContext();
+	const {connection, accountData, balance, gasFee} = getUserContext();
 
 	let showMenu = $state(false);
 	let accountsOpen = $state(false);
@@ -54,6 +54,17 @@
 	let formattedBalance = $derived.by(() => {
 		if ($balance.step === 'Loaded') {
 			return formatBalance($balance.value, 18, 6);
+		}
+		return null;
+	});
+
+	// Gas fee store and status
+	const gasFeeStatus = gasFee.status;
+
+	// Format gas price in gwei (9 decimals)
+	let formattedGasPrice = $derived.by(() => {
+		if ($gasFee.step === 'Loaded') {
+			return formatBalance($gasFee.average.maxFeePerGas, 9, 6);
 		}
 		return null;
 	});
@@ -280,6 +291,27 @@
 					</Button>
 				</div>
 			{/if}
+
+			<!-- Network Info -->
+			<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
+				<span class="text-xs tracking-wide text-muted-foreground uppercase"
+					>Network</span
+				>
+				<div
+					class="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
+				>
+					<span class="text-sm text-muted-foreground">Gas Price</span>
+					{#if $gasFeeStatus.loading && formattedGasPrice === null}
+						<Spinner class="h-4 w-4" />
+					{:else if formattedGasPrice !== null}
+						<span class="font-medium">{formattedGasPrice} gwei</span>
+					{:else if $gasFeeStatus.error}
+						<span class="text-sm text-destructive">unavailable</span>
+					{:else}
+						<span class="text-sm text-muted-foreground">—</span>
+					{/if}
+				</div>
+			</div>
 
 			<!-- Developer Links -->
 			<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
