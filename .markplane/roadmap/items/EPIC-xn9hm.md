@@ -15,14 +15,16 @@ updated: 2026-03-27
 
 ## Objective
 
-When a user has multiple tabs open with the same app, each tab currently runs its own `tx-observer` instance. This causes redundant RPC calls, potential state conflicts, and unnecessary resource usage. This epic implements a **Leader Election** pattern using **BroadcastChannel** to ensure only one tab runs the tx-observer while other tabs receive updates via broadcast.
+When a user has multiple tabs open with the same app, each tab currently runs its own `tx-observer` instance. This causes redundant RPC calls and unnecessary resource usage. This epic implements a **Leader Election** pattern to ensure only one tab runs the tx-observer.
+
+**Key simplification**: AccountData already syncs via localStorage between tabs. The tx-observer's role is to update AccountData, which then propagates to all tabs automatically. Therefore, non-leader tabs don't need to receive broadcasts—they simply don't run `process()` and rely on localStorage sync for updates.
 
 ## Key Results
 
 - [ ] Only 1 tab makes RPC calls (verify via network tab) ([[TASK-dx7a8]], [[TASK-6jc6r]])
-- [ ] All tabs receive transaction updates within 100ms ([[TASK-d9ssh]], [[TASK-ziqsf]])
-- [ ] Leadership handoff completes within 5 seconds ([[TASK-ci5bv]])
-- [ ] No transaction state lost during handoff ([[TASK-gxna7]])
+- [ ] Leadership handoff completes within 5 seconds ([[TASK-d9ssh]])
+- [ ] All tabs see updates via existing AccountData localStorage sync ([[TASK-ci5bv]])
+- [ ] TxObserverDebugOverlay only works on leader tab (acceptable tradeoff)
 
 ## Architecture
 
@@ -31,19 +33,19 @@ graph TD
     subgraph "Tab 1 - Leader"
         T1[Tab 1 UI]
         TO[tx-observer]
-        BC1[BroadcastChannel]
+        AD1[AccountData]
+        LS[localStorage]
     end
     
     subgraph "Tab 2 - Follower"
         T2[Tab 2 UI]
-        BC2[BroadcastChannel]
-        VTO2[Virtual Observer]
+        AD2[AccountData]
     end
     
-    TO --> BC1
-    BC1 <--> BC2
-    BC2 --> VTO2
-    VTO2 --> T2
+    TO -->|updates| AD1
+    AD1 -->|writes| LS
+    LS -->|sync| AD2
+    AD2 --> T2
 ```
 
 ## File Structure
@@ -52,15 +54,16 @@ graph TD
 web/src/lib/core/tab-leader/
 ├── index.ts                    # Public exports
 ├── TabLeaderService.ts         # Core leader election
-├── LeaderAwareTxObserver.ts    # Leader's observer wrapper
-├── VirtualTxObserver.ts        # Follower's virtual observer
-├── types.ts                    # Shared types
 ├── storage-lock.ts             # localStorage-based locking
+├── types.ts                    # Shared types
 └── __tests__/
 ```
 
 ## Notes
 
-- Uses BroadcastChannel + localStorage (not SharedWorker) for better browser support
+- **No VirtualTxObserver needed** - followers don't need to listen for events; AccountData localStorage sync handles it
+- **No event broadcasting needed** - tx-observer → AccountData → localStorage → other tabs
+- Uses BroadcastChannel for leader election coordination only (heartbeats, election)
 - Leaders send heartbeats every 2s; followers assume leader gone after 5s timeout
 - Graceful fallback: if BroadcastChannel unavailable, each tab runs its own observer
+- [[`web/src/lib/debug/TxObserverDebugOverlay.svelte`]](web/src/lib/debug/TxObserverDebugOverlay.svelte) only shows data on leader tab

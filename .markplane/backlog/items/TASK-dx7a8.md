@@ -1,7 +1,7 @@
 ---
 id: TASK-dx7a8
 title: Create TabLeaderService with BroadcastChannel communication
-status: draft
+status: backlog
 priority: medium
 type: feature
 effort: medium
@@ -24,22 +24,44 @@ updated: 2026-03-27
 
 ## Description
 
-[What needs to be done and why — the problem, context, and key constraints.
-An implementer reads this to understand the work. Focus on outcomes, not
-implementation steps; a task defines the problem and success criteria,
-not how to solve it.]
+Create the core `TabLeaderService` that manages leader election using BroadcastChannel for coordination. This service determines which tab should run the tx-observer.
+
+**Key insight**: We only need leader election coordination, not data synchronization. AccountData already syncs via localStorage, so non-leader tabs automatically receive updates. Non-leaders simply skip `process()`.
 
 ## Acceptance Criteria
 
-[Observable outcomes that verify completeness — what you'd check in review.
-Not an implementation checklist.]
-
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
+- [ ] TabLeaderService exports `isLeader` readable store
+- [ ] `start()` and `stop()` methods control the service lifecycle
+- [ ] Service broadcasts LEADER_ANNOUNCE, LEADER_HEARTBEAT messages for election
+- [ ] Service cleans up BroadcastChannel on stop/tab close
+- [ ] Consumers can subscribe to leadership changes
 
 ## Notes
 
-[Reference material, links, additional context.]
+### File Location
+```
+web/src/lib/core/tab-leader/TabLeaderService.ts
+```
+
+### Interface Sketch
+```typescript
+interface TabLeaderService {
+  isLeader: Readable<boolean>;
+  start(): void;
+  stop(): void;
+}
+
+type TabMessage =
+  | { type: 'LEADER_ANNOUNCE'; tabId: string; timestamp: number }
+  | { type: 'LEADER_HEARTBEAT'; tabId: string; timestamp: number };
+```
+
+### Design Decisions
+- Uses BroadcastChannel for election coordination only (not data sync)
+- Channel name: `tx-observer-leader`
+- **No INTENT_STATUS or STATE_SYNC needed** - AccountData localStorage sync handles data propagation
 
 ## References
+
+- [[EPIC-xn9hm]] - Parent epic with simplified architecture
+- [BroadcastChannel API](https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel)
