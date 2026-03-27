@@ -25,11 +25,11 @@
 
 {#if !$rpcHealth.healthy && $rpcHealth.error && !$offline.offline}
 	<div
-		class="flex w-full items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2"
+		class="sticky top-12 z-40 flex w-full items-center justify-between gap-3 border-b border-amber-900 bg-amber-950 px-4 py-2"
 	>
 		<div class="flex items-center gap-2">
-			<WifiOffIcon class="h-4 w-4 shrink-0 text-amber-500" />
-			<span class="text-sm text-amber-600 dark:text-amber-400">
+			<WifiOffIcon class="h-4 w-4 shrink-0 text-amber-400" />
+			<span class="text-sm text-amber-400">
 				{errorLabel($rpcHealth.error.category)}
 				— data may be stale.
 				{#if !isConnected}
@@ -41,7 +41,7 @@
 			<Button
 				variant="outline"
 				size="sm"
-				class="shrink-0 border-amber-500/50 text-amber-600 hover:bg-amber-500/20 dark:text-amber-400"
+				class="shrink-0 border-amber-700 text-amber-400 hover:bg-amber-900"
 				onclick={() => connection.connect()}
 			>
 				Connect Wallet

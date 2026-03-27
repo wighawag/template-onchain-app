@@ -7,10 +7,10 @@
 
 {#if $offline.offline}
 	<div
-		class="flex w-full items-center gap-2 border-b border-destructive/30 bg-destructive/10 px-4 py-2"
+		class="sticky top-12 z-40 flex w-full items-center gap-2 border-b border-red-900 bg-red-950 px-4 py-2"
 	>
-		<CloudOffIcon class="h-4 w-4 shrink-0 text-destructive" />
-		<span class="text-sm text-destructive">
+		<CloudOffIcon class="h-4 w-4 shrink-0 text-red-400" />
+		<span class="text-sm text-red-400">
 			You are offline. Some features may be unavailable until connectivity is restored.
 		</span>
 	</div>
