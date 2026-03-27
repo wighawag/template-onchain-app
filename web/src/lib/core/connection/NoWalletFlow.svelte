@@ -38,34 +38,42 @@
 			isSmallScreen && (hasTouch || isMobileOS) && !hasInjectedProvider;
 	});
 
-	const downloadWallets = $derived(
-		[
-			{
-				name: 'MetaMask',
-				description: isMobile ? 'Popular mobile wallet' : 'Popular browser extension wallet',
-				icon: '/wallets/metamask/MetaMask-icon-fox.svg',
-				url: 'https://metamask.io/download/',
-			},
-			{
-				name: 'Rainbow',
-				description: 'Fun, simple, and secure',
-				icon: '/wallets/rainbow/rainbow-icon.svg',
-				url: 'https://rainbow.me/',
-			},
-			{
-				name: 'Rabby',
-				description: 'The game-changing wallet for Ethereum',
-				icon: '/wallets/rabby/rabby-icon.svg',
-				url: 'https://rabby.io/',
-			},
-			{
-				name: 'Coinbase Wallet',
-				description: 'Your key to the world of crypto',
-				icon: '/wallets/coinbase/coinbase-icon.svg',
-				url: 'https://www.coinbase.com/wallet',
-			},
-		] as const,
-	);
+	const downloadWallets = $derived([
+		{
+			name: 'MetaMask',
+			description: isMobile
+				? 'Popular mobile wallet'
+				: 'Popular browser extension wallet',
+			icon: '/wallets/metamask/MetaMask-icon-fox.svg',
+			url: 'https://metamask.io/download/',
+		},
+
+		{
+			name: 'Trust Wallet',
+			description: 'Powerful Web3 experiences',
+			icon: '/wallets/trust/trust-icon.svg',
+			url: 'https://trustwallet.com/',
+		},
+
+		{
+			name: 'Rainbow',
+			description: 'Experience Crypto in Color',
+			icon: '/wallets/rainbow/rainbow-icon.svg',
+			url: 'https://rainbow.me/',
+		},
+		{
+			name: 'Rabby',
+			description: 'Your Go-to wallet for Ethereum',
+			icon: '/wallets/rabby/rabby-icon.svg',
+			url: 'https://rabby.io/',
+		},
+		{
+			name: 'Coinbase Wallet',
+			description: 'Your key to the world of crypto',
+			icon: '/wallets/coinbase/coinbase-icon.svg',
+			url: 'https://www.coinbase.com/wallet',
+		},
+	] as const);
 
 	const mobileWallets = [
 		{
@@ -167,7 +175,9 @@
 	</div>
 {:else}
 	<!-- Primary mode: full layout with title -->
-	<Modal.Title>{isMobile ? 'No Wallet App Found' : 'No Wallet Detected'}</Modal.Title>
+	<Modal.Title
+		>{isMobile ? 'No Wallet App Found' : 'No Wallet Detected'}</Modal.Title
+	>
 	<div class="flex flex-col gap-3 py-2">
 		<p class="text-sm text-muted-foreground">
 			You need a web3 wallet to continue. Choose an option below:
@@ -195,9 +205,13 @@
 			>
 				<DownloadIcon class="h-5 w-5" />
 				<div class="flex-1 text-left">
-					<div class="font-medium">{isMobile ? 'Get a Mobile Wallet' : 'Download a Wallet'}</div>
+					<div class="font-medium">
+						{isMobile ? 'Get a Mobile Wallet' : 'Download a Wallet'}
+					</div>
 					<div class="text-xs font-normal text-muted-foreground">
-						{isMobile ? 'Install from your app store' : 'Install a browser extension'}
+						{isMobile
+							? 'Install from your app store'
+							: 'Install a browser extension'}
 					</div>
 				</div>
 			</Button>
@@ -217,7 +231,9 @@
 	onCancel={() => (showDownloadModal = false)}
 >
 	<p class="mb-3 text-sm text-muted-foreground">
-		{isMobile ? 'Install a wallet app to connect:' : 'Install a wallet extension to connect:'}
+		{isMobile
+			? 'Install a wallet app to connect:'
+			: 'Install a wallet extension to connect:'}
 	</p>
 	<div
 		class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
