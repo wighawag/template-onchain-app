@@ -74,7 +74,7 @@
 	<div class="grid gap-6 lg:grid-cols-3">
 		{#each features as feature}
 			<div
-				class="mx-auto w-full max-w-[500px] rounded-lg border bg-card p-6 shadow-sm lg:mx-0 lg:max-w-none"
+				class="mx-auto w-full max-w-125 rounded-lg border bg-card p-6 shadow-sm lg:mx-0 lg:max-w-none"
 			>
 				<div
 					class="mb-4 flex items-center justify-center gap-3 lg:justify-start"

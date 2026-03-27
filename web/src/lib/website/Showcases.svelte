@@ -40,7 +40,7 @@
 	<div class="grid gap-8 lg:grid-cols-3">
 		{#each showcaseApps as app}
 			<div
-				class="mx-auto flex max-w-[500px] flex-col overflow-hidden rounded-lg border bg-card shadow-sm transition-shadow hover:shadow-md lg:mx-0 lg:max-w-none"
+				class="mx-auto flex max-w-125 flex-col overflow-hidden rounded-lg border bg-card shadow-sm transition-shadow hover:shadow-md lg:mx-0 lg:max-w-none"
 			>
 				<div class="aspect-video bg-muted">
 					{#if app.image}
