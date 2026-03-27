@@ -1,19 +1,14 @@
 <script lang="ts">
 	import {getUserContext} from '$lib';
 	import {onMount} from 'svelte';
-	import type {TransactionObserver} from '@etherkit/tx-observer';
 	import {slide} from 'svelte/transition';
 
 	const context = getUserContext();
-	const {accountData, publicClient} = context;
-
-	let txObserver: TransactionObserver | undefined = $state(undefined);
+	const {accountData, publicClient, txObserverDebug, txObserver} = context;
 
 	// State
 	let isMinimized = $state(false);
 	let accountOperations = $state<{[id: string]: unknown}>({});
-	let lastProcessTime = $state<number | null>(null);
-	let processCount = $state(0);
 	let eventLog = $state<Array<{timestamp: number; type: string; data: string}>>(
 		[],
 	);
@@ -146,14 +141,6 @@
 	}
 
 	onMount(() => {
-		txObserver = (globalThis as unknown as {txObserver?: TransactionObserver})
-			.txObserver;
-
-		if (!txObserver) {
-			console.warn('TxObserverDebugOverlay: txObserver not found');
-			return;
-		}
-
 		// Hook into intent:status events
 		const unsubscribeStatus = txObserver.on('intent:status', (event) => {
 			addEvent('intent:status', {
@@ -165,16 +152,6 @@
 			refreshData();
 		});
 
-		// Track process calls
-		const originalProcess = txObserver.process.bind(txObserver);
-		txObserver.process = () => {
-			lastProcessTime = Date.now();
-			processCount++;
-			const result = originalProcess();
-			setTimeout(refreshData, 100);
-			return result;
-		};
-
 		// Initial data load
 		refreshData();
 
@@ -183,7 +160,7 @@
 			refreshData();
 		});
 
-		// Periodic refresh
+		// Periodic refresh for operations data
 		const refreshInterval = setInterval(refreshData, 2000);
 
 		return () => {
@@ -202,9 +179,19 @@
 	<div class="flex items-center justify-between bg-gray-800 px-3 py-2">
 		<div class="flex items-center gap-2">
 			<span class="font-bold text-yellow-400">🔍 TX Debug</span>
-			{#if lastProcessTime}
+			<span
+				class="rounded px-1.5 py-0.5 text-[10px] font-bold {$txObserverDebug.isLeader
+					? 'bg-green-600 text-white'
+					: 'bg-gray-600 text-gray-300'}"
+				title={$txObserverDebug.isLeader
+					? 'This tab is the leader and processes transactions'
+					: 'This tab is a follower (another tab is processing)'}
+			>
+				{$txObserverDebug.isLeader ? '👑 Leader' : '👤 Follower'} ({$txObserverDebug.processCount})
+			</span>
+			{#if $txObserverDebug.lastProcessTime}
 				<span class="text-[10px] text-gray-400">
-					Process: {formatTimeAgo(lastProcessTime)} (#{processCount})
+					Last: {formatTimeAgo($txObserverDebug.lastProcessTime)}
 				</span>
 			{/if}
 		</div>

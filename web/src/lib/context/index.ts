@@ -1,5 +1,6 @@
-import type {Context} from './types.js';
+import type {Context, TxObserverDebugState} from './types.js';
 
+import {writable} from 'svelte/store';
 import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance.js';
@@ -126,6 +127,13 @@ export async function createContext(): Promise<{
 	});
 	window.viewState = viewState;
 
+	// Debug store for tx-observer processing stats
+	const txObserverDebug = writable<TxObserverDebugState>({
+		processCount: 0,
+		lastProcessTime: null,
+		isLeader: false,
+	});
+
 	return {
 		context: {
 			gasFee,
@@ -139,6 +147,8 @@ export async function createContext(): Promise<{
 			onchainState,
 			viewState,
 			clock,
+			txObserver,
+			txObserverDebug: {subscribe: txObserverDebug.subscribe},
 		},
 		start: () => {
 			// we trigger it so it is always availabe
@@ -153,12 +163,24 @@ export async function createContext(): Promise<{
 			const unsubscribeFromLeader = tabLeader.isLeader.subscribe((isLeader) => {
 				if (isLeader) {
 					// Became leader: start processing immediately
+					txObserverDebug.update((state) => ({
+						...state,
+						isLeader: true,
+						processCount: state.processCount + 1,
+						lastProcessTime: Date.now(),
+					}));
 					txObserver.process();
 					txObserverInterval = setInterval(() => {
+						txObserverDebug.update((state) => ({
+							...state,
+							processCount: state.processCount + 1,
+							lastProcessTime: Date.now(),
+						}));
 						txObserver.process();
 					}, 2 * 1000);
 				} else {
 					// Lost leadership: stop processing
+					txObserverDebug.update((state) => ({...state, isLeader: false}));
 					if (txObserverInterval !== undefined) {
 						clearInterval(txObserverInterval);
 						txObserverInterval = undefined;
