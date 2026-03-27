@@ -49,19 +49,19 @@
 			{
 				name: 'Rainbow',
 				description: 'Fun, simple, and secure',
-				icon: undefined,
+				icon: '/wallets/rainbow/rainbow-icon.svg',
 				url: 'https://rainbow.me/',
 			},
 			{
 				name: 'Rabby',
 				description: 'The game-changing wallet for Ethereum',
-				icon: undefined,
+				icon: '/wallets/rabby/rabby-icon.svg',
 				url: 'https://rabby.io/',
 			},
 			{
 				name: 'Coinbase Wallet',
 				description: 'Your key to the world of crypto',
-				icon: undefined,
+				icon: '/wallets/coinbase/coinbase-icon.svg',
 				url: 'https://www.coinbase.com/wallet',
 			},
 		] as const,
@@ -78,27 +78,27 @@
 		{
 			name: 'Trust Wallet',
 			description: 'Open in Trust Wallet',
-			icon: undefined,
+			icon: '/wallets/trust/trust-icon.svg',
 			getLink: (url: string) =>
 				`https://link.trustwallet.com/open_url?url=${encodeURIComponent(url)}`,
 		},
 		{
 			name: 'Coinbase Wallet',
 			description: 'Open in Coinbase Wallet',
-			icon: undefined,
+			icon: '/wallets/coinbase/coinbase-icon.svg',
 			getLink: (url: string) =>
 				`https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(url)}`,
 		},
 		{
 			name: 'Rainbow',
 			description: 'Open in Rainbow',
-			icon: undefined,
+			icon: '/wallets/rainbow/rainbow-icon.svg',
 			getLink: (url: string) => `rainbow://dapp?url=${encodeURIComponent(url)}`,
 		},
 		{
 			name: 'Rabby',
 			description: 'Open in Rabby',
-			icon: undefined,
+			icon: '/wallets/rabby/rabby-icon.svg',
 			getLink: (url: string) =>
 				`rabby://dapp/${url.replace(/^https?:\/\//, '')}`,
 		},

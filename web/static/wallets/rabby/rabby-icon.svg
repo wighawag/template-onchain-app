@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="rabby-grad" x1="60" y1="0" x2="60" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8697FF"/>
+      <stop offset="1" stop-color="#7B6CF6"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="26" fill="url(#rabby-grad)"/>
+  <ellipse cx="60" cy="62" rx="30" ry="32" fill="#fff"/>
+  <ellipse cx="48" cy="54" rx="5" ry="6" fill="#7B6CF6"/>
+  <ellipse cx="72" cy="54" rx="5" ry="6" fill="#7B6CF6"/>
+  <path d="M36 42c0-10 10-20 24-20s24 10 24 20" stroke="#fff" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <circle cx="30" cy="42" r="8" fill="#fff"/>
+  <circle cx="90" cy="42" r="8" fill="#fff"/>
+</svg>

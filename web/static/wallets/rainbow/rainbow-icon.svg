@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="rainbow-grad" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#174299"/>
+      <stop offset="0.2" stop-color="#001E59"/>
+      <stop offset="0.4" stop-color="#174299"/>
+      <stop offset="0.6" stop-color="#0052FF"/>
+      <stop offset="0.8" stop-color="#5B9CF5"/>
+      <stop offset="1" stop-color="#9FCCFA"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="26" fill="url(#rainbow-grad)"/>
+  <path d="M20 88V76c0-30.928 25.072-56 56-56h12v12H76c-24.3 0-44 19.7-44 44v12H20z" fill="#FF4000"/>
+  <path d="M32 88V76c0-24.3 19.7-44 44-44h12v12H76c-18.778 0-32 15.222-32 32v12H32z" fill="#FF8C00"/>
+  <path d="M44 88V76c0-17.673 14.327-32 32-32h12v12H76c-11.046 0-20 8.954-20 20v12H44z" fill="#FFCF00"/>
+  <path d="M56 88V76c0-11.046 8.954-20 20-20h12v12H76c-4.418 0-8 3.582-8 8v12H56z" fill="#02B151"/>
+  <path d="M68 88v-8a8 8 0 0 1 8-8h12v8a8 8 0 0 1-8 8H68z" fill="#00A3FF"/>
+</svg>
