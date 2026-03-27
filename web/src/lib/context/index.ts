@@ -7,6 +7,7 @@ import {createGasFeeStore} from '$lib/core/connection/gasFee';
 import {createOnchainState} from '$lib/onchain/state.js';
 import {createViewState} from '$lib/view/index.js';
 import {createTransactionObserver} from '@etherkit/tx-observer';
+import {createTabLeaderService} from '$lib/core/tab-leader';
 import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
 import {
 	createTrackedWalletConnector,
@@ -79,6 +80,9 @@ export async function createContext(): Promise<{
 	});
 	window.txObserver = txObserver;
 
+	const tabLeader = createTabLeaderService();
+	window.tabLeader = tabLeader;
+
 	const trackedWalletConnector = createTrackedWalletConnector({
 		walletClient,
 		accountData,
@@ -142,9 +146,26 @@ export async function createContext(): Promise<{
 			// we trigger it so it is always availabe
 			const unsubscribeFromGasFee = gasFee.subscribe(() => {});
 
-			const txObserverInterval = setInterval(() => {
-				txObserver.process();
-			}, 2 * 1000); // TODO delay or use onNewBlock hook
+			tabLeader.start();
+
+			let txObserverInterval: ReturnType<typeof setInterval> | undefined;
+
+			const unsubscribeFromLeader = tabLeader.isLeader.subscribe((isLeader) => {
+				if (isLeader) {
+					// Became leader: start processing immediately
+					txObserver.process();
+					txObserverInterval = setInterval(() => {
+						txObserver.process();
+					}, 2 * 1000);
+				} else {
+					// Lost leadership: stop processing
+					if (txObserverInterval !== undefined) {
+						clearInterval(txObserverInterval);
+						txObserverInterval = undefined;
+					}
+				}
+			});
+
 			trackedWalletConnector.connect();
 			txObserverConnector.connect();
 			toastConnector.connect();
@@ -155,7 +176,11 @@ export async function createContext(): Promise<{
 				txObserverConnector.disconnect();
 				toastConnector.disconnect();
 				onchainStateRefreshConnector.disconnect();
-				clearInterval(txObserverInterval);
+				unsubscribeFromLeader();
+				if (txObserverInterval !== undefined) {
+					clearInterval(txObserverInterval);
+				}
+				tabLeader.stop();
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();
 			};
