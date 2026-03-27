@@ -1,7 +1,7 @@
 ---
 id: TASK-px9fh
 title: Create RPC health status store with error detection
-status: draft
+status: done
 priority: medium
 type: feature
 effort: small

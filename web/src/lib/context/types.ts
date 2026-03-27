@@ -1,6 +1,7 @@
 import type {PublicClient} from 'viem';
 import type {BalanceStore} from '$lib/core/connection/balance';
 import type {GasFeeStore} from '$lib/core/connection/gasFee';
+import type {RpcHealthStore} from '$lib/core/connection/rpcHealth';
 import type {
 	AccountStore,
 	ChainConnection,
@@ -23,6 +24,7 @@ export type Clock = {
 export type Context = {
 	gasFee: GasFeeStore;
 	balance: BalanceStore;
+	rpcHealth: RpcHealthStore;
 	connection: ChainConnection;
 	/**
 	 * Tracked wallet client that wraps the underlying viem WalletClient.
