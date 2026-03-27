@@ -38,32 +38,34 @@
 			isSmallScreen && (hasTouch || isMobileOS) && !hasInjectedProvider;
 	});
 
-	const downloadWallets = [
-		{
-			name: 'MetaMask',
-			description: 'Popular browser extension wallet',
-			icon: '/wallets/metamask/MetaMask-icon-fox.svg',
-			url: 'https://metamask.io/download/',
-		},
-		{
-			name: 'Rainbow',
-			description: 'Fun, simple, and secure',
-			icon: undefined,
-			url: 'https://rainbow.me/',
-		},
-		{
-			name: 'Rabby',
-			description: 'The game-changing wallet for Ethereum',
-			icon: undefined,
-			url: 'https://rabby.io/',
-		},
-		{
-			name: 'Coinbase Wallet',
-			description: 'Your key to the world of crypto',
-			icon: undefined,
-			url: 'https://www.coinbase.com/wallet',
-		},
-	];
+	const downloadWallets = $derived(
+		[
+			{
+				name: 'MetaMask',
+				description: isMobile ? 'Popular mobile wallet' : 'Popular browser extension wallet',
+				icon: '/wallets/metamask/MetaMask-icon-fox.svg',
+				url: 'https://metamask.io/download/',
+			},
+			{
+				name: 'Rainbow',
+				description: 'Fun, simple, and secure',
+				icon: undefined,
+				url: 'https://rainbow.me/',
+			},
+			{
+				name: 'Rabby',
+				description: 'The game-changing wallet for Ethereum',
+				icon: undefined,
+				url: 'https://rabby.io/',
+			},
+			{
+				name: 'Coinbase Wallet',
+				description: 'Your key to the world of crypto',
+				icon: undefined,
+				url: 'https://www.coinbase.com/wallet',
+			},
+		] as const,
+	);
 
 	const mobileWallets = [
 		{
@@ -144,14 +146,6 @@
 		</div>
 	</div>
 	<div class="flex flex-col gap-2">
-		<Button
-			variant="outline"
-			class="w-full justify-start gap-3"
-			onclick={() => (showDownloadModal = true)}
-		>
-			<DownloadIcon class="h-4 w-4" />
-			<span>Get a Wallet</span>
-		</Button>
 		{#if isMobile}
 			<Button
 				variant="outline"
@@ -162,28 +156,23 @@
 				<span>Open in Wallet App</span>
 			</Button>
 		{/if}
+		<Button
+			variant="outline"
+			class="w-full justify-start gap-3"
+			onclick={() => (showDownloadModal = true)}
+		>
+			<DownloadIcon class="h-4 w-4" />
+			<span>{isMobile ? 'Get a Mobile Wallet' : 'Get a Wallet'}</span>
+		</Button>
 	</div>
 {:else}
 	<!-- Primary mode: full layout with title -->
-	<Modal.Title>No Wallet Detected</Modal.Title>
+	<Modal.Title>{isMobile ? 'No Wallet App Found' : 'No Wallet Detected'}</Modal.Title>
 	<div class="flex flex-col gap-3 py-2">
 		<p class="text-sm text-muted-foreground">
 			You need a web3 wallet to continue. Choose an option below:
 		</p>
 		<div class="flex flex-col gap-2">
-			<Button
-				variant="outline"
-				class="h-14 justify-start gap-4 px-4"
-				onclick={() => (showDownloadModal = true)}
-			>
-				<DownloadIcon class="h-5 w-5" />
-				<div class="flex-1 text-left">
-					<div class="font-medium">Download a Wallet</div>
-					<div class="text-xs font-normal text-muted-foreground">
-						Install a browser extension
-					</div>
-				</div>
-			</Button>
 			{#if isMobile}
 				<Button
 					variant="outline"
@@ -199,6 +188,19 @@
 					</div>
 				</Button>
 			{/if}
+			<Button
+				variant="outline"
+				class="h-14 justify-start gap-4 px-4"
+				onclick={() => (showDownloadModal = true)}
+			>
+				<DownloadIcon class="h-5 w-5" />
+				<div class="flex-1 text-left">
+					<div class="font-medium">{isMobile ? 'Get a Mobile Wallet' : 'Download a Wallet'}</div>
+					<div class="text-xs font-normal text-muted-foreground">
+						{isMobile ? 'Install from your app store' : 'Install a browser extension'}
+					</div>
+				</div>
+			</Button>
 		</div>
 		{#if onCancel}
 			<Button variant="outline" class="w-full" onclick={onCancel}>
@@ -210,12 +212,12 @@
 
 <!-- Download Wallet Modal -->
 <BasicModal
-	title="Get a Wallet"
+	title={isMobile ? 'Get a Mobile Wallet' : 'Get a Wallet'}
 	openWhen={showDownloadModal}
 	onCancel={() => (showDownloadModal = false)}
 >
 	<p class="mb-3 text-sm text-muted-foreground">
-		Install a wallet extension to connect:
+		{isMobile ? 'Install a wallet app to connect:' : 'Install a wallet extension to connect:'}
 	</p>
 	<div
 		class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
