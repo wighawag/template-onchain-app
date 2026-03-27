@@ -1,7 +1,7 @@
 ---
 id: TASK-zx9mx
 title: Display balance loading errors in UI
-status: draft
+status: done
 priority: medium
 type: feature
 effort: small
