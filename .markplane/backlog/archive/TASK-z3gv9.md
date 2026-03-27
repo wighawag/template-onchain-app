@@ -1,12 +1,12 @@
 ---
 id: TASK-z3gv9
 title: Import existing work into markplane
-status: backlog
+status: done
 priority: medium
 type: chore
 effort: medium
-epic: EPIC-9hy6z
-plan: PLAN-84z2m
+epic: null
+plan: null
 depends_on: []
 blocks: []
 related: []

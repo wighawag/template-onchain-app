@@ -1,12 +1,15 @@
 version: 1
 project:
   name: template-onchain-app
-  description: ''
+  description: 'Full-stack onchain application template with Solidity contracts and Svelte frontend'
 context:
   token_budget: 1000
   recent_days: 7
   auto_generate: true
-documentation_paths: []
+documentation_paths:
+  - README.md
+  - contracts/
+  - web/
 task_types:
 - feature
 - bug
@@ -14,6 +17,8 @@ task_types:
 - chore
 - research
 - spike
+- audit
+- deployment
 note_types:
 - research
 - analysis

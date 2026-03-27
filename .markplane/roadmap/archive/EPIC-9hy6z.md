@@ -1,7 +1,7 @@
 ---
 id: EPIC-9hy6z
 title: Project Setup
-status: now
+status: done
 priority: medium
 started: null
 target: null

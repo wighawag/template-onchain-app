@@ -1,11 +1,11 @@
 ---
 id: TASK-rpyrn
 title: Review and customize your markplane setup
-status: backlog
+status: done
 priority: medium
 type: chore
 effort: small
-epic: EPIC-9hy6z
+epic: null
 plan: null
 depends_on: []
 blocks: []

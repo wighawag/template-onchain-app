@@ -2,8 +2,7 @@
 id: PLAN-84z2m
 title: Import existing work into markplane
 status: draft
-implements:
-- TASK-z3gv9
+implements: []
 related: []
 created: 2026-03-27
 updated: 2026-03-27
