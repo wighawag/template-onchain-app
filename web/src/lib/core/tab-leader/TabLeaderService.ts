@@ -1,9 +1,11 @@
 import {writable, type Readable} from 'svelte/store';
 import type {TabMessage, TabLeaderService} from './types';
+import {acquireLock, refreshLock, releaseLock} from './storage-lock';
 
 const CHANNEL_NAME = 'tx-observer-leader';
 const HEARTBEAT_INTERVAL = 2000;
 const LEADER_TIMEOUT = 5000;
+const ELECTION_DEBOUNCE = 100;
 
 export function createTabLeaderService(): TabLeaderService {
 	const tabId = crypto.randomUUID();
@@ -11,6 +13,8 @@ export function createTabLeaderService(): TabLeaderService {
 	let channel: BroadcastChannel | undefined;
 	let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
 	let timeoutTimer: ReturnType<typeof setTimeout> | undefined;
+	let electionTimer: ReturnType<typeof setTimeout> | undefined;
+	let started = false;
 
 	const _isLeader = writable<boolean>(false);
 	let $isLeader = false;
@@ -31,6 +35,11 @@ export function createTabLeaderService(): TabLeaderService {
 	}
 
 	function sendHeartbeat() {
+		if (!refreshLock(tabId)) {
+			// Lost the lock (e.g., another tab took it while we were paused)
+			yieldLeadership();
+			return;
+		}
 		broadcast({type: 'LEADER_HEARTBEAT', tabId, timestamp: Date.now()});
 	}
 
@@ -47,12 +56,10 @@ export function createTabLeaderService(): TabLeaderService {
 	}
 
 	function resetTimeout() {
-		if (timeoutTimer !== undefined) {
-			clearTimeout(timeoutTimer);
-		}
+		stopTimeout();
 		timeoutTimer = setTimeout(() => {
-			// Leader timed out, claim leadership
-			claimLeadership();
+			// Leader timed out, try to elect ourselves
+			startElection();
 		}, LEADER_TIMEOUT);
 	}
 
@@ -63,54 +70,84 @@ export function createTabLeaderService(): TabLeaderService {
 		}
 	}
 
+	function stopElectionTimer() {
+		if (electionTimer !== undefined) {
+			clearTimeout(electionTimer);
+			electionTimer = undefined;
+		}
+	}
+
+	function startElection() {
+		stopElectionTimer();
+		// Debounce to prevent rapid elections from multiple tabs
+		electionTimer = setTimeout(() => {
+			if (!started || $isLeader) return;
+			claimLeadership();
+		}, ELECTION_DEBOUNCE);
+	}
+
 	function claimLeadership() {
+		const acquired = acquireLock(tabId);
+		if (!acquired) {
+			// Someone else holds a valid lock, back off
+			resetTimeout();
+			return;
+		}
+
 		setLeader(true);
 		stopTimeout();
+		stopElectionTimer();
 		announceLeadership();
 		startHeartbeat();
 	}
 
+	function yieldLeadership() {
+		setLeader(false);
+		releaseLock(tabId);
+		stopHeartbeat();
+		resetTimeout();
+	}
+
 	function handleMessage(event: MessageEvent<TabMessage>) {
 		const message = event.data;
-
 		if (message.tabId === tabId) return;
 
 		switch (message.type) {
 			case 'LEADER_ANNOUNCE':
-				// Another tab claimed leadership
-				if ($isLeader) {
-					// Resolve conflict: higher tabId wins
-					if (tabId > message.tabId) {
-						announceLeadership();
-					} else {
-						setLeader(false);
-						stopHeartbeat();
-						resetTimeout();
-					}
-				} else {
-					resetTimeout();
-				}
-				break;
 			case 'LEADER_HEARTBEAT':
 				if ($isLeader) {
-					// Another leader exists, resolve conflict
-					if (tabId > message.tabId) {
-						announceLeadership();
-					} else {
-						setLeader(false);
-						stopHeartbeat();
-						resetTimeout();
+					// Resolve conflict: compare timestamp first, then tabId for deterministic tiebreak
+					if (message.timestamp > Date.now() - HEARTBEAT_INTERVAL) {
+						// Valid message from another leader — use tabId to resolve
+						if (tabId > message.tabId) {
+							// We win, re-announce
+							announceLeadership();
+						} else {
+							// We lose
+							yieldLeadership();
+						}
 					}
 				} else {
+					// We're a follower, reset our timeout since leader is alive
+					stopElectionTimer();
 					resetTimeout();
 				}
 				break;
 		}
 	}
 
+	function onBeforeUnload() {
+		if ($isLeader) {
+			releaseLock(tabId);
+		}
+	}
+
 	function start() {
+		if (started) return;
+		started = true;
+
 		if (typeof BroadcastChannel === 'undefined') {
-			// Fallback: if BroadcastChannel not available, always be leader
+			// Fallback: no BroadcastChannel, always be leader
 			setLeader(true);
 			return;
 		}
@@ -118,13 +155,25 @@ export function createTabLeaderService(): TabLeaderService {
 		channel = new BroadcastChannel(CHANNEL_NAME);
 		channel.onmessage = handleMessage;
 
-		// Claim leadership immediately on start; other tabs will contest if they're already leading
+		if (typeof window !== 'undefined') {
+			window.addEventListener('beforeunload', onBeforeUnload);
+		}
+
+		// Try to acquire lock and become leader
 		claimLeadership();
 	}
 
 	function stop() {
+		if (!started) return;
+		started = false;
+
 		stopHeartbeat();
 		stopTimeout();
+		stopElectionTimer();
+
+		if ($isLeader) {
+			releaseLock(tabId);
+		}
 		setLeader(false);
 
 		if (channel) {
@@ -132,11 +181,16 @@ export function createTabLeaderService(): TabLeaderService {
 			channel.close();
 			channel = undefined;
 		}
+
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('beforeunload', onBeforeUnload);
+		}
 	}
 
 	return {
 		isLeader: {subscribe: _isLeader.subscribe} as Readable<boolean>,
 		start,
 		stop,
+		claimLeadership,
 	};
 }

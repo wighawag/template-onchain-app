@@ -6,4 +6,5 @@ export type TabLeaderService = {
 	isLeader: {subscribe: (run: (value: boolean) => void) => () => void};
 	start(): void;
 	stop(): void;
+	claimLeadership(): void;
 };
