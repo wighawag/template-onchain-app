@@ -7,5 +7,6 @@ export const hasFaucetLink = Boolean(
 );
 
 export function getFaucetLink(address: `0x${string}`) {
-	return `${PUBLIC_FAUCET_LINK}?chainId=${deploymentsFromFiles.chain.id}&address=${address}`;
+	const separator = PUBLIC_FAUCET_LINK.includes('?') ? '&' : '?';
+	return `${PUBLIC_FAUCET_LINK}${separator}chainId=${deploymentsFromFiles.chain.id}&address=${address}`;
 }

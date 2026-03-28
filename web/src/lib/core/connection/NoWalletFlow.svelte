@@ -29,9 +29,8 @@
 		const isMobileOS = /Android|iPhone|iPad|iPod/i.test(ua);
 
 		// Check if already inside a Wallet (Injected Provider)
-		const hasInjectedProvider =
-			typeof window !== 'undefined' &&
-			(window as Window & {ethereum?: unknown}).ethereum;
+		const hasInjectedProvider = (window as Window & {ethereum?: unknown})
+			.ethereum;
 
 		// Show mobile option only if on mobile/tablet AND not already in a dApp browser
 		isMobile =
@@ -255,7 +254,10 @@
 							class="h-full w-full object-contain"
 						/>
 					{:else}
-						<span class="text-xs font-bold">{(wallet as any).name[0]}</span>
+						<!-- Fallback for empty icon strings - type assertion needed due to as const narrowing -->
+						<span class="text-xs font-bold"
+							>{(wallet as unknown as {name: string}).name[0]}</span
+						>
 					{/if}
 				</div>
 				<div class="flex-1">
