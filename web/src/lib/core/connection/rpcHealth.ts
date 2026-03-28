@@ -93,7 +93,7 @@ export function createRpcHealthStore(params: {
 		// If either has an error, we're unhealthy
 		if (balanceError || gasFeeError) {
 			const error = balanceError || gasFeeError!;
-			const errorMessage = error.message;
+			const errorMessage = extractErrorMessage(error);
 			const category = categorizeError(error);
 
 			if (!errorSince) {
