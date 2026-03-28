@@ -1,7 +1,7 @@
 ---
 id: TASK-6jc6r
 title: Implement leader election using localStorage lock + heartbeat
-status: backlog
+status: done
 priority: medium
 type: feature
 effort: medium

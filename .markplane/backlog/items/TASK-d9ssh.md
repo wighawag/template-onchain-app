@@ -1,7 +1,7 @@
 ---
 id: TASK-d9ssh
 title: Integrate TabLeaderService with tx-observer
-status: backlog
+status: done
 priority: medium
 type: feature
 effort: small
