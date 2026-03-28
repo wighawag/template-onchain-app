@@ -1,11 +1,7 @@
 import {writable, type Readable} from 'svelte/store';
 import type {TabMessage, TabLeaderService} from './types';
 import {acquireLock, refreshLock, releaseLock} from './storage-lock';
-
-const CHANNEL_NAME = 'tx-observer-leader';
-const HEARTBEAT_INTERVAL = 2000;
-const LEADER_TIMEOUT = 5000;
-const ELECTION_DEBOUNCE = 100;
+import {CHANNEL_NAME, HEARTBEAT_INTERVAL, LEADER_TIMEOUT, ELECTION_DEBOUNCE} from './constants';
 
 export function createTabLeaderService(): TabLeaderService {
 	const tabId = crypto.randomUUID();
@@ -32,6 +28,10 @@ export function createTabLeaderService(): TabLeaderService {
 
 	function announceLeadership() {
 		broadcast({type: 'LEADER_ANNOUNCE', tabId, timestamp: Date.now()});
+	}
+
+	function announceResignation() {
+		broadcast({type: 'LEADER_RESIGN', tabId, timestamp: Date.now()});
 	}
 
 	function sendHeartbeat() {
@@ -102,9 +102,13 @@ export function createTabLeaderService(): TabLeaderService {
 	}
 
 	function yieldLeadership() {
+		const wasLeader = $isLeader;
 		setLeader(false);
 		releaseLock(tabId);
 		stopHeartbeat();
+		if (wasLeader) {
+			announceResignation();
+		}
 		resetTimeout();
 	}
 
@@ -116,16 +120,15 @@ export function createTabLeaderService(): TabLeaderService {
 			case 'LEADER_ANNOUNCE':
 			case 'LEADER_HEARTBEAT':
 				if ($isLeader) {
-					// Resolve conflict: compare timestamp first, then tabId for deterministic tiebreak
-					if (message.timestamp > Date.now() - HEARTBEAT_INTERVAL) {
-						// Valid message from another leader — use tabId to resolve
-						if (tabId > message.tabId) {
-							// We win, re-announce
-							announceLeadership();
-						} else {
-							// We lose
-							yieldLeadership();
-						}
+					// Resolve conflict: use tabId for deterministic tiebreak
+					// We resolve regardless of message age to avoid leaving both tabs as leaders
+					// (Issue: stale messages could leave dual-leader window open)
+					if (tabId > message.tabId) {
+						// We win, re-announce
+						announceLeadership();
+					} else {
+						// We lose
+						yieldLeadership();
 					}
 				} else {
 					// We're a follower, reset our timeout since leader is alive
@@ -133,11 +136,19 @@ export function createTabLeaderService(): TabLeaderService {
 					resetTimeout();
 				}
 				break;
+			case 'LEADER_RESIGN':
+				// Leader is gracefully resigning, start election immediately
+				// This improves handover from ~5s (timeout) to ~100ms (election debounce)
+				if (!$isLeader) {
+					startElection();
+				}
+				break;
 		}
 	}
 
 	function onBeforeUnload() {
 		if ($isLeader) {
+			announceResignation();
 			releaseLock(tabId);
 		}
 	}
@@ -172,6 +183,7 @@ export function createTabLeaderService(): TabLeaderService {
 		stopElectionTimer();
 
 		if ($isLeader) {
+			announceResignation();
 			releaseLock(tabId);
 		}
 		setLeader(false);
@@ -191,6 +203,5 @@ export function createTabLeaderService(): TabLeaderService {
 		isLeader: {subscribe: _isLeader.subscribe} as Readable<boolean>,
 		start,
 		stop,
-		claimLeadership,
 	};
 }

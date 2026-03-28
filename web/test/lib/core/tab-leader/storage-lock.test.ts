@@ -1,4 +1,4 @@
-import {describe, it, expect, beforeEach} from 'vitest';
+import {describe, it, expect, beforeEach, vi, afterEach} from 'vitest';
 import {acquireLock, refreshLock, releaseLock, readLock} from '$lib/core/tab-leader/storage-lock';
 
 // Mock localStorage
@@ -24,6 +24,11 @@ function clearStore() {
 describe('storage-lock', () => {
 	beforeEach(() => {
 		clearStore();
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
 	});
 
 	describe('acquireLock', () => {
@@ -56,13 +61,14 @@ describe('storage-lock', () => {
 	});
 
 	describe('refreshLock', () => {
-		it('refreshes lock for the owning tab', () => {
+		it('refreshes lock for the owning tab and updates timestamp', () => {
 			acquireLock('tab-1');
 			const before = readLock()!.timestamp;
-			// Small delay to ensure timestamp differs
+			// Advance time to ensure timestamp differs
+			vi.advanceTimersByTime(100);
 			expect(refreshLock('tab-1')).toBe(true);
 			const after = readLock()!.timestamp;
-			expect(after).toBeGreaterThanOrEqual(before);
+			expect(after).toBeGreaterThan(before);
 		});
 
 		it('fails to refresh lock for a different tab', () => {

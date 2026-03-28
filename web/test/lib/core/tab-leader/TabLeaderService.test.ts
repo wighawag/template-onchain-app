@@ -195,10 +195,45 @@ describe('TabLeaderService', () => {
 		expect(values[values.length - 1]).toBe(false);
 	});
 
-	it('exposes claimLeadership for testing', () => {
+	it('broadcasts LEADER_RESIGN on graceful stop', () => {
 		const service = createTabLeaderService();
 		service.start();
-		expect(typeof service.claimLeadership).toBe('function');
+
+		const channel = MockBroadcastChannel.instances[0];
+		const spy = vi.spyOn(channel, 'postMessage');
+
 		service.stop();
+
+		const resignMessages = spy.mock.calls.filter(
+			(call) => (call[0] as {type: string}).type === 'LEADER_RESIGN',
+		);
+		expect(resignMessages.length).toBe(1);
+	});
+
+	it('follower starts election immediately on LEADER_RESIGN', () => {
+		const service1 = createTabLeaderService();
+		service1.start();
+
+		const service2 = createTabLeaderService();
+		service2.start();
+
+		// Determine which is leader, which is follower
+		const s1IsLeader = get(service1.isLeader);
+		const leader = s1IsLeader ? service1 : service2;
+		const follower = s1IsLeader ? service2 : service1;
+
+		expect(get(leader.isLeader)).toBe(true);
+		expect(get(follower.isLeader)).toBe(false);
+
+		// Leader resigns gracefully
+		leader.stop();
+
+		// Advance past the election debounce (100ms)
+		vi.advanceTimersByTime(150);
+
+		// Follower should now be leader (much faster than the 5s timeout)
+		expect(get(follower.isLeader)).toBe(true);
+
+		follower.stop();
 	});
 });

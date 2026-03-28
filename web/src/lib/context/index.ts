@@ -1,6 +1,9 @@
 import type {Context, TxObserverDebugState} from './types.js';
 
 import {writable} from 'svelte/store';
+
+/** How often the tx-observer processes pending transactions when this tab is leader */
+const TX_OBSERVER_PROCESS_INTERVAL = 2000;
 import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance.js';
@@ -177,7 +180,7 @@ export async function createContext(): Promise<{
 							lastProcessTime: Date.now(),
 						}));
 						txObserver.process();
-					}, 2 * 1000);
+					}, TX_OBSERVER_PROCESS_INTERVAL);
 				} else {
 					// Lost leadership: stop processing
 					txObserverDebug.update((state) => ({...state, isLeader: false}));

@@ -1,18 +1,26 @@
-const LOCK_KEY = 'tx-observer-leader-lock';
+import {LOCK_KEY, STALE_THRESHOLD} from './constants';
 
 export type LockData = {
 	tabId: string;
 	timestamp: number;
 };
 
+/**
+ * Attempts to acquire the leader lock for the given tab.
+ *
+ * Note: The read-check-write pattern here is not atomic (TOCTOU race).
+ * On a fresh page load with multiple tabs starting simultaneously, all could read
+ * "no lock", all could write their own lock, and all briefly become leaders.
+ * This is intentional and safe because the BroadcastChannel conflict resolution
+ * in TabLeaderService will quickly resolve any dual-leader situation.
+ */
 export function acquireLock(tabId: string): boolean {
 	const now = Date.now();
 	const existing = readLock();
 
 	if (existing && existing.tabId !== tabId) {
 		// Another tab holds the lock — check if it's still alive
-		// A lock is considered stale if not refreshed within the timeout
-		const STALE_THRESHOLD = 6000; // slightly more than LEADER_TIMEOUT
+		// A lock is considered stale if not refreshed within the threshold
 		if (now - existing.timestamp < STALE_THRESHOLD) {
 			return false;
 		}
