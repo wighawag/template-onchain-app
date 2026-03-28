@@ -1,7 +1,7 @@
 ---
 id: TASK-ci5bv
 title: Verify AccountData localStorage sync works with leader election
-status: backlog
+status: done
 priority: medium
 type: feature
 effort: small

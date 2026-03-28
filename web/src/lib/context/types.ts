@@ -1,4 +1,5 @@
 import type {PublicClient} from 'viem';
+import type {Readable} from 'svelte/store';
 import type {BalanceStore} from '$lib/core/connection/balance';
 import type {GasFeeStore} from '$lib/core/connection/gasFee';
 import type {RpcHealthStore} from '$lib/core/connection/rpcHealth';
@@ -16,10 +17,19 @@ import type {
 import type {OnchainStateStore} from '$lib/onchain/state';
 import type {ViewStateStore} from '$lib/view';
 import type {ClockStore} from '$lib/core/clock';
+import type {TransactionObserver} from '@etherkit/tx-observer';
 
 export type WalletClient = TrackedWalletClientAutoPopulate<TransactionMetadata>;
 
 export type Clock = ClockStore;
+
+export type TxObserverDebugState = {
+	processCount: number;
+	lastProcessTime: number | null;
+	isLeader: boolean;
+};
+
+export type TxObserverDebugStore = Readable<TxObserverDebugState>;
 
 export type Context = {
 	gasFee: GasFeeStore;
@@ -39,4 +49,6 @@ export type Context = {
 	onchainState: OnchainStateStore;
 	viewState: ViewStateStore;
 	clock: Clock;
+	txObserver: TransactionObserver;
+	txObserverDebug: TxObserverDebugStore;
 };

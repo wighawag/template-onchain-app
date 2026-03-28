@@ -1,7 +1,7 @@
 ---
 id: EPIC-7jrfm
 title: Wallet Connection UX Improvements
-status: later
+status: done
 priority: medium
 started: null
 target: null

@@ -1,7 +1,7 @@
 ---
 id: TASK-gxna7
 title: Test leader election, handoff, and state synchronization
-status: backlog
+status: done
 priority: medium
 type: chore
 effort: medium

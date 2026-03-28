@@ -1,7 +1,7 @@
 ---
 id: TASK-bzr2b
 title: Fix mobile wallet extension messaging
-status: draft
+status: done
 priority: medium
 type: bug
 effort: small

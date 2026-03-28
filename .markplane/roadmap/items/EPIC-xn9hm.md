@@ -1,7 +1,7 @@
 ---
 id: EPIC-xn9hm
 title: Leader Election for Single tx-observer Across Browser Tabs
-status: later
+status: done
 priority: medium
 started: null
 target: null

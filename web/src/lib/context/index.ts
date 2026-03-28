@@ -1,5 +1,9 @@
-import type {Context} from './types.js';
+import type {Context, TxObserverDebugState} from './types.js';
 
+import {writable} from 'svelte/store';
+
+/** How often the tx-observer processes pending transactions when this tab is leader */
+const TX_OBSERVER_PROCESS_INTERVAL = 2000;
 import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance.js';
@@ -10,6 +14,7 @@ import {createClockStore} from '$lib/core/clock';
 import {createOnchainState} from '$lib/onchain/state.js';
 import {createViewState} from '$lib/view/index.js';
 import {createTransactionObserver} from '@etherkit/tx-observer';
+import {createTabLeaderService} from '$lib/core/tab-leader';
 import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
 import {
 	createTrackedWalletConnector,
@@ -83,6 +88,9 @@ export async function createContext(): Promise<{
 	});
 	window.txObserver = txObserver;
 
+	const tabLeader = createTabLeaderService();
+	window.tabLeader = tabLeader;
+
 	const trackedWalletConnector = createTrackedWalletConnector({
 		walletClient,
 		accountData,
@@ -131,6 +139,13 @@ export async function createContext(): Promise<{
 	});
 	window.viewState = viewState;
 
+	// Debug store for tx-observer processing stats
+	const txObserverDebug = writable<TxObserverDebugState>({
+		processCount: 0,
+		lastProcessTime: null,
+		isLeader: false,
+	});
+
 	return {
 		context: {
 			gasFee,
@@ -146,6 +161,8 @@ export async function createContext(): Promise<{
 			onchainState,
 			viewState,
 			clock,
+			txObserver,
+			txObserverDebug: {subscribe: txObserverDebug.subscribe},
 		},
 		start: () => {
 			// we trigger it so it is always availabe
@@ -153,9 +170,38 @@ export async function createContext(): Promise<{
 			// we trigger it so it is always availabe
 			const unsubscribeFromGasFee = gasFee.subscribe(() => {});
 
-			const txObserverInterval = setInterval(() => {
-				txObserver.process();
-			}, 2 * 1000); // TODO delay or use onNewBlock hook
+			tabLeader.start();
+
+			let txObserverInterval: ReturnType<typeof setInterval> | undefined;
+
+			const unsubscribeFromLeader = tabLeader.isLeader.subscribe((isLeader) => {
+				if (isLeader) {
+					// Became leader: start processing immediately
+					txObserverDebug.update((state) => ({
+						...state,
+						isLeader: true,
+						processCount: state.processCount + 1,
+						lastProcessTime: Date.now(),
+					}));
+					txObserver.process();
+					txObserverInterval = setInterval(() => {
+						txObserverDebug.update((state) => ({
+							...state,
+							processCount: state.processCount + 1,
+							lastProcessTime: Date.now(),
+						}));
+						txObserver.process();
+					}, TX_OBSERVER_PROCESS_INTERVAL);
+				} else {
+					// Lost leadership: stop processing
+					txObserverDebug.update((state) => ({...state, isLeader: false}));
+					if (txObserverInterval !== undefined) {
+						clearInterval(txObserverInterval);
+						txObserverInterval = undefined;
+					}
+				}
+			});
+
 			trackedWalletConnector.connect();
 			txObserverConnector.connect();
 			toastConnector.connect();
@@ -166,7 +212,11 @@ export async function createContext(): Promise<{
 				txObserverConnector.disconnect();
 				toastConnector.disconnect();
 				onchainStateRefreshConnector.disconnect();
-				clearInterval(txObserverInterval);
+				unsubscribeFromLeader();
+				if (txObserverInterval !== undefined) {
+					clearInterval(txObserverInterval);
+				}
+				tabLeader.stop();
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();
 			};

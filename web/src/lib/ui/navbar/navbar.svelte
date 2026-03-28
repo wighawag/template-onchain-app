@@ -8,6 +8,7 @@
 	import Address from '../../core/ui/ethereum/Address.svelte';
 	import Badge from '$lib/shadcn/ui/badge/badge.svelte';
 	import {formatBalance} from '$lib/core/utils/format/balance';
+	import {FaucetButton, hasFaucetLink} from '$lib/core/ui/faucet/index.js';
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
@@ -80,7 +81,8 @@
 	// Uses baseFeePerGas + maxPriorityFeePerGas for accurate effective price
 	let formattedGasPrice = $derived.by(() => {
 		if ($gasFee.step === 'Loaded') {
-			const effectiveGasPrice = $gasFee.baseFeePerGas + $gasFee.average.maxPriorityFeePerGas;
+			const effectiveGasPrice =
+				$gasFee.baseFeePerGas + $gasFee.average.maxPriorityFeePerGas;
 			return formatBalance(effectiveGasPrice, 9, 6);
 		}
 		return null;
@@ -287,9 +289,7 @@
 
 				<!-- Balance & Transactions Section -->
 				<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
-					<div
-						class="flex flex-col gap-1 rounded-md bg-muted/50 px-3 py-2"
-					>
+					<div class="flex flex-col gap-1 rounded-md bg-muted/50 px-3 py-2">
 						<div class="flex items-center justify-between">
 							<span class="text-sm text-muted-foreground">Balance</span>
 							{#if $balanceStatus.loading && formattedBalance === null}
@@ -302,12 +302,15 @@
 								<span class="text-sm text-muted-foreground">—</span>
 							{/if}
 						</div>
+
 						{#if $balanceStatus.error}
 							<div class="flex items-center justify-between">
 								<span class="flex items-center gap-1 text-xs text-destructive">
 									<AlertCircleIcon class="h-3 w-3" />
 									{#if $balanceStatus.lastSuccessfulFetch}
-										Stale — updated {formatTimeAgo($balanceStatus.lastSuccessfulFetch)}
+										Stale — updated {formatTimeAgo(
+											$balanceStatus.lastSuccessfulFetch,
+										)}
 									{:else}
 										Unable to fetch balance
 									{/if}
@@ -321,7 +324,12 @@
 								</button>
 							</div>
 						{/if}
+
+						{#if hasFaucetLink && $balance.step === 'Loaded' && $balance.value === 0n}
+							<FaucetButton />
+						{/if}
 					</div>
+
 					<a
 						href={route('/transactions/')}
 						class="{buttonVariants({variant: 'outline'})} justify-between"
