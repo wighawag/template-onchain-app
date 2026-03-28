@@ -1,7 +1,7 @@
 ---
 id: TASK-utqc3
 title: Create offline indicator banner component
-status: draft
+status: done
 priority: medium
 type: feature
 effort: xs

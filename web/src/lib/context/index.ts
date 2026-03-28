@@ -8,6 +8,9 @@ import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance.js';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
+import {createRpcHealthStore} from '$lib/core/connection/rpcHealth';
+import {createOfflineStore} from '$lib/core/connection/offline';
+import {createClockStore} from '$lib/core/clock';
 import {createOnchainState} from '$lib/onchain/state.js';
 import {createViewState} from '$lib/view/index.js';
 import {createTransactionObserver} from '@etherkit/tx-observer';
@@ -42,8 +45,9 @@ export async function createContext(): Promise<{
 	window.publicClient = publicClient;
 	window.deployments = deployments;
 
-	// TODO
-	const clock = Date;
+	// Reactive clock store that updates every second for smooth "time ago" displays
+	const clock = createClockStore();
+	window.clock = clock;
 
 	// ----------------------------------------------------------------------------
 	// TRACKED WALLET CLIENT
@@ -121,6 +125,11 @@ export async function createContext(): Promise<{
 		deployments: deployments.current,
 	});
 	window.gasFee = gasFee;
+
+	const rpcHealth = createRpcHealthStore({balance, gasFee});
+	window.rpcHealth = rpcHealth;
+	const offline = createOfflineStore();
+	window.offline = offline;
 	// ----------------------------------------------------------------------------
 
 	const viewState = createViewState({
@@ -141,6 +150,8 @@ export async function createContext(): Promise<{
 		context: {
 			gasFee,
 			balance,
+			rpcHealth,
+			offline,
 			connection,
 			walletClient,
 			publicClient,

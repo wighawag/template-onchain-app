@@ -1,7 +1,7 @@
 ---
 id: EPIC-2h3e9
 title: Connection Health and Network Status Indicators
-status: later
+status: done
 priority: medium
 started: null
 target: null

@@ -12,6 +12,8 @@
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import AlertCircleIcon from '@lucide/svelte/icons/circle-alert';
+	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 	import {page} from '$app/state';
 	import GitIcon from '$lib/icons/GitIcon.svelte';
 
@@ -23,7 +25,7 @@
 		communityURL?: string;
 	} = $props();
 
-	const {connection, accountData, balance} = getUserContext();
+	const {connection, accountData, balance, gasFee, clock} = getUserContext();
 
 	let showMenu = $state(false);
 	let accountsOpen = $state(false);
@@ -55,6 +57,33 @@
 	let formattedBalance = $derived.by(() => {
 		if ($balance.step === 'Loaded') {
 			return formatBalance($balance.value, 18, 6);
+		}
+		return null;
+	});
+
+	// Balance status store
+	const balanceStatus = balance.status;
+
+	// Format time ago for stale indicator (reactive to clock store)
+	function formatTimeAgo(timestamp: number): string {
+		const seconds = Math.floor(($clock - timestamp) / 1000);
+		if (seconds < 60) return `${seconds}s ago`;
+		const minutes = Math.floor(seconds / 60);
+		if (minutes < 60) return `${minutes}m ago`;
+		const hours = Math.floor(minutes / 60);
+		return `${hours}h ago`;
+	}
+
+	// Gas fee store and status
+	const gasFeeStatus = gasFee.status;
+
+	// Format effective gas price in gwei (9 decimals)
+	// Uses baseFeePerGas + maxPriorityFeePerGas for accurate effective price
+	let formattedGasPrice = $derived.by(() => {
+		if ($gasFee.step === 'Loaded') {
+			const effectiveGasPrice =
+				$gasFee.baseFeePerGas + $gasFee.average.maxPriorityFeePerGas;
+			return formatBalance(effectiveGasPrice, 9, 6);
 		}
 		return null;
 	});
@@ -129,12 +158,20 @@
 			</Button>
 		{:else if connection.isTargetStepReached($connection)}
 			<div class="m-1 hidden h-8 items-center space-x-2 sm:flex">
-				{#if formattedBalance !== null}
+				{#if $balanceStatus.error && formattedBalance !== null}
+					<span class="flex items-center gap-1 text-sm text-muted-foreground">
+						<AlertCircleIcon class="h-3 w-3 text-amber-500" />
+						{formattedBalance} ETH
+					</span>
+				{:else if formattedBalance !== null}
 					<span class="text-sm text-muted-foreground"
 						>{formattedBalance} ETH</span
 					>
-					<!-- {:else}
-					<Address value={$connection.account.address} /> -->
+				{:else if $balanceStatus.error}
+					<span class="flex items-center gap-1 text-sm text-destructive">
+						<AlertCircleIcon class="h-3 w-3" />
+						Balance error
+					</span>
 				{/if}
 			</div>
 		{:else}
@@ -252,17 +289,47 @@
 
 				<!-- Balance & Transactions Section -->
 				<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
-					{#if formattedBalance !== null}
-						<div
-							class="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
-						>
+					<div class="flex flex-col gap-1 rounded-md bg-muted/50 px-3 py-2">
+						<div class="flex items-center justify-between">
 							<span class="text-sm text-muted-foreground">Balance</span>
-							<span class="font-medium">{formattedBalance} ETH</span>
+							{#if $balanceStatus.loading && formattedBalance === null}
+								<Spinner class="h-4 w-4" />
+							{:else if formattedBalance !== null}
+								<span class="font-medium">{formattedBalance} ETH</span>
+							{:else if $balanceStatus.error}
+								<span class="text-sm text-destructive">Failed to load</span>
+							{:else}
+								<span class="text-sm text-muted-foreground">—</span>
+							{/if}
 						</div>
-					{/if}
-					{#if hasFaucetLink && $balance.step === 'Loaded' && $balance.value === 0n}
-						<FaucetButton />
-					{/if}
+
+						{#if $balanceStatus.error}
+							<div class="flex items-center justify-between">
+								<span class="flex items-center gap-1 text-xs text-destructive">
+									<AlertCircleIcon class="h-3 w-3" />
+									{#if $balanceStatus.lastSuccessfulFetch}
+										Stale — updated {formatTimeAgo(
+											$balanceStatus.lastSuccessfulFetch,
+										)}
+									{:else}
+										Unable to fetch balance
+									{/if}
+								</span>
+								<button
+									class="flex items-center gap-1 text-xs text-primary hover:underline"
+									onclick={() => balance.update()}
+								>
+									<RefreshCwIcon class="h-3 w-3" />
+									Retry
+								</button>
+							</div>
+						{/if}
+
+						{#if hasFaucetLink && $balance.step === 'Loaded' && $balance.value === 0n}
+							<FaucetButton />
+						{/if}
+					</div>
+
 					<a
 						href={route('/transactions/')}
 						class="{buttonVariants({variant: 'outline'})} justify-between"
@@ -284,6 +351,27 @@
 					</Button>
 				</div>
 			{/if}
+
+			<!-- Network Info -->
+			<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
+				<span class="text-xs tracking-wide text-muted-foreground uppercase"
+					>Network</span
+				>
+				<div
+					class="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2"
+				>
+					<span class="text-sm text-muted-foreground">Gas Price</span>
+					{#if $gasFeeStatus.loading && formattedGasPrice === null}
+						<Spinner class="h-4 w-4" />
+					{:else if formattedGasPrice !== null}
+						<span class="font-medium">{formattedGasPrice} gwei</span>
+					{:else if $gasFeeStatus.error}
+						<span class="text-sm text-destructive">unavailable</span>
+					{:else}
+						<span class="text-sm text-muted-foreground">—</span>
+					{/if}
+				</div>
+			</div>
 
 			<!-- Developer Links -->
 			<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
