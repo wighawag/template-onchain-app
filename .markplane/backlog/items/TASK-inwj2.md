@@ -1,7 +1,7 @@
 ---
 id: TASK-inwj2
 title: Add missing wallet icons to connection flow
-status: draft
+status: done
 priority: low
 type: feature
 effort: small

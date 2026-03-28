@@ -1,7 +1,7 @@
 ---
 id: TASK-d8jdn
 title: Add faucet link for testnet chains
-status: draft
+status: done
 priority: medium
 type: feature
 effort: small
