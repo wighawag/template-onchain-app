@@ -71,15 +71,13 @@ export function createRpcHealthStore(params: {
 }): RpcHealthStore {
 	const {balance, gasFee} = params;
 
-	// Use writable store to manage state properly instead of closure variables
-	// This follows the same pattern as balance.ts and gasFee.ts
+	// Track state for comparison and error timing
 	let $state: RpcHealthValue = {healthy: true, error: null};
 	let errorSince: number | undefined;
-	const _store = writable<RpcHealthValue>($state);
 
 	function setState(state: RpcHealthValue) {
 		$state = state;
-		_store.set($state);
+		store.set($state);
 	}
 
 	let unsubscribeBalance: (() => void) | undefined;
