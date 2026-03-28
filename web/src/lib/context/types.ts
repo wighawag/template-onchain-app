@@ -15,12 +15,11 @@ import type {
 } from '$lib/account/AccountData';
 import type {OnchainStateStore} from '$lib/onchain/state';
 import type {ViewStateStore} from '$lib/view';
+import type {ClockStore} from '$lib/core/clock';
 
 export type WalletClient = TrackedWalletClientAutoPopulate<TransactionMetadata>;
 
-export type Clock = {
-	now(): number;
-};
+export type Clock = ClockStore;
 
 export type Context = {
 	gasFee: GasFeeStore;

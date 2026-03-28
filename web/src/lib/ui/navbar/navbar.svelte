@@ -24,7 +24,7 @@
 		communityURL?: string;
 	} = $props();
 
-	const {connection, accountData, balance, gasFee} = getUserContext();
+	const {connection, accountData, balance, gasFee, clock} = getUserContext();
 
 	let showMenu = $state(false);
 	let accountsOpen = $state(false);
@@ -63,9 +63,9 @@
 	// Balance status store
 	const balanceStatus = balance.status;
 
-	// Format time ago for stale indicator
+	// Format time ago for stale indicator (reactive to clock store)
 	function formatTimeAgo(timestamp: number): string {
-		const seconds = Math.floor((Date.now() - timestamp) / 1000);
+		const seconds = Math.floor(($clock - timestamp) / 1000);
 		if (seconds < 60) return `${seconds}s ago`;
 		const minutes = Math.floor(seconds / 60);
 		if (minutes < 60) return `${minutes}m ago`;
@@ -76,10 +76,12 @@
 	// Gas fee store and status
 	const gasFeeStatus = gasFee.status;
 
-	// Format gas price in gwei (9 decimals)
+	// Format effective gas price in gwei (9 decimals)
+	// Uses baseFeePerGas + maxPriorityFeePerGas for accurate effective price
 	let formattedGasPrice = $derived.by(() => {
 		if ($gasFee.step === 'Loaded') {
-			return formatBalance($gasFee.average.maxFeePerGas, 9, 6);
+			const effectiveGasPrice = $gasFee.baseFeePerGas + $gasFee.average.maxPriorityFeePerGas;
+			return formatBalance(effectiveGasPrice, 9, 6);
 		}
 		return null;
 	});
