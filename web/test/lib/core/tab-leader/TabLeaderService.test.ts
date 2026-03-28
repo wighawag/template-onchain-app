@@ -112,7 +112,7 @@ describe('TabLeaderService', () => {
 		service2.stop();
 	});
 
-	it('follower becomes leader after timeout when leader stops heartbeating', () => {
+	it('follower becomes leader on LEADER_RESIGN via graceful stop', () => {
 		const service1 = createTabLeaderService();
 		service1.start();
 
@@ -127,12 +127,51 @@ describe('TabLeaderService', () => {
 		expect(get(leader.isLeader)).toBe(true);
 		expect(get(follower.isLeader)).toBe(false);
 
-		// Simulate leader closing (stop without cleanup to simulate crash)
+		// Leader resigns gracefully (broadcasts LEADER_RESIGN)
 		leader.stop();
 
-		// Advance past leader timeout (5s)
-		vi.advanceTimersByTime(5100);
+		// Advance past the election debounce (100ms) - fast path
+		vi.advanceTimersByTime(150);
 
+		expect(get(follower.isLeader)).toBe(true);
+
+		follower.stop();
+	});
+
+	it('follower becomes leader after timeout when leader crashes (no LEADER_RESIGN)', () => {
+		const service1 = createTabLeaderService();
+		service1.start();
+
+		const service2 = createTabLeaderService();
+		service2.start();
+
+		// Determine which is leader, which is follower
+		const s1IsLeader = get(service1.isLeader);
+		const leaderChannelIdx = s1IsLeader ? 0 : 1;
+		const follower = s1IsLeader ? service2 : service1;
+
+		expect(get(follower.isLeader)).toBe(false);
+
+		// Simulate leader crash:
+		// 1. Close its BroadcastChannel (prevents LEADER_RESIGN from being sent)
+		// 2. Remove lock from localStorage (simulates stale lock after crash)
+		// In production, the lock would become stale after STALE_THRESHOLD (6s)
+		// We remove it directly to isolate testing the timeout detection path
+		const leaderChannel = MockBroadcastChannel.instances[leaderChannelIdx];
+		leaderChannel.close();
+		localStorage.removeItem('tx-observer-leader-lock');
+
+		// Follower should NOT be leader yet (hasn't timed out)
+		expect(get(follower.isLeader)).toBe(false);
+
+		// Advance time but not past timeout - follower still waiting
+		vi.advanceTimersByTime(3000);
+		expect(get(follower.isLeader)).toBe(false);
+
+		// Advance past leader timeout (5s total) + election debounce (100ms)
+		vi.advanceTimersByTime(2200);
+
+		// Now follower should have detected timeout and claimed leadership
 		expect(get(follower.isLeader)).toBe(true);
 
 		follower.stop();
