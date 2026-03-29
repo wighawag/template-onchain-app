@@ -229,8 +229,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0(svelte@5.55.0)
       synqable:
-        specifier: ^0.0.11
-        version: 0.0.11
+        specifier: ^0.0.13
+        version: 0.0.13
       tailwind-merge:
         specifier: ^3.5.0
         version: 3.5.0
@@ -4051,8 +4051,8 @@ packages:
     engines: {node: '>=14.0.0'}
     hasBin: true
 
-  synqable@0.0.11:
-    resolution: {integrity: sha512-VaV4pphahDZuT/CpLOa2peRNaveTmk8XX+XPw1043WTBo5bSWINSV8QT+d5/23lMcDDCylyPziKOsn6GX9rzrg==}
+  synqable@0.0.13:
+    resolution: {integrity: sha512-NVccel/juJ3ygpM4iT8Llkwv+DW4MHexa43Kyvhdwk0L0frt3S6xyXF7nrtZ9oj+a1E4iDOdK+I7+UR5NCGrbg==}
 
   tabbable@6.4.0:
     resolution: {integrity: sha512-05PUHKSNE8ou2dwIxTngl4EzcnsCDZGJ/iCLtDflR/SHB/ny14rXc+qU5P4mG9JkusiV7EivzY9Mhm55AzAvCg==}
@@ -8772,7 +8772,7 @@ snapshots:
       picocolors: 1.1.1
       sax: 1.5.0
 
-  synqable@0.0.11:
+  synqable@0.0.13:
     dependencies:
       named-logs: 0.4.1
       object-hash: 3.0.0

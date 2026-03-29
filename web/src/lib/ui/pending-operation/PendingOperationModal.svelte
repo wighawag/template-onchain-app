@@ -86,7 +86,9 @@
 	async function handleDismiss() {
 		if (operationKey) {
 			const currentAccountData = accountData.get();
-			currentAccountData?.removeItem('operations', operationKey);
+			currentAccountData?.removeItem('operations', operationKey, {
+				ignoreMissing: true,
+			});
 			handleClose();
 		}
 	}
