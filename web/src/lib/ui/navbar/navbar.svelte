@@ -25,7 +25,8 @@
 		communityURL?: string;
 	} = $props();
 
-	const {connection, accountData, balance, gasFee, clock} = getUserContext();
+	const {connection, accountData, balance, gasFee, clock, deployments} =
+		getUserContext();
 
 	let showMenu = $state(false);
 	let accountsOpen = $state(false);
@@ -161,11 +162,13 @@
 				{#if $balanceStatus.error && formattedBalance !== null}
 					<span class="flex items-center gap-1 text-sm text-muted-foreground">
 						<AlertCircleIcon class="h-3 w-3 text-amber-500" />
-						{formattedBalance} ETH
+						{formattedBalance}
+						{deployments.current.chain.nativeCurrency.symbol}
 					</span>
 				{:else if formattedBalance !== null}
 					<span class="text-sm text-muted-foreground"
-						>{formattedBalance} ETH</span
+						>{formattedBalance}
+						{deployments.current.chain.nativeCurrency.symbol}</span
 					>
 				{:else if $balanceStatus.error}
 					<span class="flex items-center gap-1 text-sm text-destructive">
@@ -295,7 +298,10 @@
 							{#if $balanceStatus.loading && formattedBalance === null}
 								<Spinner class="h-4 w-4" />
 							{:else if formattedBalance !== null}
-								<span class="font-medium">{formattedBalance} ETH</span>
+								<span class="font-medium"
+									>{formattedBalance}
+									{deployments.current.chain.nativeCurrency.symbol}</span
+								>
 							{:else if $balanceStatus.error}
 								<span class="text-sm text-destructive">Failed to load</span>
 							{:else}

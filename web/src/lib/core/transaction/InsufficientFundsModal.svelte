@@ -6,6 +6,7 @@
 	import {formatBalance} from '$lib/core/utils/format/balance';
 	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
 	import {FaucetButton, hasFaucetLink} from '$lib/core/ui/faucet/index.js';
+	import deployments from '$lib/deployments';
 
 	const state = balanceCheckStore;
 
@@ -35,16 +36,25 @@
 			<div class="space-y-2 rounded-lg bg-muted p-4">
 				<div class="flex justify-between">
 					<span class="text-muted-foreground">Your balance:</span>
-					<span class="font-mono">{formatBalance($state.balance)} ETH</span>
+					<span class="font-mono"
+						>{formatBalance($state.balance)}
+						{deployments.chain.nativeCurrency.symbol}</span
+					>
 				</div>
 				<div class="flex justify-between">
 					<span class="text-muted-foreground">Estimated cost:</span>
-					<span class="font-mono">{formatBalance($state.estimatedCost)} ETH</span>
+					<span class="font-mono"
+						>{formatBalance($state.estimatedCost)}
+						{deployments.chain.nativeCurrency.symbol}</span
+					>
 				</div>
 				<hr class="border-border" />
 				<div class="flex justify-between text-destructive">
 					<span>Shortfall:</span>
-					<span class="font-mono">{formatBalance($state.shortfall)} ETH</span>
+					<span class="font-mono"
+						>{formatBalance($state.shortfall)}
+						{deployments.chain.nativeCurrency.symbol}</span
+					>
 				</div>
 			</div>
 

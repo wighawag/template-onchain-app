@@ -466,7 +466,7 @@ export function formatDecodedTransaction(
 			methodDetails = formatDecodedArgs(data.args);
 		}
 	} else if (!data.functionName) {
-		methodLabel = 'ETH Transfer';
+		methodLabel = 'Transfer';
 	} else if (data.functionName === 'Contract Creation') {
 		methodLabel = 'Contract Creation';
 	}

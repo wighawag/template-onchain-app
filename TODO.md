@@ -1,5 +1,0 @@
-- [ ] rename PUBLIC_ENS_NODE_URL with PUBLIC_MAINNET_NODE_URL (for ENS but can also be used for other like uniswap for price oracle)
-- [ ] differentiate between PUBLIC_NODE_URL that would be used for fetching and PUBLIC_CHAIN_INFO_NODE_URL that would replace the chain info urls id specified
-- [ ] settings in sidebar (rpc url, but maybe other thing?)
-- [ ] Ability for user to set their rpc url (can be proposed if rpcHelath is down)
-- [ ] where we use ETH, we should use deployments.chain.nativeCurrency values

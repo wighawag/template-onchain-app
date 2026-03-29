@@ -4,7 +4,7 @@
 	import {getFaucetLink} from '.';
 	import {getUserContext} from '$lib';
 
-	const {account} = getUserContext();
+	const {account, deployments} = getUserContext();
 
 	function openFaucet() {
 		const address = $account;
@@ -21,5 +21,5 @@
 
 <Button variant="outline" onclick={openFaucet} class="w-full gap-2">
 	<ExternalLinkIcon class="h-4 w-4" />
-	Get Test ETH
+	Get {deployments.current.chain.nativeCurrency.symbol}
 </Button>
