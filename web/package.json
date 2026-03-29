@@ -6,7 +6,7 @@
 	"devDependencies": {
 		"@etherkit/tx-observer": "0.0.11",
 		"@etherkit/viem-tx-tracker": "^0.0.9",
-		"@etherplay/connect": "^0.0.46",
+		"@etherplay/connect": "^0.0.47",
 		"@internationalized/date": "^3.12.0",
 		"@lucide/svelte": "^1.7.0",
 		"@observator/svelte": "^0.3.1",
@@ -62,5 +62,8 @@
 		"serve": "ipfs-emulator --only -d build -p 8080",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run"
+	},
+	"dependencies": {
+		"@etherkit/burner-wallet": "^0.0.3"
 	}
 }

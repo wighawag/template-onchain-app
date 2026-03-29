@@ -1,9 +1,5 @@
 import type {Context, TxObserverDebugState} from './types.js';
-
 import {writable} from 'svelte/store';
-
-/** How often the tx-observer processes pending transactions when this tab is leader */
-const TX_OBSERVER_PROCESS_INTERVAL = 2000;
 import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance.js';
@@ -22,12 +18,27 @@ import {
 	createOnchainStateRefreshConnector,
 } from '$lib/account/connectors.js';
 import {createToastConnector} from '$lib/account/toastConnector.js';
+import {initBurnerWallet} from '@etherkit/burner-wallet';
+import {PUBLIC_NODE_URL, PUBLIC_USE_BURNER_WALLET} from '$env/static/public';
+
+/** How often the tx-observer processes pending transactions when this tab is leader */
+const TX_OBSERVER_PROCESS_INTERVAL = 2000;
 
 export async function createContext(): Promise<{
 	context: Context;
 	start: () => () => void;
 }> {
 	const window = globalThis as any;
+
+	let cleanupBurnerWallet: (() => void) | undefined;
+
+	// TODO use chainInfo if no piblicNodeUrl ?
+	if (PUBLIC_NODE_URL && PUBLIC_USE_BURNER_WALLET) {
+		const {cleanup} = initBurnerWallet({
+			nodeURL: PUBLIC_NODE_URL,
+		});
+		cleanupBurnerWallet = cleanup;
+	}
 
 	// ----------------------------------------------------------------------------
 	// CONNECTION
@@ -39,7 +50,10 @@ export async function createContext(): Promise<{
 		publicClient,
 		account,
 		deployments,
-	} = await establishRemoteConnection();
+	} = await establishRemoteConnection({
+		nodeURL: PUBLIC_NODE_URL,
+		// chainInfoNodeURL
+	});
 
 	window.connection = connection;
 	window.publicClient = publicClient;
@@ -208,6 +222,7 @@ export async function createContext(): Promise<{
 			onchainStateRefreshConnector.connect();
 
 			return () => {
+				cleanupBurnerWallet?.();
 				trackedWalletConnector.disconnect();
 				txObserverConnector.disconnect();
 				toastConnector.disconnect();
