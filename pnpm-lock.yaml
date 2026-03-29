@@ -15,8 +15,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0
       ldenv:
-        specifier: ^0.3.16
-        version: 0.3.16
+        specifier: ^0.4.0
+        version: 0.4.0
       zellij-launcher:
         specifier: ^0.0.1
         version: 0.0.1
@@ -90,8 +90,8 @@ importers:
         specifier: ^0.0.6
         version: 0.0.6(bufferutil@4.1.0)(hardhat@3.2.0(bufferutil@4.1.0))(typescript@6.0.2)(zod@3.25.76)
       ldenv:
-        specifier: ^0.3.16
-        version: 0.3.16
+        specifier: ^0.4.0
+        version: 0.4.0
       prettier:
         specifier: ^3.8.0
         version: 3.8.1
@@ -189,6 +189,9 @@ importers:
       json-stable-stringify:
         specifier: ^1.3.0
         version: 1.3.0
+      ldenv:
+        specifier: ^0.4.0
+        version: 0.4.0
       mode-watcher:
         specifier: ^1.1.0
         version: 1.1.0(svelte@5.55.0)
@@ -2279,6 +2282,10 @@ packages:
   cross-spawn@5.1.0:
     resolution: {integrity: sha512-pTgQJ5KC0d2hcY8eyL1IzlBPYjTkyH72XRZPnLyKus2mBfNjQs3klqbJU2VILqZryAZUt9JOb3h/mWMy23/f5A==}
 
+  cross-spawn@7.0.6:
+    resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
+    engines: {node: '>= 8'}
+
   cross-var@1.1.0:
     resolution: {integrity: sha512-wIcFax9RNm5ayuORUeJ5MLxPbfh8XdZhhUpKutIszU46Fs9UIhEdPJ7+YguM+7FxEj+68hSQVyathVsIu84SiA==}
     hasBin: true
@@ -3027,6 +3034,10 @@ packages:
     resolution: {integrity: sha512-ShaNPPzgUi+iGj9bsQ0TPRm6MuOcPpc1NklL0/IzJsvB0OdHwWoPhmeTVR5z0oC3zzLebrojozo/nt8d2XTZbQ==}
     hasBin: true
 
+  ldenv@0.4.0:
+    resolution: {integrity: sha512-lNmRC4w63sAi1LrodtQoL3/a4b6HbRZ5IDoBnwPWNoDpMWprSVYTfs5n8wZ01biqMK4lQhVIDvJ/EZf8ygHE1Q==}
+    hasBin: true
+
   libsql@0.5.29:
     resolution: {integrity: sha512-8lMP8iMgiBzzoNbAPQ59qdVcj6UaE/Vnm+fiwX4doX4Narook0a4GPKWBEv+CR8a1OwbfkgL18uBfBjWdF0Fzg==}
     cpu: [x64, arm64, wasm32, arm]
@@ -3467,6 +3478,10 @@ packages:
     resolution: {integrity: sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==}
     engines: {node: '>=0.10.0'}
 
+  path-key@3.1.1:
+    resolution: {integrity: sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==}
+    engines: {node: '>=8'}
+
   path-to-regexp@1.9.0:
     resolution: {integrity: sha512-xIp7/apCFJuUHdDLWe8O1HIkb0kQrOMb/0u6FXQjemHn/ii5LrIzU6bdECnsiTF/GjZkMEKg1xdiZwNqDYlZ6g==}
 
@@ -3880,9 +3895,17 @@ packages:
     resolution: {integrity: sha512-EV3L1+UQWGor21OmnvojK36mhg+TyIKDh3iFBKBohr5xeXIhNBcx8oWdgkTEEQ+BEFFYdLRuqMfd5L84N1V5Vg==}
     engines: {node: '>=0.10.0'}
 
+  shebang-command@2.0.0:
+    resolution: {integrity: sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==}
+    engines: {node: '>=8'}
+
   shebang-regex@1.0.0:
     resolution: {integrity: sha512-wpoSFAxys6b2a2wHZ1XpDSgD7N9iVjg29Ph9uV/uaP9Ex/KXlkTZTeddxDPSYQpgvzKLGJke2UU0AzoGCjNIvQ==}
     engines: {node: '>=0.10.0'}
+
+  shebang-regex@3.0.0:
+    resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
+    engines: {node: '>=8'}
 
   side-channel-list@1.0.0:
     resolution: {integrity: sha512-FCLHtRD/gnpCiCHEiJLOwdmFP+wzCmDEkc9y7NsYxeF4u7Btsn1ZuwgwJGxImImHicJArLP4R0yX4c2KCrMrTA==}
@@ -4449,6 +4472,11 @@ packages:
 
   which@1.3.1:
     resolution: {integrity: sha512-HxJdYWq1MTIQbJ3nw0cqssHoTNU267KlrDuGZ1WYlxDStUtKUhOaJmh112/TZmHxxUfuJqPXSOm7tDyas0OSIQ==}
+    hasBin: true
+
+  which@2.0.2:
+    resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
+    engines: {node: '>= 8'}
     hasBin: true
 
   why-is-node-running@2.3.0:
@@ -6781,6 +6809,12 @@ snapshots:
       shebang-command: 1.2.0
       which: 1.3.1
 
+  cross-spawn@7.0.6:
+    dependencies:
+      path-key: 3.1.1
+      shebang-command: 2.0.0
+      which: 2.0.2
+
   cross-var@1.1.0:
     dependencies:
       babel-preset-es2015: 6.24.1
@@ -7645,6 +7679,12 @@ snapshots:
       dotenv: 16.6.1
       dotenv-expand: 10.0.0
 
+  ldenv@0.4.0:
+    dependencies:
+      cross-spawn: 7.0.6
+      dotenv: 16.6.1
+      dotenv-expand: 10.0.0
+
   libsql@0.5.29:
     dependencies:
       '@neon-rs/load': 0.0.4
@@ -8078,6 +8118,8 @@ snapshots:
   patch-recorder@0.4.0: {}
 
   path-is-absolute@1.0.1: {}
+
+  path-key@3.1.1: {}
 
   path-to-regexp@1.9.0:
     dependencies:
@@ -8561,7 +8603,13 @@ snapshots:
     dependencies:
       shebang-regex: 1.0.0
 
+  shebang-command@2.0.0:
+    dependencies:
+      shebang-regex: 3.0.0
+
   shebang-regex@1.0.0: {}
+
+  shebang-regex@3.0.0: {}
 
   side-channel-list@1.0.0:
     dependencies:
@@ -9115,6 +9163,10 @@ snapshots:
       webidl-conversions: 3.0.1
 
   which@1.3.1:
+    dependencies:
+      isexe: 2.0.0
+
+  which@2.0.2:
     dependencies:
       isexe: 2.0.0
 

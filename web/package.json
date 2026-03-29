@@ -23,6 +23,7 @@
 		"eip-1193": "^0.6.5",
 		"ipfs-gateway-emulator": "4.2.1-ipfs.2",
 		"json-stable-stringify": "^1.3.0",
+		"ldenv": "^0.4.0",
 		"mode-watcher": "^1.1.0",
 		"named-logs": "^0.4.1",
 		"observator": "^0.3.0",
