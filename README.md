@@ -306,13 +306,13 @@ export default deployScript(
 Contract deployments are automatically exported to `web/src/lib/deployments.ts`. Import them in your Svelte components:
 
 ```typescript
-import { deployments } from "$lib/deployments";
+import deployments from "$lib/deployments";
 
 // Access contract address
-const address = deployments.GreetingsRegistry.address;
+const address = deployments.contracts.GreetingsRegistry.address;
 
 // Access contract ABI
-const abi = deployments.GreetingsRegistry.abi;
+const abi = deployments.contracts..GreetingsRegistry.abi;
 ```
 
 ## Environment Variables
