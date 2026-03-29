@@ -38,64 +38,89 @@
 	let avatarUri = $derived(ensAvatar || blockieUri);
 	let isBlockie = $derived(!ensAvatar);
 
-	// Load ENS avatar on component mount if ENS context is available
+	// Initialize from cache and load ENS avatar when address changes
 	$effect(() => {
-		if (ensContext && address) {
-			untrack(() => {
-				if (!avatarAttempted) {
-					avatarAttempted = true;
-					loadENSAvatar();
-				}
-			});
+		// Track address to trigger this effect
+		const currentAddress = address;
+
+		// Reset state for new address
+		avatarAttempted = false;
+		ensAttempted = false;
+
+		if (!ensContext || !currentAddress) {
+			ensAvatar = null;
+			ensName = null;
+			return;
+		}
+
+		// Check cache synchronously first - no blink for cached avatars
+		const cachedAvatarState = ensContext.getENSAvatarState(currentAddress);
+		if (cachedAvatarState.avatar) {
+			ensAvatar = cachedAvatarState.avatar;
+			avatarAttempted = true;
+		} else if (!cachedAvatarState.loading) {
+			// Not cached and not loading - start fetch
+			ensAvatar = null;
+			avatarAttempted = true;
+			loadENSAvatar(currentAddress);
+		}
+
+		// Also check cached ENS name
+		const cachedNameState = ensContext.getENSState(currentAddress);
+		if (cachedNameState.name) {
+			ensName = cachedNameState.name;
+			ensAttempted = true;
+		} else {
+			ensName = null;
 		}
 	});
 
-	// Reset avatar attempt when address changes
-	$effect(() => {
-		// Track address to trigger this effect
-		const _addr = address;
-		untrack(() => {
-			avatarAttempted = false;
-			ensAttempted = false;
-			ensAvatar = null;
-			ensName = null;
-		});
-	});
-
-	// Load ENS name when popover opens
+	// Load ENS name when popover opens (if not already loaded)
 	$effect(() => {
 		if (popoverOpen && showAddressOnTap && ensContext) {
 			// Use untrack to prevent re-triggering when ensName/ensNameLoading change
 			untrack(() => {
-				if (!ensAttempted) {
+				if (!ensAttempted && address) {
 					ensAttempted = true;
-					loadENSName();
+					loadENSName(address);
 				}
 			});
 		}
 	});
 
-	async function loadENSAvatar() {
-		if (!address || !ensContext) {
+	async function loadENSAvatar(addr: `0x${string}`) {
+		if (!ensContext) {
 			return;
 		}
 		ensAvatarLoading = true;
 		try {
-			ensAvatar = await ensContext.fetchENSAvatar(address);
+			const result = await ensContext.fetchENSAvatar(addr);
+			// Only update if address hasn't changed
+			if (addr === address) {
+				ensAvatar = result;
+			}
 		} finally {
-			ensAvatarLoading = false;
+			if (addr === address) {
+				ensAvatarLoading = false;
+			}
 		}
 	}
 
-	async function loadENSName() {
-		if (!address || !ensContext) {
+	async function loadENSName(addr: `0x${string}`) {
+		if (!ensContext) {
 			return;
 		}
 		ensNameLoading = true;
 		try {
-			ensName = await ensContext.fetchENS(address);
+			const result = await ensContext.fetchENS(addr);
+			// Only update if address hasn't changed
+			if (addr === address) {
+				ensName = result;
+			}
 		} finally {
-			ensNameLoading = false;
+			if (addr === address) {
+				ensNameLoading = false;
+			}
 		}
 	}
 
