@@ -6,8 +6,9 @@
 	import type {HTMLImgAttributes} from 'svelte/elements';
 	import {getContext} from 'svelte';
 	import {untrack} from 'svelte';
+	import type {ENSContext} from '$lib/core/ens';
 
-	interface BlockieProps extends HTMLImgAttributes {
+	interface EthereumAvatarProps extends HTMLImgAttributes {
 		address: `0x${string}`;
 		offset?: number;
 		showAddressOnTap?: boolean;
@@ -18,42 +19,83 @@
 		offset = 0,
 		showAddressOnTap = false,
 		...restProps
-	}: BlockieProps = $props();
+	}: EthereumAvatarProps = $props();
 
-	let uri = $derived(Blockie.getURI(address, offset));
+	let blockieUri = $derived(Blockie.getURI(address, offset));
 
-	// ENS context for resolving names
-	const ensContext = getContext<
-		{fetchENS: (address: `0x${string}`) => Promise<string | null>} | undefined
-	>('ens');
+	// ENS context for resolving names and avatars
+	const ensContext = getContext<ENSContext | undefined>('ens');
 
 	let ensName: string | null = $state(null);
-	let ensLoading = $state(false);
+	let ensAvatar: string | null = $state(null);
+	let ensNameLoading = $state(false);
+	let ensAvatarLoading = $state(false);
 	let ensAttempted = false; // non-reactive flag to prevent re-triggering
+	let avatarAttempted = false; // non-reactive flag for avatar loading
 	let popoverOpen = $state(false);
 
-	// Load ENS when popover opens
+	// Compute the avatar URI - use ENS avatar if available, fallback to blockie
+	let avatarUri = $derived(ensAvatar || blockieUri);
+	let isBlockie = $derived(!ensAvatar);
+
+	// Load ENS avatar on component mount if ENS context is available
 	$effect(() => {
-		if (popoverOpen && showAddressOnTap && ensContext) {
-			// Use untrack to prevent re-triggering when ensName/ensLoading change
+		if (ensContext && address) {
 			untrack(() => {
-				if (!ensAttempted) {
-					ensAttempted = true;
-					loadENS();
+				if (!avatarAttempted) {
+					avatarAttempted = true;
+					loadENSAvatar();
 				}
 			});
 		}
 	});
 
-	async function loadENS() {
+	// Reset avatar attempt when address changes
+	$effect(() => {
+		// Track address to trigger this effect
+		const _addr = address;
+		untrack(() => {
+			avatarAttempted = false;
+			ensAttempted = false;
+			ensAvatar = null;
+			ensName = null;
+		});
+	});
+
+	// Load ENS name when popover opens
+	$effect(() => {
+		if (popoverOpen && showAddressOnTap && ensContext) {
+			// Use untrack to prevent re-triggering when ensName/ensNameLoading change
+			untrack(() => {
+				if (!ensAttempted) {
+					ensAttempted = true;
+					loadENSName();
+				}
+			});
+		}
+	});
+
+	async function loadENSAvatar() {
 		if (!address || !ensContext) {
 			return;
 		}
-		ensLoading = true;
+		ensAvatarLoading = true;
+		try {
+			ensAvatar = await ensContext.fetchENSAvatar(address);
+		} finally {
+			ensAvatarLoading = false;
+		}
+	}
+
+	async function loadENSName() {
+		if (!address || !ensContext) {
+			return;
+		}
+		ensNameLoading = true;
 		try {
 			ensName = await ensContext.fetchENS(address);
 		} finally {
-			ensLoading = false;
+			ensNameLoading = false;
 		}
 	}
 
@@ -65,7 +107,20 @@
 	<Popover.Root bind:open={popoverOpen}>
 		<Popover.Trigger class="cursor-pointer rounded-full focus:outline-none">
 			<Avatar.Root>
-				<Avatar.AvatarImage src={uri} alt={address} style={blockieImageStyle} />
+				{#if ensAvatarLoading}
+					<!-- Show blockie while loading ENS avatar -->
+					<Avatar.AvatarImage
+						src={blockieUri}
+						alt={address}
+						style={blockieImageStyle}
+					/>
+				{:else}
+					<Avatar.AvatarImage
+						src={avatarUri}
+						alt={address}
+						style={isBlockie ? blockieImageStyle : undefined}
+					/>
+				{/if}
 			</Avatar.Root>
 		</Popover.Trigger>
 		<Popover.Content
@@ -91,18 +146,18 @@
 				}
 			}}
 		>
-			<Popover.Arrow class="blockie-popover-arrow" />
+			<Popover.Arrow class="ethereum-avatar-popover-arrow" />
 			<div class="flex items-center gap-3">
-				<!-- Larger blockie avatar in the popover -->
+				<!-- Larger avatar in the popover -->
 				<Avatar.Root class="size-12 ring-2 ring-border">
 					<Avatar.AvatarImage
-						src={uri}
+						src={avatarUri}
 						alt={address}
-						style={blockieImageStyle}
+						style={isBlockie ? blockieImageStyle : undefined}
 					/>
 				</Avatar.Root>
 				<div class="flex min-w-0 flex-col justify-center gap-1">
-					{#if ensLoading}
+					{#if ensNameLoading}
 						<div class="h-5 w-24 animate-pulse rounded bg-muted"></div>
 					{:else if ensName}
 						<span class="truncate font-semibold text-foreground">{ensName}</span>
@@ -121,18 +176,31 @@
 	</Popover.Root>
 {:else}
 	<Avatar.Root>
-		<Avatar.AvatarImage src={uri} alt={address} style={blockieImageStyle} />
+		{#if ensAvatarLoading}
+			<!-- Show blockie while loading ENS avatar -->
+			<Avatar.AvatarImage
+				src={blockieUri}
+				alt={address}
+				style={blockieImageStyle}
+			/>
+		{:else}
+			<Avatar.AvatarImage
+				src={avatarUri}
+				alt={address}
+				style={isBlockie ? blockieImageStyle : undefined}
+			/>
+		{/if}
 	</Avatar.Root>
 {/if}
 
 <style>
-	:global(.blockie-popover-arrow) {
+	:global(.ethereum-avatar-popover-arrow) {
 		fill: var(--muted) !important;
 	}
-	:global(.blockie-popover-arrow svg) {
+	:global(.ethereum-avatar-popover-arrow svg) {
 		fill: var(--muted) !important;
 	}
-	:global(.blockie-popover-arrow polygon) {
+	:global(.ethereum-avatar-popover-arrow polygon) {
 		fill: var(--muted) !important;
 	}
 </style>

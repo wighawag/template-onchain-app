@@ -8,7 +8,7 @@
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
-	import BlockieAvatar from '$lib/core/ui/ethereum/BlockieAvatar.svelte';
+	import EthereumAvatar from '$lib/core/ui/ethereum/EthereumAvatar.svelte';
 	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
 
 	const {
@@ -197,7 +197,7 @@
 						<div
 							class="flex items-center gap-3 rounded-lg border px-4 py-3 sm:gap-4"
 						>
-							<BlockieAvatar
+							<EthereumAvatar
 								address={message.account}
 								class="h-8 w-8 shrink-0 rounded-full"
 								showAddressOnTap

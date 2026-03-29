@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
-	import BlockieAvatar from '$lib/core/ui/ethereum/BlockieAvatar.svelte';
+	import EthereumAvatar from '$lib/core/ui/ethereum/EthereumAvatar.svelte';
 	import {Button} from '$lib/shadcn/ui/button';
 	import type {
 		AnyConnectionStore,
@@ -158,7 +158,7 @@
 						<div
 							class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
 						>
-							<BlockieAvatar address={account} />
+							<EthereumAvatar address={account} />
 						</div>
 						<Address value={account} />
 					</button>

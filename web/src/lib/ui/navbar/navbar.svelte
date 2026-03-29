@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {getUserContext, route} from '$lib';
 	import Button, {buttonVariants} from '$lib/shadcn/ui/button/button.svelte';
-	import BlockieAvatar from '../../core/ui/ethereum/BlockieAvatar.svelte';
+	import EthereumAvatar from '../../core/ui/ethereum/EthereumAvatar.svelte';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Drawer from '$lib/shadcn/ui/drawer/index.js';
 	import * as Collapsible from '$lib/shadcn/ui/collapsible/index.js';
@@ -193,7 +193,7 @@
 			aria-label="Open menu"
 		>
 			{#if connection.isTargetStepReached($connection)}
-				<BlockieAvatar address={$connection.account.address} />
+				<EthereumAvatar address={$connection.account.address} />
 				{#if transactionCount > 0}
 					<span
 						class="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground"
@@ -226,7 +226,7 @@
 									<div
 										class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
 									>
-										<BlockieAvatar address={$connection.account.address} />
+										<EthereumAvatar address={$connection.account.address} />
 									</div>
 									<Address value={$connection.account.address} />
 								</div>
@@ -260,7 +260,7 @@
 											<div
 												class="h-5 w-5 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
 											>
-												<BlockieAvatar address={account} />
+												<EthereumAvatar address={account} />
 											</div>
 											<Address value={account} />
 											{#if account === $connection.account.address}

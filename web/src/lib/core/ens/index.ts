@@ -17,14 +17,23 @@ export type ENSAddressResult = {
 	error?: Error;
 };
 
+export type ENSAvatarResult = {
+	avatar: string | null;
+	loading: boolean;
+	error?: Error;
+};
+
 export type ENSCache = Map<`0x${string}`, ENSResult>;
 export type ENSAddressCache = Map<string, ENSAddressResult>;
+export type ENSAvatarCache = Map<`0x${string}`, ENSAvatarResult>;
 
 export type ENSContext = {
 	fetchENS: (address: `0x${string}`) => Promise<string | null>;
 	getENSState: (address: `0x${string}`) => ENSResult;
 	resolveAddress: (name: string) => Promise<`0x${string}` | null>;
 	getAddressState: (name: string) => ENSAddressResult;
+	fetchENSAvatar: (address: `0x${string}`) => Promise<string | null>;
+	getENSAvatarState: (address: `0x${string}`) => ENSAvatarResult;
 };
 
 // Create the public client once for all ENS lookups
@@ -40,11 +49,13 @@ const publicClient = createPublicClient({
 export function createENSService(): ENSContext {
 	const cache: ENSCache = new Map();
 	const addressCache: ENSAddressCache = new Map();
+	const avatarCache: ENSAvatarCache = new Map();
 	const pendingRequests = new Map<`0x${string}`, Promise<string | null>>();
 	const pendingAddressRequests = new Map<
 		string,
 		Promise<`0x${string}` | null>
 	>();
+	const pendingAvatarRequests = new Map<`0x${string}`, Promise<string | null>>();
 
 	/**
 	 * Get the current ENS state for an address (synchronous).
@@ -173,10 +184,84 @@ export function createENSService(): ENSContext {
 		return fetchPromise;
 	}
 
+	/**
+	 * Get the current ENS avatar state for an address (synchronous).
+	 * Returns the cached state or a default loading state.
+	 */
+	function getENSAvatarState(address: `0x${string}`): ENSAvatarResult {
+		const cached = avatarCache.get(address);
+		if (cached) {
+			return cached;
+		}
+		return {avatar: null, loading: false};
+	}
+
+	/**
+	 * Fetch ENS avatar for an address with caching.
+	 * First resolves the ENS name, then fetches the avatar.
+	 * If a request is already in progress for this address, returns the same promise.
+	 * If the result is cached, returns it immediately.
+	 */
+	async function fetchENSAvatar(address: `0x${string}`): Promise<string | null> {
+		// Check if we already have a cached result
+		const cached = avatarCache.get(address);
+		if (cached && !cached.loading) {
+			logger.debug(`ENS avatar cache hit for ${address}: ${cached.avatar}`);
+			return cached.avatar;
+		}
+
+		// Check if there's already a pending request for this address
+		const pending = pendingAvatarRequests.get(address);
+		if (pending) {
+			logger.debug(`ENS avatar request already pending for ${address}`);
+			return pending;
+		}
+
+		// Set loading state
+		avatarCache.set(address, {avatar: null, loading: true});
+
+		// Create the fetch promise
+		const fetchPromise = (async (): Promise<string | null> => {
+			try {
+				logger.debug(`Fetching ENS avatar for ${address}`);
+
+				// First, get the ENS name for this address
+				const name = await fetchENS(address);
+				if (!name) {
+					logger.debug(`No ENS name found for ${address}, cannot fetch avatar`);
+					avatarCache.set(address, {avatar: null, loading: false});
+					return null;
+				}
+
+				// Now fetch the avatar using the ENS name
+				const avatar = await publicClient.getEnsAvatar({name});
+				logger.debug(`ENS avatar resolved for ${address}: ${avatar}`);
+
+				avatarCache.set(address, {avatar, loading: false});
+				return avatar;
+			} catch (error) {
+				logger.debug(`Failed to fetch ENS avatar for ${address}`, error);
+				avatarCache.set(address, {
+					avatar: null,
+					loading: false,
+					error: error instanceof Error ? error : new Error(String(error)),
+				});
+				return null;
+			} finally {
+				pendingAvatarRequests.delete(address);
+			}
+		})();
+
+		pendingAvatarRequests.set(address, fetchPromise);
+		return fetchPromise;
+	}
+
 	return {
 		fetchENS,
 		getENSState,
 		resolveAddress,
 		getAddressState,
+		fetchENSAvatar,
+		getENSAvatarState,
 	};
 }
