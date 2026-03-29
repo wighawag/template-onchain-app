@@ -9,6 +9,7 @@ export type GasPriceEstimates = {
 	slow: GasPrice;
 	average: GasPrice;
 	fast: GasPrice;
+	baseFeePerGas: bigint;
 	higherThanExpected: boolean;
 };
 
@@ -126,6 +127,7 @@ export function createGasFeeStore(
 					slow: result[0],
 					average: result[1],
 					fast: result[2],
+					baseFeePerGas,
 					higherThanExpected: options?.expectedWorstGasPrice
 						? result[2].maxFeePerGas > options?.expectedWorstGasPrice
 						: false,
@@ -162,6 +164,7 @@ export function createGasFeeStore(
 					maxFeePerGas: gasPrice,
 					maxPriorityFeePerGas: gasPrice,
 				},
+				baseFeePerGas: gasPrice,
 				higherThanExpected: options?.expectedWorstGasPrice
 					? gasPrice > options?.expectedWorstGasPrice
 					: false,

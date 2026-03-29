@@ -1,3 +1,7 @@
+# setup
+
+`pnpm i`
+
 # frontend
 
 in ./web

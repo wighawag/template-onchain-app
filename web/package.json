@@ -6,7 +6,7 @@
 	"devDependencies": {
 		"@etherkit/tx-observer": "0.0.11",
 		"@etherkit/viem-tx-tracker": "^0.0.9",
-		"@etherplay/connect": "^0.0.44",
+		"@etherplay/connect": "^0.0.50",
 		"@internationalized/date": "^3.12.0",
 		"@lucide/svelte": "^1.7.0",
 		"@observator/svelte": "^0.3.1",
@@ -36,7 +36,7 @@
 		"svelte": "^5.55.0",
 		"svelte-check": "^4.0.0",
 		"svelte-sonner": "^1.1.0",
-		"synqable": "^0.0.11",
+		"synqable": "^0.0.13",
 		"tailwind-merge": "^3.5.0",
 		"tailwind-variants": "^3.2.2",
 		"tailwindcss": "^4.2.2",
@@ -62,5 +62,8 @@
 		"serve": "ipfs-emulator --only -d build -p 8080",
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run"
+	},
+	"dependencies": {
+		"@etherkit/burner-wallet": "^0.0.3"
 	}
 }

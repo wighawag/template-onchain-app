@@ -1,6 +1,5 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
 	import {getUserContext} from '$lib';
 	import * as Card from '$lib/shadcn/ui/card';
 	import * as Alert from '$lib/shadcn/ui/alert';
@@ -17,7 +16,6 @@
 	import ArrowLeftIcon from '@lucide/svelte/icons/arrow-left';
 	import WalletIcon from '@lucide/svelte/icons/wallet';
 	import FileCodeIcon from '@lucide/svelte/icons/file-code';
-	import CopyIcon from '@lucide/svelte/icons/copy';
 	import ExpandIcon from '@lucide/svelte/icons/expand';
 	import ChevronsDownIcon from '@lucide/svelte/icons/chevrons-down';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
@@ -49,6 +47,7 @@
 		connection,
 		balance: balanceStore,
 		gasFee,
+		deployments,
 	} = getUserContext();
 
 	let balance = $state<bigint>(0n);
@@ -221,7 +220,10 @@
 							<div class="text-sm font-medium text-muted-foreground">
 								Balance
 							</div>
-							<div class="font-mono text-lg">{formatEther(balance)} ETH</div>
+							<div class="font-mono text-lg">
+								{formatEther(balance)}
+								{deployments.current.chain.nativeCurrency.symbol}
+							</div>
 						</div>
 						<div>
 							<div class="text-sm font-medium text-muted-foreground">Nonce</div>

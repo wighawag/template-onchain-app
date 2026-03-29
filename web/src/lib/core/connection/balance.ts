@@ -7,7 +7,7 @@ export type BalanceValue = {step: 'Unloaded'} | {step: 'Loaded'; value: bigint};
 
 export type BalanceStatus = {
 	loading: boolean;
-	error?: {message: string};
+	error?: {message: string; cause?: unknown};
 	lastSuccessfulFetch?: number;
 };
 
@@ -74,7 +74,7 @@ export function createBalanceStore(
 			// Preserve lastSuccessfulFetch on error
 			setStatus({
 				loading: false,
-				error: {message: `failed to fetch balance for ${$account}`},
+				error: {message: `failed to fetch balance for ${$account}`, cause: err},
 				lastSuccessfulFetch: $status.lastSuccessfulFetch,
 			});
 			return false;

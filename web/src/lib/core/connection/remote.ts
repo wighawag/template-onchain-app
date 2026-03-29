@@ -18,19 +18,30 @@ import type {
 } from './types';
 
 // TODO allow to specify the expected DeploymentStore type
-export async function establishRemoteConnection(): Promise<EstablishedConnection> {
-	const chainInfo = deploymentsFromFiles.chain;
-
-	// console.log(`chainInfo`, chainInfo);
+export async function establishRemoteConnection(options?: {
+	nodeURL?: string;
+	chainInfoNodeURL?: string;
+}): Promise<EstablishedConnection> {
+	const chainInfo = options?.chainInfoNodeURL
+		? {
+				...deploymentsFromFiles.chain,
+				rpcUrls: {
+					...deploymentsFromFiles.chain.rpcUrls,
+					default: {
+						...deploymentsFromFiles.chain.rpcUrls.default,
+						http: [options.chainInfoNodeURL],
+					},
+				},
+			}
+		: deploymentsFromFiles.chain;
 
 	const connection = createConnection({
-		// walletOnly: true,
 		targetStep: 'WalletConnected',
+		useCurrentAccount: 'whenSingle',
+		nodeURL: options?.nodeURL,
 		chainInfo,
 		prioritizeWalletProvider: true,
-		// alwaysUseCurrentAccount: true,
 		autoConnect: true,
-		// requestSignatureAutomaticallyIfPossible: true,
 	});
 
 	const walletClient = createWalletClient({
@@ -64,8 +75,6 @@ export async function establishRemoteConnection(): Promise<EstablishedConnection
 	);
 
 	let lastDeployments: TypedDeployments = deploymentsFromFiles;
-
-	// console.log(lastDeployments);
 
 	// TODO
 	// we can specify LinkedData type for each contracts

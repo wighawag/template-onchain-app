@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
-	import BlockieAvatar from '$lib/core/ui/ethereum/BlockieAvatar.svelte';
+	import EthereumAvatar from '$lib/core/ui/ethereum/EthereumAvatar.svelte';
 	import {Button} from '$lib/shadcn/ui/button';
 	import type {
 		AnyConnectionStore,
@@ -18,6 +18,17 @@
 
 	let email: string = $state('');
 	let emailInput: HTMLInputElement | undefined = $state(undefined);
+
+	// TODO make it a specific `auto` mode ?
+	// or maybe on provider ?
+	let pendingRequest = $derived(
+		!(
+			$connection.step !== 'Idle' &&
+			$connection.step !== 'MechanismToChoose' &&
+			$connection.mechanism.type === 'wallet' &&
+			$connection.mechanism.name === 'Burner Wallet'
+		) && ($connection.wallet?.pendingRequests?.length ?? 0) > 0,
+	);
 </script>
 
 <Modal.Root
@@ -42,7 +53,7 @@
 				bind:this={emailInput}
 				bind:value={email}
 				placeholder="Enter your email"
-				class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+				class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
 			/>
 			<Button
 				class="w-full"
@@ -87,7 +98,14 @@
 								class="h-full w-full object-contain"
 							/>
 						</div>
-						<span class="text-sm font-medium">{wallet.info.name}</span>
+						<div class="flex flex-col">
+							<span class="text-sm font-medium">{wallet.info.name}</span>
+							{#if wallet.info.name === 'Burner Wallet'}
+								<span class="text-xs text-amber-600 dark:text-amber-400">
+									⚠️ Stored in clear text. Do not use with real funds.
+								</span>
+							{/if}
+						</div>
 					</button>
 				{/each}
 			</div>
@@ -110,7 +128,7 @@
 		<!-- Dev option -->
 		<Button
 			variant="ghost"
-			class="w-full mt-2 text-xs text-muted-foreground"
+			class="mt-2 w-full text-xs text-muted-foreground"
 			onclick={() =>
 				connection.connect({
 					type: 'mnemonic',
@@ -158,7 +176,7 @@
 						<div
 							class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
 						>
-							<BlockieAvatar address={account} />
+							<EthereumAvatar address={account} />
 						</div>
 						<Address value={account} />
 					</button>
@@ -202,10 +220,7 @@
 </BasicModal>
 
 <!-- Pending Wallet Request Modal -->
-<BasicModal
-	title="Wallet Action Required"
-	openWhen={($connection.wallet?.pendingRequests?.length ?? 0) > 0}
->
+<BasicModal title="Wallet Action Required" openWhen={pendingRequest}>
 	<div class="flex flex-col items-center gap-4 py-4">
 		<svg
 			class="h-12 w-12 animate-pulse text-primary"

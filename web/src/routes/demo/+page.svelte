@@ -8,7 +8,7 @@
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
-	import BlockieAvatar from '$lib/core/ui/ethereum/BlockieAvatar.svelte';
+	import EthereumAvatar from '$lib/core/ui/ethereum/EthereumAvatar.svelte';
 	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
 
 	const {
@@ -154,7 +154,9 @@
 				>
 					<AlertCircleIcon class="mb-3 h-10 w-10" />
 					<p class="text-base">Failed to load messages</p>
-					<p class="text-sm text-muted-foreground">
+					<p
+						class="line-clamp-3 max-w-full overflow-hidden text-sm wrap-break-word text-ellipsis text-muted-foreground"
+					>
 						{$viewStatus.error.message}
 					</p>
 					<Button
@@ -195,7 +197,7 @@
 						<div
 							class="flex items-center gap-3 rounded-lg border px-4 py-3 sm:gap-4"
 						>
-							<BlockieAvatar
+							<EthereumAvatar
 								address={message.account}
 								class="h-8 w-8 shrink-0 rounded-full"
 								showAddressOnTap

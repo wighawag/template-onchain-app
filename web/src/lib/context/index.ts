@@ -1,12 +1,16 @@
-import type {Context} from './types.js';
-
+import type {Context, TxObserverDebugState} from './types.js';
+import {writable} from 'svelte/store';
 import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance.js';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
+import {createRpcHealthStore} from '$lib/core/connection/rpcHealth';
+import {createOfflineStore} from '$lib/core/connection/offline';
+import {createClockStore} from '$lib/core/clock';
 import {createOnchainState} from '$lib/onchain/state.js';
 import {createViewState} from '$lib/view/index.js';
 import {createTransactionObserver} from '@etherkit/tx-observer';
+import {createTabLeaderService} from '$lib/core/tab-leader';
 import {createTrackedWalletClient} from '@etherkit/viem-tx-tracker';
 import {
 	createTrackedWalletConnector,
@@ -14,12 +18,32 @@ import {
 	createOnchainStateRefreshConnector,
 } from '$lib/account/connectors.js';
 import {createToastConnector} from '$lib/account/toastConnector.js';
+import {initBurnerWallet} from '@etherkit/burner-wallet';
+import {PUBLIC_NODE_URL, PUBLIC_USE_BURNER_WALLET} from '$env/static/public';
+
+/** How often the tx-observer processes pending transactions when this tab is leader */
+const TX_OBSERVER_PROCESS_INTERVAL = 2000;
 
 export async function createContext(): Promise<{
 	context: Context;
 	start: () => () => void;
 }> {
 	const window = globalThis as any;
+
+	let cleanupBurnerWallet: (() => void) | undefined;
+
+	// TODO use chainInfo if no piblicNodeUrl ?
+	if (
+		PUBLIC_USE_BURNER_WALLET &&
+		(PUBLIC_USE_BURNER_WALLET.startsWith('http') || PUBLIC_NODE_URL)
+	) {
+		const {cleanup} = initBurnerWallet({
+			nodeURL: PUBLIC_USE_BURNER_WALLET.startsWith('http')
+				? PUBLIC_USE_BURNER_WALLET
+				: PUBLIC_NODE_URL,
+		});
+		cleanupBurnerWallet = cleanup;
+	}
 
 	// ----------------------------------------------------------------------------
 	// CONNECTION
@@ -31,14 +55,18 @@ export async function createContext(): Promise<{
 		publicClient,
 		account,
 		deployments,
-	} = await establishRemoteConnection();
+	} = await establishRemoteConnection({
+		nodeURL: PUBLIC_NODE_URL,
+		// chainInfoNodeURL
+	});
 
 	window.connection = connection;
 	window.publicClient = publicClient;
 	window.deployments = deployments;
 
-	// TODO
-	const clock = Date;
+	// Reactive clock store that updates every second for smooth "time ago" displays
+	const clock = createClockStore();
+	window.clock = clock;
 
 	// ----------------------------------------------------------------------------
 	// TRACKED WALLET CLIENT
@@ -79,6 +107,9 @@ export async function createContext(): Promise<{
 	});
 	window.txObserver = txObserver;
 
+	const tabLeader = createTabLeaderService();
+	window.tabLeader = tabLeader;
+
 	const trackedWalletConnector = createTrackedWalletConnector({
 		walletClient,
 		accountData,
@@ -113,6 +144,11 @@ export async function createContext(): Promise<{
 		deployments: deployments.current,
 	});
 	window.gasFee = gasFee;
+
+	const rpcHealth = createRpcHealthStore({balance, gasFee});
+	window.rpcHealth = rpcHealth;
+	const offline = createOfflineStore();
+	window.offline = offline;
 	// ----------------------------------------------------------------------------
 
 	const viewState = createViewState({
@@ -122,10 +158,19 @@ export async function createContext(): Promise<{
 	});
 	window.viewState = viewState;
 
+	// Debug store for tx-observer processing stats
+	const txObserverDebug = writable<TxObserverDebugState>({
+		processCount: 0,
+		lastProcessTime: null,
+		isLeader: false,
+	});
+
 	return {
 		context: {
 			gasFee,
 			balance,
+			rpcHealth,
+			offline,
 			connection,
 			walletClient,
 			publicClient,
@@ -135,6 +180,8 @@ export async function createContext(): Promise<{
 			onchainState,
 			viewState,
 			clock,
+			txObserver,
+			txObserverDebug: {subscribe: txObserverDebug.subscribe},
 		},
 		start: () => {
 			// we trigger it so it is always availabe
@@ -142,20 +189,54 @@ export async function createContext(): Promise<{
 			// we trigger it so it is always availabe
 			const unsubscribeFromGasFee = gasFee.subscribe(() => {});
 
-			const txObserverInterval = setInterval(() => {
-				txObserver.process();
-			}, 2 * 1000); // TODO delay or use onNewBlock hook
+			tabLeader.start();
+
+			let txObserverInterval: ReturnType<typeof setInterval> | undefined;
+
+			const unsubscribeFromLeader = tabLeader.isLeader.subscribe((isLeader) => {
+				if (isLeader) {
+					// Became leader: start processing immediately
+					txObserverDebug.update((state) => ({
+						...state,
+						isLeader: true,
+						processCount: state.processCount + 1,
+						lastProcessTime: Date.now(),
+					}));
+					txObserver.process();
+					txObserverInterval = setInterval(() => {
+						txObserverDebug.update((state) => ({
+							...state,
+							processCount: state.processCount + 1,
+							lastProcessTime: Date.now(),
+						}));
+						txObserver.process();
+					}, TX_OBSERVER_PROCESS_INTERVAL);
+				} else {
+					// Lost leadership: stop processing
+					txObserverDebug.update((state) => ({...state, isLeader: false}));
+					if (txObserverInterval !== undefined) {
+						clearInterval(txObserverInterval);
+						txObserverInterval = undefined;
+					}
+				}
+			});
+
 			trackedWalletConnector.connect();
 			txObserverConnector.connect();
 			toastConnector.connect();
 			onchainStateRefreshConnector.connect();
 
 			return () => {
+				cleanupBurnerWallet?.();
 				trackedWalletConnector.disconnect();
 				txObserverConnector.disconnect();
 				toastConnector.disconnect();
 				onchainStateRefreshConnector.disconnect();
-				clearInterval(txObserverInterval);
+				unsubscribeFromLeader();
+				if (txObserverInterval !== undefined) {
+					clearInterval(txObserverInterval);
+				}
+				tabLeader.stop();
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();
 			};

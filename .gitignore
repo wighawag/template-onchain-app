@@ -8,3 +8,5 @@ node_modules/
 !.vscode/*.default
 
 tmp/
+# Nightshift plan artifacts (keep out of version control)
+.nightshift-plan
