@@ -1,8 +1,8 @@
-import { writable } from 'svelte/store';
+import {writable} from 'svelte/store';
 
 export type BalanceCheckState =
-	| { step: 'idle' }
-	| { step: 'estimating' }
+	| {step: 'idle'}
+	| {step: 'estimating'}
 	| {
 			step: 'insufficient';
 			balance: bigint;
@@ -12,18 +12,18 @@ export type BalanceCheckState =
 	  };
 
 function createBalanceCheckStore() {
-	const { subscribe, set } = writable<BalanceCheckState>({ step: 'idle' });
+	const {subscribe, set} = writable<BalanceCheckState>({step: 'idle'});
 
 	return {
 		subscribe,
-		startEstimating: () => set({ step: 'estimating' }),
+		startEstimating: () => set({step: 'estimating'}),
 		showInsufficientFunds: (data: {
 			balance: bigint;
 			estimatedCost: bigint;
 			shortfall: bigint;
 			onDismiss: () => void;
-		}) => set({ step: 'insufficient', ...data }),
-		close: () => set({ step: 'idle' }),
+		}) => set({step: 'insufficient', ...data}),
+		close: () => set({step: 'idle'}),
 	};
 }
 

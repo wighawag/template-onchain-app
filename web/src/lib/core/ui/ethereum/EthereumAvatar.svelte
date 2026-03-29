@@ -185,7 +185,8 @@
 					{#if ensNameLoading}
 						<div class="h-5 w-24 animate-pulse rounded bg-muted"></div>
 					{:else if ensName}
-						<span class="truncate font-semibold text-foreground">{ensName}</span>
+						<span class="truncate font-semibold text-foreground">{ensName}</span
+						>
 					{/if}
 					<Address
 						value={address}

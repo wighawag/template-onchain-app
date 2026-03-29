@@ -1,4 +1,9 @@
-import type {PublicClient, Abi, ContractFunctionName, ContractFunctionArgs} from 'viem';
+import type {
+	PublicClient,
+	Abi,
+	ContractFunctionName,
+	ContractFunctionArgs,
+} from 'viem';
 import type {BalanceStore} from '$lib/core/connection/balance';
 import type {GasFeeStore} from '$lib/core/connection/gasFee';
 
