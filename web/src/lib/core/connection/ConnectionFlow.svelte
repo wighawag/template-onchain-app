@@ -18,6 +18,17 @@
 
 	let email: string = $state('');
 	let emailInput: HTMLInputElement | undefined = $state(undefined);
+
+	// TODO make it a specific `auto` mode ?
+	// or maybe on provider ?
+	let pendingRequest = $derived(
+		!(
+			$connection.step !== 'Idle' &&
+			$connection.step !== 'MechanismToChoose' &&
+			$connection.mechanism.type === 'wallet' &&
+			$connection.mechanism.name === 'Burner Wallet'
+		) && ($connection.wallet?.pendingRequests?.length ?? 0) > 0,
+	);
 </script>
 
 <Modal.Root
@@ -42,7 +53,7 @@
 				bind:this={emailInput}
 				bind:value={email}
 				placeholder="Enter your email"
-				class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+				class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
 			/>
 			<Button
 				class="w-full"
@@ -110,7 +121,7 @@
 		<!-- Dev option -->
 		<Button
 			variant="ghost"
-			class="w-full mt-2 text-xs text-muted-foreground"
+			class="mt-2 w-full text-xs text-muted-foreground"
 			onclick={() =>
 				connection.connect({
 					type: 'mnemonic',
@@ -202,10 +213,7 @@
 </BasicModal>
 
 <!-- Pending Wallet Request Modal -->
-<BasicModal
-	title="Wallet Action Required"
-	openWhen={($connection.wallet?.pendingRequests?.length ?? 0) > 0}
->
+<BasicModal title="Wallet Action Required" openWhen={pendingRequest}>
 	<div class="flex flex-col items-center gap-4 py-4">
 		<svg
 			class="h-12 w-12 animate-pulse text-primary"
