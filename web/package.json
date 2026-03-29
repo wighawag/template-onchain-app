@@ -51,7 +51,7 @@
 	},
 	"scripts": {
 		"prepare": "pnpm generate-pwa-icons && svelte-kit sync",
-		"generate-pwa-icons": "rm -Rf ./static/pwa; pwag static/icon.svg src/web-config.json",
+		"generate-pwa-icons": "pwag static/icon.svg src/web-config.json",
 		"dev": "ldenv vite dev --host",
 		"build": "ldenv vite build",
 		"preview": "vite preview",
