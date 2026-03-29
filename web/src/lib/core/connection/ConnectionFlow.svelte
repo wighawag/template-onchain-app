@@ -98,7 +98,14 @@
 								class="h-full w-full object-contain"
 							/>
 						</div>
-						<span class="text-sm font-medium">{wallet.info.name}</span>
+						<div class="flex flex-col">
+							<span class="text-sm font-medium">{wallet.info.name}</span>
+							{#if wallet.info.name === 'Burner Wallet'}
+								<span class="text-xs text-amber-600 dark:text-amber-400">
+									⚠️ Stored in clear text. Do not use with real funds.
+								</span>
+							{/if}
+						</div>
 					</button>
 				{/each}
 			</div>
