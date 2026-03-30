@@ -41,6 +41,10 @@ export async function createContext(): Promise<{
 			nodeURL: PUBLIC_USE_BURNER_WALLET.startsWith('http')
 				? PUBLIC_USE_BURNER_WALLET
 				: PUBLIC_NODE_URL,
+			impersonateAddresses: [
+				'0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+				'0xF78cD306b23031dE9E739A5BcDE61764e82AD5eF',
+			],
 		});
 		cleanupBurnerWallet = cleanup;
 	}
