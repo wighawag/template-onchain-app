@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"devDependencies": {
-		"@etherkit/burner-wallet": "^0.0.3",
+		"@etherkit/burner-wallet": "^0.0.8",
 		"@etherkit/tx-observer": "0.0.11",
 		"@etherkit/viem-tx-tracker": "^0.0.9",
 		"@etherplay/connect": "^0.0.50",
