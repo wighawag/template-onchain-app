@@ -8,6 +8,7 @@ import {createServiceWorker} from '$lib/core/service-worker';
 import {createNotificationsService} from './core/notifications';
 import {createContext} from 'svelte';
 import type {Context} from './context/types';
+import {env} from '$env/dynamic/public';
 
 export const hashParams = getHashParamsFromLocation();
 
@@ -45,3 +46,6 @@ const [getUserContextFunction, setUserContext] = createContext<() => Context>();
 
 const getUserContext = () => getUserContextFunction()();
 export {getUserContext, setUserContext};
+
+(globalThis as any).env = env;
+(globalThis as any).vite_env = import.meta.env;

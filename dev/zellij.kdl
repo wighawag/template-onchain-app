@@ -9,6 +9,7 @@ layout {
 		pane name="svelte-check" command="pnpm"  {
 			args "web:check:watch"
 		}
+		
 	}
 
 	pane split_direction="vertical" {
@@ -18,6 +19,12 @@ layout {
 		pane name="purgatory" command="pnpm"  {
 			args "contracts:node:purgatory" "--rpc-url" "http://localhost:8546"
 		}
+		pane name="faucet" command="pnpm"  {
+			args "contracts:faucet"
+		}
+	}
+
+	pane split_direction="vertical" {
 		pane name="watch and compile" command="pnpm"  {
 			args "contracts:compile:watch"
 		}
