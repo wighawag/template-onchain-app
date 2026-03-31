@@ -78,8 +78,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       faucet-server:
-        specifier: ^0.0.6
-        version: 0.0.6(@libsql/core@0.17.2)(bufferutil@4.1.0)(hono@4.12.9)(typescript@5.9.3)(zod@3.25.76)
+        specifier: ^0.0.7
+        version: 0.0.7(@libsql/core@0.17.2)(bufferutil@4.1.0)(hono@4.12.9)(typescript@5.9.3)(zod@3.25.76)
       forge-std:
         specifier: github:foundry-rs/forge-std#v1.9.4
         version: https://codeload.github.com/foundry-rs/forge-std/tar.gz/1eea5bae12ae557d589f9f0f0edae2faa47cb262
@@ -186,8 +186,8 @@ importers:
         specifier: ^0.6.5
         version: 0.6.5
       faucet-client:
-        specifier: ^0.0.1
-        version: 0.0.1
+        specifier: ^0.0.2
+        version: 0.0.2
       ipfs-gateway-emulator:
         specifier: 4.2.1-ipfs.2
         version: 4.2.1-ipfs.2
@@ -2591,14 +2591,14 @@ packages:
   fastq@1.20.1:
     resolution: {integrity: sha512-GGToxJ/w1x32s/D2EKND7kTil4n8OVk/9mycTc4VDza13lOvpUZTGX3mFSCtV9ksdGBVzvsyAVLM6mHFThxXxw==}
 
-  faucet-client@0.0.1:
-    resolution: {integrity: sha512-TgQ1GezTQVoZajxaVNEVKZB4xOkNu3kEIR5iRdbouZeWWx/NzR9/1ohO8mzmEuog5LjJMA7dRSAY2ZOWVsXbuA==}
+  faucet-client@0.0.2:
+    resolution: {integrity: sha512-uIj1KyvRnZe99RmRlBgsO4xcZTOO9v1kNY2XDBruhYrWVO1TjkWoLJh0raJuM3bevX2KRFj4g7eXIe5NVZA01A==}
 
-  faucet-server-app@0.0.5:
-    resolution: {integrity: sha512-akASDC0J1y8zIv8oeN+hM06YzZCcTVRH2k/+Gr8xrAazJO6eD1U6/16t1N+G2n7ao3BPJruxldteffaeUmJivA==}
+  faucet-server-app@0.0.6:
+    resolution: {integrity: sha512-HJVho4Dmi6Z/47CXn5CkpX3X8LDgYu2HL6CpwCE9kWzeKipTBV2dhrAgFkIoeWS3jDeXAbjCkn5WU4rZouvtgQ==}
 
-  faucet-server@0.0.6:
-    resolution: {integrity: sha512-6pjDrqxzC9TVKV8JzAsy2DhK7RwNJTJmho9tIsKDgE0IFdpDj6JpHXXpZrOkEfFt7Mks9jzpVsnV4BZ0OTS/+Q==}
+  faucet-server@0.0.7:
+    resolution: {integrity: sha512-C2Oc/YZYVxpp1fzHXu2PiB402KwxSk/aGURA2d92FDFXghaCThdgO9QHgl+1OCxAdmcBfeb32ib/lkL1FqQhPw==}
     hasBin: true
 
   fdir@6.5.0:
@@ -7147,9 +7147,9 @@ snapshots:
     dependencies:
       reusify: 1.1.0
 
-  faucet-client@0.0.1: {}
+  faucet-client@0.0.2: {}
 
-  faucet-server-app@0.0.5(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76):
+  faucet-server-app@0.0.6(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76):
     dependencies:
       hono: 4.12.9
       named-logs: 0.4.1
@@ -7161,12 +7161,12 @@ snapshots:
       - utf-8-validate
       - zod
 
-  faucet-server@0.0.6(@libsql/core@0.17.2)(bufferutil@4.1.0)(hono@4.12.9)(typescript@5.9.3)(zod@3.25.76):
+  faucet-server@0.0.7(@libsql/core@0.17.2)(bufferutil@4.1.0)(hono@4.12.9)(typescript@5.9.3)(zod@3.25.76):
     dependencies:
       '@hono/node-server': 1.19.12(hono@4.12.9)
       '@libsql/client': 0.17.2(bufferutil@4.1.0)
       commander: 14.0.3
-      faucet-server-app: 0.0.5(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
+      faucet-server-app: 0.0.6(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
       ldenv: 0.5.0
       named-logs-context: 0.1.1
       remote-sql-libsql: 0.0.7(@libsql/core@0.17.2)

@@ -34,7 +34,7 @@
 		"as-soon": "^0.1.6",
 		"cross-var": "^1.1.0",
 		"earl": "^2.0.0",
-		"faucet-server": "^0.0.6",
+		"faucet-server": "^0.0.7",
 		"forge-std": "github:foundry-rs/forge-std#v1.9.4",
 		"hardhat": "^3.2.0",
 		"hardhat-deploy": "^2.0.3",
