@@ -80,11 +80,10 @@ export async function createContext(): Promise<{
 	// Wrap the raw wallet client with tracking capabilities
 	// This is exposed as `walletClient` for drop-in compatibility
 	// Use `walletClient.walletClient` to access the underlying viem WalletClient if needed
-	// Cast to WalletClient to preserve the chain type from rawWalletClient
 	const walletClient = createTrackedWalletClient({
 		populateMetadata: true,
 		clock: () => clock.now(),
-	}).using(rawWalletClient, publicClient) as WalletClient;
+	}).using(rawWalletClient, publicClient);
 	window.walletClient = walletClient;
 
 	// ----------------------------------------------------------------------------
