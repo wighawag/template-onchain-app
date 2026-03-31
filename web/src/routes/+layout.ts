@@ -24,5 +24,5 @@ if (!dev) {
 	);
 }
 
-// add global method to get current state of a svelte store
+// Dev/debug: attaching svelte store get() for console access
 (globalThis as any).get = get;

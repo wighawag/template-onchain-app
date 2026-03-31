@@ -75,6 +75,7 @@
 				address: contractAddress as `0x${string}`,
 				abi: [abiItem],
 				functionName: abiItem.name,
+				// Dynamic args from user input - type cannot be inferred at compile time
 				args: args as any,
 			});
 
@@ -116,6 +117,7 @@
 					address: contractAddress as `0x${string}`,
 					abi: [abiItem],
 					functionName: abiItem.name,
+					// Dynamic args from user input - type cannot be inferred at compile time
 					args: args as any,
 					account: currentConnection.account.address,
 				},

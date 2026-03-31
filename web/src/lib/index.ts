@@ -47,5 +47,7 @@ const [getUserContextFunction, setUserContext] = createContext<() => Context>();
 const getUserContext = () => getUserContextFunction()();
 export {getUserContext, setUserContext};
 
+// Dev/debug: attaching to globalThis for console access
 (globalThis as any).env = env;
+// Dev/debug: attaching to globalThis for console access
 (globalThis as any).vite_env = import.meta.env;

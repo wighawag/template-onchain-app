@@ -28,6 +28,7 @@ export async function createContext(): Promise<{
 	context: Context;
 	start: () => () => void;
 }> {
+	// Dev/debug: window alias for attaching debug properties to globalThis
 	const window = globalThis as any;
 
 	let cleanupBurnerWallet: (() => void) | undefined;

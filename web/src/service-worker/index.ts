@@ -332,6 +332,7 @@ async function handlePush(data?: string) {
 				// notif.timestamp
 				// notif.renotify
 			} else {
+				// Fallback for legacy notification format with root-level title/options
 				notificationTuple.title =
 					json.notification?.title || (json as any).title || 'Notification';
 				notificationTuple.options = json.notification || (json as any).options;
