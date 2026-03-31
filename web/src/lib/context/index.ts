@@ -1,4 +1,4 @@
-import type {Context, TxObserverDebugState, WalletClient} from './types.js';
+import type {Context, TxObserverDebugState} from './types.js';
 import {writable} from 'svelte/store';
 import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
