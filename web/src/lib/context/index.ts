@@ -1,4 +1,4 @@
-import type {Context, TxObserverDebugState} from './types.js';
+import type {Context, TxObserverDebugState, WalletClient} from './types.js';
 import {writable} from 'svelte/store';
 import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
@@ -80,10 +80,11 @@ export async function createContext(): Promise<{
 	// Wrap the raw wallet client with tracking capabilities
 	// This is exposed as `walletClient` for drop-in compatibility
 	// Use `walletClient.walletClient` to access the underlying viem WalletClient if needed
+	// Cast to WalletClient to preserve the chain type from rawWalletClient
 	const walletClient = createTrackedWalletClient({
 		populateMetadata: true,
 		clock: () => clock.now(),
-	}).using(rawWalletClient, publicClient);
+	}).using(rawWalletClient, publicClient) as WalletClient;
 	window.walletClient = walletClient;
 
 	// ----------------------------------------------------------------------------

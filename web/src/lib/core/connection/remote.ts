@@ -1,20 +1,16 @@
 import deploymentsFromFiles from '$lib/deployments';
 import {createConnection} from '@etherplay/connect';
 import {derived, writable} from 'svelte/store';
-import {
-	createPublicClient,
-	createWalletClient,
-	custom,
-	type Chain,
-	type PublicClient,
-	type Transport,
-} from 'viem';
+import {createPublicClient, createWalletClient, custom} from 'viem';
 import type {
 	Account,
+	ChainInfo,
 	DeploymentsStore,
 	EstablishedConnection,
 	OptionalSigner,
 	TypedDeployments,
+	TypedPublicClient,
+	TypedWalletClient,
 } from './types';
 
 // TODO allow to specify the expected DeploymentStore type
@@ -22,8 +18,10 @@ export async function establishRemoteConnection(options?: {
 	nodeURL?: string;
 	chainInfoNodeURL?: string;
 }): Promise<EstablishedConnection> {
-	const chainInfo = options?.chainInfoNodeURL
-		? {
+	// Cast to ChainInfo to preserve the literal type even when modifying rpcUrls
+	// The structure is the same, just the RPC URL may change
+	const chainInfo: ChainInfo = options?.chainInfoNodeURL
+		? ({
 				...deploymentsFromFiles.chain,
 				rpcUrls: {
 					...deploymentsFromFiles.chain.rpcUrls,
@@ -32,7 +30,7 @@ export async function establishRemoteConnection(options?: {
 						http: [options.chainInfoNodeURL],
 					},
 				},
-			}
+			} as ChainInfo)
 		: deploymentsFromFiles.chain;
 
 	const connection = createConnection({
@@ -52,7 +50,7 @@ export async function establishRemoteConnection(options?: {
 	const publicClient = createPublicClient({
 		chain: chainInfo,
 		transport: custom(connection.provider),
-	}) as unknown as PublicClient<Transport, Chain, undefined>; // TODO anyway to reconciliate?
+	}) as TypedPublicClient;
 
 	const account = derived<typeof connection, Account>(
 		connection,

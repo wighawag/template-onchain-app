@@ -1,4 +1,4 @@
-import type {PublicClient, Abi, ContractFunctionName, ContractFunctionArgs} from 'viem';
+import type {PublicClient, Abi} from 'viem';
 import type {BalanceStore} from '$lib/core/connection/balance';
 import type {GasFeeStore} from '$lib/core/connection/gasFee';
 
@@ -19,34 +19,27 @@ export interface RawTransactionParams {
 	account: `0x${string}`;
 }
 
-export interface ContractCallParams<
-	TAbi extends Abi | readonly unknown[],
-	TFunctionName extends ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
-> {
+// Minimal constraint for contract call params - any object with address, abi, functionName, account
+export interface ContractCallParamsMinimal {
 	address: `0x${string}`;
-	abi: TAbi;
-	functionName: TFunctionName;
-	args?: ContractFunctionArgs<TAbi, 'nonpayable' | 'payable', TFunctionName>;
+	abi: Abi | readonly unknown[];
+	functionName: string;
 	account: `0x${string}`;
-	value?: bigint;
 }
 
 // Overload signatures
 export interface EnsureCanAfford {
-	// Contract call overload
-	<
-		const TAbi extends Abi | readonly unknown[],
-		TFunctionName extends ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
-	>(
+	// Contract call overload - preserves exact input type
+	<const TContract extends ContractCallParamsMinimal>(
 		options: EnsureCanAffordBase & {
-			contract: ContractCallParams<TAbi, TFunctionName>;
+			contract: TContract;
 		},
-	): Promise<ContractCallParams<TAbi, TFunctionName> & {chain: null}>;
+	): Promise<TContract>;
 
 	// Raw transaction overload
 	(
 		options: EnsureCanAffordBase & {
 			transaction: RawTransactionParams;
 		},
-	): Promise<RawTransactionParams & {chain: null}>;
+	): Promise<RawTransactionParams>;
 }

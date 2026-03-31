@@ -137,9 +137,9 @@ export const ensureCanAfford: EnsureCanAfford = async (options: any) => {
 
 		// Step 7: Return the params for use with writeContract/sendTransaction
 		if ('contract' in options) {
-			return {...options.contract, chain: null};
+			return options.contract;
 		} else {
-			return {...options.transaction, chain: null};
+			return options.transaction;
 		}
 	} catch (error) {
 		balanceCheckStore.close();

@@ -57,8 +57,8 @@
 					account: currentConnection.account.address,
 				},
 			});
-
-			await walletClient.writeContract(contractRequest as any);
+	
+			await walletClient.writeContract(contractRequest);
 			greetingInput = '';
 		} catch (error) {
 			if (error instanceof InsufficientFundsError) {

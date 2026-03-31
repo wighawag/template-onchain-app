@@ -1,4 +1,4 @@
-import type {PublicClient} from 'viem';
+import type {Account, CustomTransport} from 'viem';
 import type {Readable} from 'svelte/store';
 import type {BalanceStore} from '$lib/core/connection/balance';
 import type {GasFeeStore} from '$lib/core/connection/gasFee';
@@ -7,7 +7,9 @@ import type {OfflineStore} from '$lib/core/connection/offline';
 import type {
 	AccountStore,
 	ChainConnection,
+	ChainInfo,
 	DeploymentsStore,
+	TypedPublicClient,
 } from '$lib/core/connection/types';
 import type {TrackedWalletClientAutoPopulate} from '@etherkit/viem-tx-tracker';
 import type {
@@ -19,7 +21,17 @@ import type {ViewStateStore} from '$lib/view';
 import type {ClockStore} from '$lib/core/clock';
 import type {TransactionObserver} from '@etherkit/tx-observer';
 
-export type WalletClient = TrackedWalletClientAutoPopulate<TransactionMetadata>;
+/**
+ * TrackedWalletClient with chain info from deployments.
+ * This allows writeContract calls to have optional `chain` parameter
+ * since the client already has a chain associated.
+ */
+export type WalletClient = TrackedWalletClientAutoPopulate<
+	TransactionMetadata,
+	CustomTransport,
+	ChainInfo,
+	Account | undefined
+>;
 
 export type Clock = ClockStore;
 
@@ -42,7 +54,7 @@ export type Context = {
 	 * Supports optional `metadata` field on writeContract/sendTransaction for tracking.
 	 */
 	walletClient: WalletClient;
-	publicClient: PublicClient;
+	publicClient: TypedPublicClient;
 	account: AccountStore;
 	deployments: DeploymentsStore;
 	accountData: MultiAccountDataStore;

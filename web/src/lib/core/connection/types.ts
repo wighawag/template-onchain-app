@@ -5,6 +5,7 @@ import type {
 } from '@etherplay/connect';
 import type {Readable} from 'svelte/store';
 import type {
+	Account as ViemAccount,
 	Chain,
 	CustomTransport,
 	PublicClient,
@@ -25,6 +26,25 @@ export type AccountStore = Readable<Account>;
 
 export type TypedDeployments = typeof deploymentsFromFiles;
 
+/**
+ * Chain type derived from deployments - preserves literal types for better inference
+ */
+export type ChainInfo = TypedDeployments['chain'];
+
+/**
+ * Typed wallet client with chain info from deployments
+ */
+export type TypedWalletClient = WalletClient<
+	CustomTransport,
+	ChainInfo,
+	ViemAccount | undefined
+>;
+
+/**
+ * Typed public client with chain info from deployments
+ */
+export type TypedPublicClient = PublicClient<CustomTransport, ChainInfo>;
+
 export type DeploymentsStore = Readable<TypedDeployments> & {
 	current: TypedDeployments;
 };
@@ -37,8 +57,8 @@ export type ChainConnection = ConnectionStore<
 
 export type EstablishedConnection = {
 	connection: ChainConnection;
-	walletClient: WalletClient;
-	publicClient: PublicClient;
+	walletClient: TypedWalletClient;
+	publicClient: TypedPublicClient;
 	account: AccountStore;
 	signer: OptionalSignerStore;
 	deployments: DeploymentsStore;
