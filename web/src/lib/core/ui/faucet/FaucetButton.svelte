@@ -8,7 +8,7 @@
 	import {claimFund} from 'faucet-client';
 	import {PUBLIC_FAUCET_LINK} from '$env/static/public';
 
-	const {account, deployments} = getUserContext();
+	const {account, balance, deployments} = getUserContext();
 
 	let status = $state<'idle' | 'pending' | 'success' | 'error'>('idle');
 
@@ -32,6 +32,8 @@
 				},
 			);
 			status = 'success';
+			// Trigger immediate balance refresh so modal updates
+			balance.update();
 		} catch {
 			status = 'error';
 			setTimeout(() => {

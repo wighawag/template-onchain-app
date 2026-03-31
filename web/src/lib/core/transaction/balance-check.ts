@@ -73,15 +73,21 @@ async function checkBalanceAndShowModal(
 		return;
 	}
 
-	// Insufficient funds - show modal and wait for dismissal
-	return new Promise((_, reject) => {
+	// Insufficient funds - show modal and wait for user action
+	// The modal subscribes to balanceStore for live updates
+	return new Promise((resolve, reject) => {
 		balanceCheckStore.showInsufficientFunds({
-			balance: currentBalance.value,
+			balanceStore: balance,
 			estimatedCost,
-			shortfall: estimatedCost - currentBalance.value,
+			onContinue: () => {
+				balanceCheckStore.close();
+				resolve(); // Continue with transaction
+			},
 			onDismiss: () => {
 				balanceCheckStore.close();
-				reject(new InsufficientFundsError(currentBalance.value, estimatedCost));
+				const currentBal = get(balance);
+				const balValue = currentBal.step === 'Loaded' ? currentBal.value : 0n;
+				reject(new InsufficientFundsError(balValue, estimatedCost));
 			},
 		});
 	});
