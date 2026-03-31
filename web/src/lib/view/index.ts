@@ -54,8 +54,8 @@ export function createViewState(params: {
 				const operation = $operations[operationID];
 				if (
 					operation.transactionIntent.state?.status !== 'Failure' &&
-					!inclusionsToIgnore.find(
-						(v) => operation.transactionIntent.state?.inclusion == v,
+					!inclusionsToIgnore.some(
+						(v) => operation.transactionIntent.state?.inclusion === v,
 					) &&
 					operation.metadata.type === 'functionCall' &&
 					operation.metadata.functionName === 'setMessage'

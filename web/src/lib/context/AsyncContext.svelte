@@ -26,6 +26,17 @@
 		{/if}
 	{:then context}
 		<ContextComponent {context}>{@render children?.()}</ContextComponent>
+	{:catch error}
+		<div class="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
+			<p class="text-lg font-semibold text-destructive">Failed to initialize application</p>
+			<p class="max-w-md text-sm text-muted-foreground">{error?.message || 'Unknown error'}</p>
+			<button
+				class="rounded-md border px-4 py-2 text-sm hover:bg-muted"
+				onclick={() => window.location.reload()}
+			>
+				Reload
+			</button>
+		</div>
 	{/await}
 {:else if loading}
 	{@render loading()}

@@ -32,7 +32,7 @@ export async function createContext(): Promise<{
 
 	let cleanupBurnerWallet: (() => void) | undefined;
 
-	// TODO use chainInfo if no piblicNodeUrl ?
+	// TODO use chainInfo if no publicNodeUrl ?
 	if (
 		PUBLIC_USE_BURNER_WALLET &&
 		(PUBLIC_USE_BURNER_WALLET.startsWith('http') || PUBLIC_NODE_URL)

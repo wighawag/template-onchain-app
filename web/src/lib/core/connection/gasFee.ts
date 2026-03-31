@@ -135,9 +135,9 @@ export function createGasFeeStore(
 			} catch (err: any) {
 				if (feeHistoryNotSupported === undefined) {
 					if (
-						('details' in err &&
-							err.details.indexOf('unknown method eth_feeHistory') != -1) ||
-						err.details.indexOf('Unknown method eth_feeHistory') != -1
+						'details' in err &&
+						(err.details.indexOf('unknown method eth_feeHistory') != -1 ||
+							err.details.indexOf('Unknown method eth_feeHistory') != -1)
 					) {
 						feeHistoryNotSupported = true;
 					} else {

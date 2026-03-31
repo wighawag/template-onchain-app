@@ -72,28 +72,11 @@ export function createOnchainState(params: {
 		});
 
 		try {
-			// DEBUG failure cases:
-			// await (() =>
-			// 	new Promise((resolve, reject) => {
-			// 		if ($state.step === 'Loaded' || Math.random() > 0.5) {
-			// 			setTimeout(() => reject('Failed'), 1000);
-			// 		} else {
-			// 			setTimeout(resolve, 2000);
-			// 		}
-			// 		// if (Math.random() > 0.5) {
-			// 		// 	setTimeout(() => reject('Failed'), 1000);
-			// 		// } else {
-			// 		// 	setTimeout(resolve, 45000);
-			// 		// }
-			// 	}))();
-
-			// console.log(`fetching...`);
 			const valueFromContracts = await publicClient.readContract({
 				...deployments.contracts.GreetingsRegistry,
 				functionName: 'getLastMessages',
 				args: [BigInt(config.maxMessages)],
 			});
-			// console.log(`...fetched`);
 			const messages = valueFromContracts.map((v) => ({
 				...v,
 				timestamp: Number(v.timestamp) * 1000,
@@ -150,8 +133,8 @@ export function createOnchainState(params: {
 		}
 	}
 
-	function update() {
-		fetchState();
+	async function update() {
+		await fetchState();
 	}
 
 	return {

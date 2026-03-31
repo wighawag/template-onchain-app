@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "setup": "pnpm i",
+    "teardown": null,
+    "run": [
+      "pnpm contracts:node:local",
+      "pnpm contracts:compile:watch",
+      "pnpm contracts:deploy:watch localhost --ts ../web/src/lib/deployments.ts",
+      "pnpm contracts:build:watch"
+    ]
+  }
+}

@@ -85,6 +85,7 @@ export function createBalanceStore(
 		if (!$account) {
 			setState({step: 'Unloaded'});
 			setStatus({loading: false});
+			return;
 		}
 		if (timeout) {
 			clearTimeout(timeout);

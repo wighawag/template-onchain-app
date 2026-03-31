@@ -54,7 +54,7 @@ export function createAccountData(params: {
 	let lastId: number = 0;
 	function generateId() {
 		let id = clock.now();
-		if (id == lastId) {
+		if (id === lastId) {
 			id = lastId + 1;
 		}
 		lastId = id;

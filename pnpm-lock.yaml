@@ -48,8 +48,8 @@ importers:
         specifier: ^0.19.3
         version: 0.19.3(bufferutil@4.1.0)(rocketh@0.19.3(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76))(typescript@5.9.3)(zod@3.25.76)
       '@rocketh/proxy':
-        specifier: ^0.19.5
-        version: 0.19.5(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
+        specifier: ^0.19.6
+        version: 0.19.6(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
       '@rocketh/read-execute':
         specifier: ^0.19.0
         version: 0.19.0(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
@@ -1172,8 +1172,8 @@ packages:
     peerDependencies:
       rocketh: 0.19.3
 
-  '@rocketh/proxy@0.19.5':
-    resolution: {integrity: sha512-aezjka4ZX+2gxinSp9YMx4Shob0vbgDCBprjFvWxCUU2EKEt3/vgZ7qZNTBEoFq+xUycJ/JnGW+sL6EDJ/7yEQ==}
+  '@rocketh/proxy@0.19.6':
+    resolution: {integrity: sha512-iw58CjkkAryKhCPlIbjYXCdxIt/EPq6ED0rQ2yEdsnbmVSvcyXrGAUdv47gdHRGPQQJf10bxtFvCesVtt7jkFw==}
 
   '@rocketh/read-execute@0.19.0':
     resolution: {integrity: sha512-nnaOOpvoZy58FYD+Olwcbco+EBk7ngokQ/VMKdSMk1FJ/KpXHfrplH3x5Q6zDymlF/stXdQfSpzPRMbI/ZZpSA==}
@@ -5442,7 +5442,7 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@rocketh/proxy@0.19.5(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)':
+  '@rocketh/proxy@0.19.6(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)':
     dependencies:
       '@rocketh/core': 0.19.0(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
       '@rocketh/deploy': 0.19.1(bufferutil@4.1.0)(typescript@5.9.3)(zod@3.25.76)
