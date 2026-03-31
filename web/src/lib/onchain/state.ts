@@ -41,9 +41,11 @@ export function createOnchainState(params: {
 	deployments: TypedDeployments;
 	config: {
 		maxMessages: number;
+		fetchInterval?: number;
 	};
 }): OnchainStateStore {
 	const {publicClient, deployments, config} = params;
+	const fetchInterval = config.fetchInterval ?? 5_000;
 
 	// Main store - discriminated union with data
 	let $state: OnchainStateValue = defaultState();
@@ -63,7 +65,7 @@ export function createOnchainState(params: {
 		_statusStore.set($status);
 	}
 
-	async function fetchState() {
+	async function fetchState(): Promise<boolean> {
 		// Set loading=true, preserve lastSuccessfulFetch (only triggers status subscribers)
 		setStatus({
 			loading: true,
@@ -86,6 +88,7 @@ export function createOnchainState(params: {
 			setState({step: 'Loaded', messages});
 			// Update status with new lastSuccessfulFetch timestamp (triggers status subscribers)
 			setStatus({loading: false, lastSuccessfulFetch: Date.now()});
+			return true;
 		} catch (err) {
 			console.error(`failed to fetch`, err);
 			// On error, preserve lastSuccessfulFetch
@@ -97,23 +100,31 @@ export function createOnchainState(params: {
 				},
 				lastSuccessfulFetch: $status.lastSuccessfulFetch,
 			});
+			return false;
 		}
 	}
 
 	let started = false;
 	let timeout: NodeJS.Timeout | undefined;
+	let consecutiveErrors = 0;
 
 	async function fetchContinuously() {
-		try {
-			await fetchState();
-		} catch (err) {
-			console.error(`failed to fetch`, err);
+		let interval = fetchInterval;
+		const success = await fetchState();
+		if (success) {
+			consecutiveErrors = 0;
+		} else {
+			consecutiveErrors++;
+			interval = Math.min(
+				fetchInterval * Math.pow(2, consecutiveErrors),
+				60_000,
+			);
 		}
 		if (timeout) {
 			clearTimeout(timeout);
 		}
 		if (started) {
-			timeout = setTimeout(fetchContinuously, 5000); // TODO config
+			timeout = setTimeout(fetchContinuously, interval);
 		} else {
 			timeout = undefined;
 		}

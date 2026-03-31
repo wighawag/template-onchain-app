@@ -9,7 +9,12 @@
 	import {getUserContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import EthereumAvatar from '$lib/core/ui/ethereum/EthereumAvatar.svelte';
-	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
+	import {
+		ensureCanAfford,
+		InsufficientFundsError,
+		isUserRejectionError,
+	} from '$lib/core/transaction';
+	import {toast} from 'svelte-sonner';
 
 	const {
 		connection,
@@ -60,7 +65,14 @@
 				// User dismissed the modal - silently cancel
 				return;
 			}
+			if (isUserRejectionError(error)) {
+				// User rejected the transaction in their wallet - silently cancel
+				return;
+			}
 			console.error('Failed to set greeting:', error);
+			toast.error('Transaction failed', {
+				description: error instanceof Error ? error.message : 'Unknown error',
+			});
 		} finally {
 			isSubmitting = false;
 		}

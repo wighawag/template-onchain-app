@@ -96,12 +96,20 @@ export function createBalanceStore(
 		}
 	}
 
+	let consecutiveErrors = 0;
+
 	async function fetchNow(account: `0x${string}`) {
 		let interval = fetchInterval;
 		try {
 			const success = await fetchState(account);
-			if (!success) {
-				interval = 500;
+			if (success) {
+				consecutiveErrors = 0;
+			} else {
+				consecutiveErrors++;
+				interval = Math.min(
+					fetchInterval * Math.pow(2, consecutiveErrors),
+					60_000,
+				);
 			}
 		} finally {
 			if (!timeout) {

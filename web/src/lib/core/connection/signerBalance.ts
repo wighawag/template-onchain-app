@@ -116,12 +116,20 @@ export function createSignerBalanceStore(
 		}
 	}
 
+	let consecutiveErrors = 0;
+
 	async function fetchNow(signer: Signer) {
 		let interval = fetchInterval;
 		try {
 			const success = await fetchState(signer);
-			if (!success) {
-				interval = 500;
+			if (success) {
+				consecutiveErrors = 0;
+			} else {
+				consecutiveErrors++;
+				interval = Math.min(
+					fetchInterval * Math.pow(2, consecutiveErrors),
+					60_000,
+				);
 			}
 		} finally {
 			if (!timeout) {

@@ -42,6 +42,7 @@ function defaultStatus(): GasFeeStatus {
 }
 
 function avg(arr: bigint[]) {
+	if (arr.length === 0) return 0n;
 	const sum = arr.reduce((a: bigint, v: bigint) => a + v);
 	return sum / BigInt(arr.length);
 }
@@ -200,6 +201,8 @@ export function createGasFeeStore(
 		}
 	}
 
+	let consecutiveErrors = 0;
+
 	async function fetchContinuously() {
 		if (timeout) {
 			clearTimeout(timeout);
@@ -209,8 +212,14 @@ export function createGasFeeStore(
 		let interval = fetchInterval;
 		try {
 			const success = await fetchState();
-			if (!success) {
-				interval = 500;
+			if (success) {
+				consecutiveErrors = 0;
+			} else {
+				consecutiveErrors++;
+				interval = Math.min(
+					fetchInterval * Math.pow(2, consecutiveErrors),
+					60_000,
+				);
 			}
 		} finally {
 			if (!timeout) {
