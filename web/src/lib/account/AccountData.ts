@@ -17,6 +17,23 @@ import {
 	defineSchema,
 	map,
 } from 'synqable';
+import {PUBLIC_OPERATION_RETENTION_DAYS} from '$env/static/public';
+
+/** Default number of days to retain completed operations before deletion */
+const DEFAULT_OPERATION_RETENTION_DAYS = 7;
+
+/**
+ * Parse the retention days from env variable with fallback to default.
+ * Returns the retention period in milliseconds.
+ */
+function getOperationRetentionMs(): number {
+	const days = PUBLIC_OPERATION_RETENTION_DAYS
+		? parseInt(PUBLIC_OPERATION_RETENTION_DAYS, 10)
+		: DEFAULT_OPERATION_RETENTION_DAYS;
+	// Fallback to default if parsing fails or value is invalid
+	const validDays = isNaN(days) || days <= 0 ? DEFAULT_OPERATION_RETENTION_DAYS : days;
+	return validDays * 24 * 60 * 60 * 1000;
+}
 
 export type TransactionMetadata = PopulatedMetadata;
 
@@ -119,8 +136,7 @@ export function createAccountData(params: {
 					},
 					metadata: {...transaction.metadata, tx: transaction},
 				},
-				// TODO define a correct value, make it configurable
-				{deleteAt: clock.now() + 7 * 24 * 60 * 60 * 1000},
+				{deleteAt: clock.now() + getOperationRetentionMs()},
 			);
 		} else {
 			throw new Error(`accountData not ready`);

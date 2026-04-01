@@ -15,7 +15,6 @@
 	import {setContext} from 'svelte';
 	import {Toaster} from '$lib/shadcn/ui/sonner';
 	import AcrossPages from '$lib/context/AcrossPages.svelte';
-	import SplashScreen from '$lib/ui/splash/SplashScreen.svelte';
 
 	let {children} = $props();
 
@@ -24,9 +23,6 @@
 </script>
 
 <AsyncContext getContext={createContext}>
-	{#snippet loading()}
-		<SplashScreen />
-	{/snippet}
 	<Navbar />
 	<OfflineBanner />
 	<RpcHealthBanner />

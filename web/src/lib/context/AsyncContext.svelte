@@ -4,16 +4,84 @@
 	import ContextComponent from './Context.svelte';
 	import {browser} from '$app/environment';
 	import {url} from '$lib/core/utils/web/path';
+
 	interface Props {
 		getContext: () => Promise<{context: Context; start: () => () => void}>;
 		children?: Snippet;
 		loading?: Snippet;
-		// minLoading?: number; // TODO implement a minimum loading for splashscreen
+		/**
+		 * Minimum time in milliseconds to show the loading/splash screen.
+		 * If set, the splash screen will be shown for at least this duration,
+		 * even if the context loads faster. The timer starts only after the
+		 * splash image is fully loaded, ensuring the image doesn't flash briefly.
+		 */
+		minLoading?: number;
+		/**
+		 * Custom splash image URL. If not provided, defaults to '/icon.svg'.
+		 * Used with minLoading to preload the image before starting the timer.
+		 */
+		splashImage?: string;
 	}
 
-	let {getContext, children, loading}: Props = $props();
+	let {getContext, children, loading, minLoading, splashImage}: Props = $props();
 
-	let promise = browser ? (() => getContext())() : undefined;
+	const defaultSplashImage = url('/icon.svg');
+	let splashImageUrl = $derived(splashImage ?? defaultSplashImage);
+
+	/**
+	 * Preload an image and return a promise that resolves when loaded.
+	 * Returns immediately if the image is already cached.
+	 */
+	function preloadImage(src: string): Promise<void> {
+		return new Promise((resolve) => {
+			if (!browser) {
+				resolve();
+				return;
+			}
+			const img = new Image();
+			img.onload = () => resolve();
+			img.onerror = () => resolve(); // Resolve even on error to not block loading
+			img.src = src;
+			// If already cached, complete event fires synchronously
+			if (img.complete) {
+				resolve();
+			}
+		});
+	}
+
+	/**
+	 * Create a promise that resolves after a specified delay.
+	 */
+	function delay(ms: number): Promise<void> {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
+	/**
+	 * Create a combined loading promise that:
+	 * 1. Waits for the splash image to load first (if minLoading is set)
+	 * 2. Then starts the minimum loading timer
+	 * 3. Waits for both the context AND the min timer to complete
+	 */
+	async function createCombinedPromise(): Promise<{context: Context; start: () => () => void}> {
+		const contextPromise = getContext();
+
+		if (!minLoading || minLoading <= 0) {
+			// No minimum loading, just return the context promise
+			return contextPromise;
+		}
+
+		// Preload the splash image first, then start the timer
+		await preloadImage(splashImageUrl);
+
+		// Start minimum loading timer AFTER image is loaded
+		const minLoadingPromise = delay(minLoading);
+
+		// Wait for both context and minimum loading time
+		const [context] = await Promise.all([contextPromise, minLoadingPromise]);
+		return context;
+	}
+
+	let promise = browser ? createCombinedPromise() : undefined;
 </script>
 
 {#if promise}
@@ -22,7 +90,7 @@
 			{@render loading()}
 		{:else}
 			<div class="splash-screen">
-				<img src={url('/icon.svg')} alt="Loading" class="splash-logo" />
+				<img src={splashImageUrl} alt="Loading" class="splash-logo" />
 				<span class="sr-only">Loading ...</span>
 			</div>
 		{/if}
@@ -48,7 +116,7 @@
 	{@render loading()}
 {:else}
 	<div class="splash-screen">
-		<img src={url('/icon.svg')} alt="Loading" class="splash-logo" />
+		<img src={splashImageUrl} alt="Loading" class="splash-logo" />
 		<span class="sr-only">Loading ...</span>
 	</div>
 {/if}
