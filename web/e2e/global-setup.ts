@@ -143,6 +143,11 @@ async function buildWeb(): Promise<void> {
 	execSync('pnpm build localhost', {
 		cwd: WEB_DIR,
 		stdio: 'inherit',
+		env: {
+			...process.env,
+			// Enable direct faucet API mode for e2e tests (no popup window)
+			PUBLIC_FAUCET_API: 'http://localhost:34010',
+		},
 	});
 	console.log('✓ Web app built');
 }

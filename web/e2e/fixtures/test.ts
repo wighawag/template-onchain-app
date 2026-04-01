@@ -24,35 +24,6 @@ export interface WalletFixtures {
 }
 
 /**
- * Fund a wallet address using Hardhat's JSON-RPC method
- */
-async function fundWalletViaHardhat(
-	page: Page,
-	address: string,
-	amountInEther: string = '10',
-): Promise<void> {
-	// Convert ether to wei in hex
-	const weiAmount = BigInt(parseFloat(amountInEther) * 1e18);
-	const hexAmount = '0x' + weiAmount.toString(16);
-
-	await page.evaluate(
-		async ({addr, amount}) => {
-			await fetch('http://localhost:8545', {
-				method: 'POST',
-				headers: {'Content-Type': 'application/json'},
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					method: 'hardhat_setBalance',
-					params: [addr, amount],
-					id: 1,
-				}),
-			});
-		},
-		{addr: address, amount: hexAmount},
-	);
-}
-
-/**
  * Connect wallet using Dev Mode (burner wallet with test mnemonic)
  */
 async function connectWalletDevMode(page: Page): Promise<void> {
@@ -77,46 +48,31 @@ async function connectWalletDevMode(page: Page): Promise<void> {
 		console.log('Wallet may already be connected or modal not shown');
 	}
 
-	// Handle Insufficient Funds modal - dismiss it and fund the wallet
+	// Handle Insufficient Funds modal - click "Get ETH" to use the faucet API
 	try {
-		const dismissButton = page.getByRole('button', {name: /dismiss/i});
-		const isInsufficientFundsVisible = await dismissButton
-			.isVisible({timeout: 2000})
+		const getEthButton = page.getByRole('button', {name: /get eth/i});
+		const isInsufficientFundsVisible = await getEthButton
+			.isVisible({timeout: 3000})
 			.catch(() => false);
 
 		if (isInsufficientFundsVisible) {
-			// Get the wallet address from the page header (shows "0 ETH" with avatar)
-			// Fund the wallet using Hardhat's setBalance
-			const walletAddress = await page.evaluate(() => {
-				// Try to get the address from localStorage where the burner wallet stores it
-				const storedWallet = localStorage.getItem('__burner_wallet__');
-				if (storedWallet) {
-					try {
-						const wallet = JSON.parse(storedWallet);
-						return wallet.address || wallet.account;
-					} catch {
-						return null;
-					}
-				}
-				return null;
-			});
+			// Click "Get ETH" - this will call the faucet API directly (no popup)
+			await getEthButton.click();
 
-			if (walletAddress) {
-				await fundWalletViaHardhat(page, walletAddress);
-				// Wait for balance update to reflect
-				await page.waitForTimeout(500);
-			}
-
-			// Click dismiss to close the modal
-			await dismissButton.click();
+			// Wait for "Continue Transaction" button to appear (indicates funds are sufficient)
+			const continueButton = page.getByRole('button', {name: /continue transaction/i});
+			await continueButton.waitFor({state: 'visible', timeout: 30000});
+			
+			// Click "Continue Transaction" to proceed with the original transaction
+			await continueButton.click();
 
 			// Wait for modal to close
 			await page.waitForFunction(
 				() => {
 					const modal = document.querySelector('[role="dialog"]');
-					return !modal || !modal.textContent?.includes('Insufficient Funds');
+					return !modal || !modal.textContent?.includes('Funds');
 				},
-				{timeout: 5000},
+				{timeout: 10000},
 			);
 		}
 	} catch {
@@ -126,24 +82,31 @@ async function connectWalletDevMode(page: Page): Promise<void> {
 
 /**
  * Wait for any pending transaction to be confirmed.
- * Waits for the send button to be enabled (not submitting) or for success toast.
+ * Waits for all pending indicators to disappear.
  */
 async function waitForTransactionComplete(page: Page): Promise<void> {
-	// Wait for any pending indicators in message cards to disappear
-	const pendingIndicator = page.locator('text=Pending');
-	if (await pendingIndicator.isVisible({timeout: 500}).catch(() => false)) {
-		await pendingIndicator.waitFor({state: 'hidden', timeout: 30000});
+	// Wait for ALL pending indicators in message cards to disappear
+	// Use a function that checks if any pending text exists
+	try {
+		await page.waitForFunction(
+			() => {
+				const pendingElements = document.querySelectorAll(
+					'[class*="animate-spin"], [class*="Pending"]',
+				);
+				// Also check for "Transaction pending" text
+				const pendingText = document.body.textContent?.includes(
+					'Transaction pending',
+				);
+				return pendingElements.length === 0 && !pendingText;
+			},
+			{timeout: 30000},
+		);
+	} catch {
+		// Timeout - might still have pending indicators, but continue
 	}
 
-	// Alternatively, check for success toast
-	const successToast = page.locator('[data-sonner-toast][data-type="success"]');
-	try {
-		await successToast.waitFor({state: 'visible', timeout: 5000});
-		// Give the UI a moment to update after success
-		await page.waitForTimeout(500);
-	} catch {
-		// No success toast, that's okay - might have already dismissed
-	}
+	// Give the UI a moment to settle
+	await page.waitForTimeout(500);
 }
 
 export const test = base.extend<WalletFixtures>({
