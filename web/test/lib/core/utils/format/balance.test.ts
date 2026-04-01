@@ -30,13 +30,13 @@ describe('formatBalance', () => {
 		});
 
 		it('should round up when appropriate (prefix with ~)', () => {
-			// 9999.869888745411607160000 ETH
-			expect(formatBalance(9999_869_888_745_411_607_160_000n)).toBe('~9999.87');
+			// 9999.86988874541160716 ETH (9999.86... rounds up to 9999.87)
+			expect(formatBalance(9_999_869_888_745_411_607_160n)).toBe('~9999.87');
 		});
 
 		it('should truncate down when appropriate (prefix with >)', () => {
-			// A value that should be truncated down
-			expect(formatBalance(99_999_123_400_000_000_000n)).toBe('>99.999');
+			// 99.9991234 ETH truncated to 4 decimal places (maxSymbols=7: 2 for "99" + 1 for "." + 4 decimals)
+			expect(formatBalance(99_999_123_400_000_000_000n)).toBe('>99.9991');
 		});
 	});
 
@@ -113,7 +113,7 @@ describe('formatBalance', () => {
 	describe('examples from documentation', () => {
 		it('should match documented examples', () => {
 			// From the JSDoc comments
-			expect(formatBalance(9999_869_888_745_411_607_160_000n)).toBe('~9999.87');
+			expect(formatBalance(9_999_869_888_745_411_607_160n)).toBe('~9999.87');
 			expect(formatBalance(99_999_000_000_000_000_000_000n)).toBe('99999');
 			expect(formatBalance(99_010_000_000_000_000_000n)).toBe('99.01');
 

@@ -10,7 +10,7 @@
  *
  * @example
  * // For ETH (18 decimals)
- * formatBalance(9999869888745411607160000n) // "~9999.87"
+ * formatBalance(9999869888745411607160n) // "~9999.87"
  * formatBalance(99999000000000000000000n) // "99999"
  * formatBalance(99010000000000000000n) // "99.01"
  *
