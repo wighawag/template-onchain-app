@@ -96,7 +96,7 @@ export async function createContext(): Promise<{
 	// ----------------------------------------------------------------------------
 
 	// Cast chain to augmented type for access to optional properties
-	const chain = deployments.current.chain as AugmentedChainInfo;
+	const chain = deployments.get().chain as AugmentedChainInfo;
 	const chainProperties = chain.properties ?? {};
 
 	// Extract chain-specific configuration with defaults
@@ -130,14 +130,14 @@ export async function createContext(): Promise<{
 
 	const onchainState = createOnchainState({
 		publicClient,
-		deployments: deployments.current,
+		deployments: deployments.get(),
 		config,
 	});
 	window.onchainState = onchainState;
 
 	const accountData = createAccountData({
 		accountStore: account,
-		deployments: deployments.current,
+		deployments: deployments.get(),
 		clock,
 	});
 	window.accountData = accountData;
@@ -182,7 +182,7 @@ export async function createContext(): Promise<{
 	// TODO use deployment store ?
 	const gasFee = createGasFeeStore({
 		publicClient: publicClient,
-		deployments: deployments.current,
+		deployments: deployments.get(),
 	});
 	window.gasFee = gasFee;
 

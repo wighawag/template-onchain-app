@@ -163,12 +163,12 @@
 					<span class="flex items-center gap-1 text-sm text-muted-foreground">
 						<AlertCircleIcon class="h-3 w-3 text-amber-500" />
 						{formattedBalance}
-						{deployments.current.chain.nativeCurrency.symbol}
+						{$deployments.chain.nativeCurrency.symbol}
 					</span>
 				{:else if formattedBalance !== null}
 					<span class="text-sm text-muted-foreground"
 						>{formattedBalance}
-						{deployments.current.chain.nativeCurrency.symbol}</span
+						{$deployments.chain.nativeCurrency.symbol}</span
 					>
 				{:else if $balanceStatus.error}
 					<span class="flex items-center gap-1 text-sm text-destructive">
@@ -300,7 +300,7 @@
 							{:else if formattedBalance !== null}
 								<span class="font-medium"
 									>{formattedBalance}
-									{deployments.current.chain.nativeCurrency.symbol}</span
+									{$deployments.chain.nativeCurrency.symbol}</span
 								>
 							{:else if $balanceStatus.error}
 								<span class="text-sm text-destructive">Failed to load</span>

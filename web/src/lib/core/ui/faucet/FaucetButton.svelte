@@ -23,7 +23,7 @@
 			await claimFund(
 				{
 					faucetUrl: PUBLIC_FAUCET_LINK,
-					chainId: deployments.current.chain.id,
+					chainId: $deployments.chain.id,
 					address,
 				},
 				{
@@ -58,5 +58,5 @@
 	{:else}
 		<ExternalLinkIcon class="h-4 w-4" />
 	{/if}
-	Get {deployments.current.chain.nativeCurrency.symbol}
+	Get {$deployments.chain.nativeCurrency.symbol}
 </Button>

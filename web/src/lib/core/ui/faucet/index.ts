@@ -1,5 +1,5 @@
 import {PUBLIC_FAUCET_LINK} from '$env/static/public';
-import deploymentsFromFiles from '$lib/deployments';
+import {deployments} from '$lib/deployments-store';
 
 export {default as FaucetButton} from './FaucetButton.svelte';
 export const hasFaucetLink = Boolean(
@@ -8,5 +8,5 @@ export const hasFaucetLink = Boolean(
 
 export function getFaucetLink(address: `0x${string}`) {
 	const separator = PUBLIC_FAUCET_LINK.includes('?') ? '&' : '?';
-	return `${PUBLIC_FAUCET_LINK}${separator}chainId=${deploymentsFromFiles.chain.id}&address=${address}`;
+	return `${PUBLIC_FAUCET_LINK}${separator}chainId=${deployments.get().chain.id}&address=${address}`;
 }

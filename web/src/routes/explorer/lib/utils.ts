@@ -1,5 +1,5 @@
 import type {Abi, Address, Log} from 'viem';
-import deploymentsFromFiles from '$lib/deployments';
+import {deployments} from '$lib/deployments-store';
 import {decodeEventLog, formatEther, formatGwei} from 'viem';
 
 export interface ContractInfo {
@@ -21,7 +21,7 @@ export interface DecodedEvent {
  * Find contract in deployments by address
  */
 export function findContractByAddress(address: Address): ContractInfo | null {
-	const contracts = deploymentsFromFiles.contracts;
+	const contracts = deployments.get().contracts;
 	for (const [name, contract] of Object.entries(contracts)) {
 		if (contract.address.toLowerCase() === address.toLowerCase()) {
 			return {

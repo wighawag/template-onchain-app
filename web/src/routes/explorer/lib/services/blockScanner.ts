@@ -1,5 +1,5 @@
 import type {PublicClient, Transaction} from 'viem';
-import deploymentsFromFiles from '$lib/deployments';
+import {deployments} from '$lib/deployments-store';
 
 /**
  * Transaction summary structure for the transaction list
@@ -37,7 +37,7 @@ export interface BlockIndexSummary {
  * Get chain ID from deployments
  */
 function getChainId(): number {
-	return deploymentsFromFiles.chain.id;
+	return deployments.get().chain.id;
 }
 
 /**

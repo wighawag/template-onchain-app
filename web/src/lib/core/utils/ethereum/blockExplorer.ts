@@ -1,9 +1,13 @@
 import {PUBLIC_USE_INTERNAL_EXPLORER} from '$env/static/public';
-import deploymentsFromFiles from '$lib/deployments';
-import type {AugmentedChainInfo} from '$lib/core/connection/types';
+import {deployments, type AugmentedChainInfo} from '$lib/deployments-store';
 
-// Cast chain to augmented type once for proper typing of optional properties
-const chain = deploymentsFromFiles.chain as AugmentedChainInfo;
+/**
+ * Get the augmented chain info from deployments
+ * Uses a getter function instead of module-level constant for HMR compatibility
+ */
+function getChain(): AugmentedChainInfo {
+	return deployments.get().chain as AugmentedChainInfo;
+}
 
 /**
  * Link destination options for address/transaction components
@@ -15,7 +19,7 @@ export type LinkToOption = 'internal' | 'external' | 'both' | 'auto' | false;
  * Returns null if no block explorer is configured
  */
 export function getBlockExplorerTxUrl(hash: string): string | null {
-	const blockExplorers = chain.blockExplorers;
+	const blockExplorers = getChain().blockExplorers;
 	if (!blockExplorers?.default?.url) return null;
 	return `${blockExplorers.default.url}/tx/${hash}`;
 }
@@ -25,7 +29,7 @@ export function getBlockExplorerTxUrl(hash: string): string | null {
  * Returns null if no block explorer is configured
  */
 export function getBlockExplorerAddressUrl(address: string): string | null {
-	const blockExplorers = chain.blockExplorers;
+	const blockExplorers = getChain().blockExplorers;
 	if (!blockExplorers?.default?.url) return null;
 	return `${blockExplorers.default.url}/address/${address}`;
 }
@@ -34,7 +38,7 @@ export function getBlockExplorerAddressUrl(address: string): string | null {
  * Get the block explorer name if configured
  */
 export function getBlockExplorerName(): string | null {
-	const blockExplorers = chain.blockExplorers;
+	const blockExplorers = getChain().blockExplorers;
 	return blockExplorers?.default?.name ?? null;
 }
 
@@ -42,7 +46,7 @@ export function getBlockExplorerName(): string | null {
  * Check if a block explorer is configured
  */
 export function hasBlockExplorer(): boolean {
-	const blockExplorers = chain.blockExplorers;
+	const blockExplorers = getChain().blockExplorers;
 	return !!blockExplorers?.default?.url;
 }
 

@@ -51,7 +51,7 @@
 				balance,
 				gasFee,
 				contract: {
-					...deployments.current.contracts.GreetingsRegistry,
+					...$deployments.contracts.GreetingsRegistry,
 					functionName: 'setMessage',
 					args: [greetingInput],
 					account: currentConnection.account.address,

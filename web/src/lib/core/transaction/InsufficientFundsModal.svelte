@@ -7,7 +7,7 @@
 	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import {FaucetButton, hasFaucetLink} from '$lib/core/ui/faucet/index.js';
-	import deployments from '$lib/deployments';
+	import {deployments} from '$lib/deployments-store';
 
 	const state = balanceCheckStore;
 
@@ -83,14 +83,14 @@
 					<span class="text-muted-foreground">Your balance:</span>
 					<span class="font-mono"
 						>{formatBalance(displayBalance)}
-						{deployments.chain.nativeCurrency.symbol}</span
+						{$deployments.chain.nativeCurrency.symbol}</span
 					>
 				</div>
 				<div class="flex justify-between">
 					<span class="text-muted-foreground">Estimated cost:</span>
 					<span class="font-mono"
 						>{formatBalance($state.estimatedCost)}
-						{deployments.chain.nativeCurrency.symbol}</span
+						{$deployments.chain.nativeCurrency.symbol}</span
 					>
 				</div>
 				{#if !hasSufficientFunds}
@@ -99,7 +99,7 @@
 						<span>Shortfall:</span>
 						<span class="font-mono"
 							>{formatBalance(shortfall)}
-							{deployments.chain.nativeCurrency.symbol}</span
+							{$deployments.chain.nativeCurrency.symbol}</span
 						>
 					</div>
 				{/if}

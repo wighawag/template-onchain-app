@@ -1,16 +1,13 @@
-import deploymentsFromFiles from '$lib/deployments';
+import {deployments} from '$lib/deployments-store';
 import {createConnection} from '@etherplay/connect';
-import {derived, writable} from 'svelte/store';
+import {derived} from 'svelte/store';
 import {createPublicClient, createWalletClient, custom} from 'viem';
 import type {
 	Account,
 	ChainInfo,
-	DeploymentsStore,
 	EstablishedConnection,
 	OptionalSigner,
-	TypedDeployments,
 	TypedPublicClient,
-	TypedWalletClient,
 } from './types';
 
 // TODO allow to specify the expected DeploymentStore type
@@ -18,20 +15,23 @@ export async function establishRemoteConnection(options?: {
 	nodeURL?: string;
 	chainInfoNodeURL?: string;
 }): Promise<EstablishedConnection> {
+	// Use deployments.get() for synchronous access
+	const currentDeployments = deployments.get();
+	
 	// Cast to ChainInfo to preserve the literal type even when modifying rpcUrls
 	// The structure is the same, just the RPC URL may change
 	const chainInfo: ChainInfo = options?.chainInfoNodeURL
 		? ({
-				...deploymentsFromFiles.chain,
+				...currentDeployments.chain,
 				rpcUrls: {
-					...deploymentsFromFiles.chain.rpcUrls,
+					...currentDeployments.chain.rpcUrls,
 					default: {
-						...deploymentsFromFiles.chain.rpcUrls.default,
+						...currentDeployments.chain.rpcUrls.default,
 						http: [options.chainInfoNodeURL],
 					},
 				},
 			} as ChainInfo)
-		: deploymentsFromFiles.chain;
+		: currentDeployments.chain;
 
 	const connection = createConnection({
 		targetStep: 'WalletConnected',
@@ -72,31 +72,12 @@ export async function establishRemoteConnection(options?: {
 		},
 	);
 
-	let lastDeployments: TypedDeployments = deploymentsFromFiles;
-
-	// TODO
-	// we can specify LinkedData type for each contracts
-	const deploymentsStore = writable<TypedDeployments>(
-		lastDeployments,
-		(set) => {
-			// TODO handle redeployment
-			// lastDeployments =
-		},
-	);
-
-	const deployments: DeploymentsStore = {
-		subscribe: deploymentsStore.subscribe,
-		get current() {
-			return lastDeployments;
-		},
-	};
-
 	return {
 		connection,
 		walletClient,
 		publicClient,
 		account,
 		signer,
-		deployments,
+		deployments, // Use the imported HMR-aware store
 	};
 }

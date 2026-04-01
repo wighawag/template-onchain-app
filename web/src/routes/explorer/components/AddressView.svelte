@@ -222,7 +222,7 @@
 							</div>
 							<div class="font-mono text-lg">
 								{formatEther(balance)}
-								{deployments.current.chain.nativeCurrency.symbol}
+								{$deployments.chain.nativeCurrency.symbol}
 							</div>
 						</div>
 						<div>

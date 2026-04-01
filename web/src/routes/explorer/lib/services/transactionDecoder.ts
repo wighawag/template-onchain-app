@@ -5,7 +5,7 @@ import {
 	BaseError,
 	ContractFunctionRevertedError,
 } from 'viem';
-import deploymentsFromFiles from '$lib/deployments';
+import {deployments} from '$lib/deployments-store';
 
 /**
  * Contract info for decoding
@@ -52,7 +52,7 @@ export interface FormattedDecodedTransaction {
  * Find contract in deployments by address
  */
 function findContractByAddress(address: `0x${string}`): ContractInfo | null {
-	const contracts = deploymentsFromFiles.contracts;
+	const contracts = deployments.get().contracts;
 	for (const [name, contract] of Object.entries(contracts)) {
 		if (contract.address.toLowerCase() === address.toLowerCase()) {
 			return {
