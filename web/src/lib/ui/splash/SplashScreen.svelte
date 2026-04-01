@@ -1,5 +1,9 @@
+<script>
+	import {url} from '$lib/core/utils/web/path';
+</script>
+
 <div class="splash-screen" aria-label="Loading application" role="status">
-	<img src="/icon.svg" alt="" class="splash-logo" aria-hidden="true" />
+	<img src={url('/icon.svg')} alt="" class="splash-logo" aria-hidden="true" />
 	<span class="sr-only">Loading ...</span>
 </div>
 

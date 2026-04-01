@@ -3,6 +3,7 @@
 	import type {Snippet} from 'svelte';
 	import ContextComponent from './Context.svelte';
 	import {browser} from '$app/environment';
+	import {url} from '$lib/core/utils/web/path';
 	interface Props {
 		getContext: () => Promise<{context: Context; start: () => () => void}>;
 		children?: Snippet;
@@ -21,7 +22,7 @@
 			{@render loading()}
 		{:else}
 			<div class="splash-screen">
-				<img src="/icon.svg" alt="Loading" class="splash-logo" />
+				<img src={url('/icon.svg')} alt="Loading" class="splash-logo" />
 				<span class="sr-only">Loading ...</span>
 			</div>
 		{/if}
@@ -47,7 +48,7 @@
 	{@render loading()}
 {:else}
 	<div class="splash-screen">
-		<img src="/icon.svg" alt="Loading" class="splash-logo" />
+		<img src={url('/icon.svg')} alt="Loading" class="splash-logo" />
 		<span class="sr-only">Loading ...</span>
 	</div>
 {/if}
