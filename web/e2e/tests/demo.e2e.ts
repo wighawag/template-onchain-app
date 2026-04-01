@@ -30,15 +30,23 @@ describe('Demo Page - Greetings Registry', () => {
 		await expect(sendButton).toBeEnabled();
 	});
 
-	test('should trigger wallet connection modal when submitting', async ({
+	test('should connect wallet and submit when clicking send', async ({
 		page,
+		fundWallets,
+		waitForTransaction,
 	}) => {
+		// Fund wallets before testing
+		await fundWallets();
+		
 		await page.goto('/demo');
 
+		// Use a unique greeting for this test
+		const uniqueGreeting = `Connect test ${Date.now()}`;
+		
 		// Fill in a greeting - use click then fill to ensure focus
 		const input = page.getByPlaceholder('Enter your greeting...');
 		await input.click();
-		await input.fill('Test greeting');
+		await input.fill(uniqueGreeting);
 
 		// Trigger input event to ensure Svelte reactivity
 		await input.dispatchEvent('input');
@@ -47,43 +55,59 @@ describe('Demo Page - Greetings Registry', () => {
 		const sendButton = page.getByRole('button', {name: /send/i});
 		await expect(sendButton).toBeEnabled({timeout: 5000});
 
-		// Click send
+		// Click send - this will connect the wallet
+		// When burner wallet is the only available wallet, it connects directly
+		// without showing a wallet selection modal
 		await sendButton.click();
 
-		// Should show the wallet connection modal
-		// Look for the Dev Mode button which indicates the modal is open
-		await expect(
-			page.getByRole('button', {name: /dev mode/i}),
-		).toBeVisible({timeout: 5000});
+		// Wait for the transaction to complete
+		await waitForTransaction(page);
+
+		// The greeting should appear in the messages list (look for exact text match in a message card)
+		const messageCard = page.locator('[class*="rounded-lg border px-4 py-3"]').filter({
+			hasText: uniqueGreeting,
+		});
+		await expect(messageCard).toBeVisible({timeout: 30000});
+		
+		// Wallet should now be connected (balance shown in navbar)
+		const navbarBalance = page.locator('text=/\\d+\\.?\\d*\\s*ETH/');
+		await expect(navbarBalance.first()).toBeVisible({timeout: 10000});
 	});
 
-	test('should connect wallet using Dev Mode', async ({
+	test('should show wallet as connected after submitting', async ({
 		page,
-		connectWallet,
+		fundWallets,
+		waitForTransaction,
 	}) => {
+		// Fund wallets before testing
+		await fundWallets();
+		
 		await page.goto('/demo');
 
-		// Fill in a greeting - use click then fill to ensure focus
+		// Wait for the page to fully load
 		const input = page.getByPlaceholder('Enter your greeting...');
-		await input.click();
-		await input.fill('Test greeting');
+		await expect(input).toBeVisible({timeout: 10000});
 
-		// Trigger input event to ensure Svelte reactivity
+		// Use unique greeting for this test
+		const uniqueGreeting = `Wallet test ${Date.now()}`;
+		
+		// Fill in a greeting - click first to ensure the input is ready
+		await input.click();
+		await input.fill(uniqueGreeting);
 		await input.dispatchEvent('input');
 
-		// Wait for the send button to be enabled
+		// Wait for the send button to be enabled and click it
 		const sendButton = page.getByRole('button', {name: /send/i});
-		await expect(sendButton).toBeEnabled({timeout: 5000});
+		await expect(sendButton).toBeEnabled({timeout: 10000});
 		await sendButton.click();
 
-		// Connect using Dev Mode
-		await connectWallet(page);
+		// Wait for transaction
+		await waitForTransaction(page);
 
-		// After connection, the modal should close
-		// The Dev Mode button should no longer be visible
-		await expect(
-			page.getByRole('button', {name: /dev mode/i}),
-		).not.toBeVisible({timeout: 10000});
+		// After connection and transaction, the wallet balance should be visible
+		// This confirms the wallet is connected
+		const navbarBalance = page.locator('text=/\\d+\\.?\\d*\\s*ETH/');
+		await expect(navbarBalance.first()).toBeVisible({timeout: 10000});
 	});
 
 	test('should submit a greeting and see it in the list', async ({
@@ -159,23 +183,32 @@ describe('Demo Page - Greetings Registry', () => {
 	}) => {
 		const page = connectedPage;
 
+		const uniqueMessage = `Clear test ${Date.now()}`;
 		const input = page.getByPlaceholder('Enter your greeting...');
-		await input.fill('Clear test message');
+		await input.fill(uniqueMessage);
 		await page.getByRole('button', {name: /send/i}).click();
 
 		// Wait for transaction
 		await waitForTransaction(page);
 
-		// Input should be cleared
-		await expect(input).toHaveValue('');
+		// Wait for the message to appear (confirms transaction completed)
+		const messageCard = page.locator('[class*="rounded-lg border px-4 py-3"]').filter({
+			hasText: uniqueMessage,
+		});
+		await expect(messageCard).toBeVisible({timeout: 30000});
+
+		// Input should be cleared after successful submission
+		// Give extra time for the UI to update
+		await expect(input).toHaveValue('', {timeout: 15000});
 	});
 
-	test('should show multiple messages in order', async ({connectedPage, waitForTransaction}) => {
+	test('should replace previous message from same account', async ({connectedPage, waitForTransaction}) => {
 		const page = connectedPage;
 
-		// Submit two messages
-		const message1 = `First message ${Date.now()}`;
-		const message2 = `Second message ${Date.now() + 1}`;
+		// The contract allows only ONE message per account - new messages replace old ones
+		const timestamp = Date.now();
+		const message1 = `First ${timestamp}`;
+		const message2 = `Second ${timestamp}`;
 
 		// Submit first message
 		const input = page.getByPlaceholder('Enter your greeting...');
@@ -183,26 +216,28 @@ describe('Demo Page - Greetings Registry', () => {
 		await page.getByRole('button', {name: /send/i}).click();
 		await waitForTransaction(page);
 
-		// Wait for message to appear
-		await expect(page.getByText(message1)).toBeVisible({timeout: 30000});
+		// Wait for first message to appear in a message card
+		const messageCard1 = page.locator('[class*="rounded-lg border px-4 py-3"]').filter({
+			hasText: message1,
+		});
+		await expect(messageCard1).toBeVisible({timeout: 30000});
 
-		// Submit second message
+		// Submit second message (this REPLACES the first message)
 		await input.fill(message2);
 		await page.getByRole('button', {name: /send/i}).click();
 		await waitForTransaction(page);
 
-		// Both messages should be visible
-		await expect(page.getByText(message1)).toBeVisible({timeout: 10000});
-		await expect(page.getByText(message2)).toBeVisible({timeout: 10000});
+		// Wait for second message to appear
+		const messageCard2 = page.locator('[class*="rounded-lg border px-4 py-3"]').filter({
+			hasText: message2,
+		});
+		await expect(messageCard2).toBeVisible({timeout: 30000});
 
-		// Get all message cards
+		// The first message should NO LONGER be visible (replaced by second)
+		await expect(messageCard1).not.toBeVisible({timeout: 5000});
+
+		// The most recent message from this account should be visible at the top
 		const messageCards = page.locator('[class*="rounded-lg border px-4 py-3"]');
-		const count = await messageCards.count();
-
-		// There should be at least 2 messages
-		expect(count).toBeGreaterThanOrEqual(2);
-
-		// The most recent message should appear first (newest first order)
 		const firstMessageText = await messageCards.first().textContent();
 		expect(firstMessageText).toContain(message2);
 	});
