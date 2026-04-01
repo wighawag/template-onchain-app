@@ -20,9 +20,31 @@ import {
 import {createToastConnector} from '$lib/account/toastConnector.js';
 import {initBurnerWallet} from '@etherkit/burner-wallet';
 import {PUBLIC_NODE_URL, PUBLIC_USE_BURNER_WALLET} from '$env/static/public';
+import type {AugmentedChainInfo} from '$lib/core/connection/types.js';
 
-/** How often the tx-observer processes pending transactions when this tab is leader */
-const TX_OBSERVER_PROCESS_INTERVAL = 2000;
+// ============================================================================
+// Default Configuration Values
+// ============================================================================
+
+/** Default finality for chains without explicit configuration (Ethereum mainnet default) */
+const DEFAULT_FINALITY = 12;
+
+/** Default block time in ms for chains without explicit configuration (Ethereum mainnet ~12s) */
+const DEFAULT_BLOCK_TIME_MS = 12000;
+
+/** Minimum process interval to avoid excessive polling */
+const MIN_PROCESS_INTERVAL_MS = 1000;
+
+/** Default number of messages to display */
+const DEFAULT_MAX_MESSAGES = 10;
+
+/**
+ * Calculate tx-observer process interval from block time.
+ * Uses half the block time, clamped to a minimum threshold.
+ */
+function calculateProcessInterval(blockTimeMs: number): number {
+	return Math.max(Math.floor(blockTimeMs / 2), MIN_PROCESS_INTERVAL_MS);
+}
 
 export async function createContext(): Promise<{
 	context: Context;
@@ -69,6 +91,19 @@ export async function createContext(): Promise<{
 	window.publicClient = publicClient;
 	window.deployments = deployments;
 
+	// ----------------------------------------------------------------------------
+	// CHAIN CONFIGURATION
+	// ----------------------------------------------------------------------------
+
+	// Cast chain to augmented type for access to optional properties
+	const chain = deployments.current.chain as AugmentedChainInfo;
+	const chainProperties = chain.properties ?? {};
+
+	// Extract chain-specific configuration with defaults
+	const finality = chainProperties.finality ?? DEFAULT_FINALITY;
+	const blockTimeMs = chainProperties.averageBlockTimeMs ?? DEFAULT_BLOCK_TIME_MS;
+	const txObserverProcessInterval = calculateProcessInterval(blockTimeMs);
+
 	// Reactive clock store that updates every second for smooth "time ago" displays
 	const clock = createClockStore();
 	window.clock = clock;
@@ -89,7 +124,7 @@ export async function createContext(): Promise<{
 	// ----------------------------------------------------------------------------
 
 	const config = {
-		maxMessages: 10,
+		maxMessages: DEFAULT_MAX_MESSAGES,
 	};
 
 	const onchainState = createOnchainState({
@@ -107,7 +142,7 @@ export async function createContext(): Promise<{
 	window.accountData = accountData;
 
 	const txObserver = createTransactionObserver({
-		finality: 12, //TODO
+		finality,
 		provider: connection.provider,
 	});
 	window.txObserver = txObserver;
@@ -215,7 +250,7 @@ export async function createContext(): Promise<{
 							lastProcessTime: Date.now(),
 						}));
 						txObserver.process();
-					}, TX_OBSERVER_PROCESS_INTERVAL);
+					}, txObserverProcessInterval);
 				} else {
 					// Lost leadership: stop processing
 					txObserverDebug.update((state) => ({...state, isLeader: false}));

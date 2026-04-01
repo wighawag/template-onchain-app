@@ -1,5 +1,9 @@
 import {PUBLIC_USE_INTERNAL_EXPLORER} from '$env/static/public';
 import deploymentsFromFiles from '$lib/deployments';
+import type {AugmentedChainInfo} from '$lib/core/connection/types';
+
+// Cast chain to augmented type once for proper typing of optional properties
+const chain = deploymentsFromFiles.chain as AugmentedChainInfo;
 
 /**
  * Link destination options for address/transaction components
@@ -11,8 +15,7 @@ export type LinkToOption = 'internal' | 'external' | 'both' | 'auto' | false;
  * Returns null if no block explorer is configured
  */
 export function getBlockExplorerTxUrl(hash: string): string | null {
-	// blockExplorers is optional, may exist in production deployments but not in generated types
-	const blockExplorers = (deploymentsFromFiles.chain as any).blockExplorers;
+	const blockExplorers = chain.blockExplorers;
 	if (!blockExplorers?.default?.url) return null;
 	return `${blockExplorers.default.url}/tx/${hash}`;
 }
@@ -22,8 +25,7 @@ export function getBlockExplorerTxUrl(hash: string): string | null {
  * Returns null if no block explorer is configured
  */
 export function getBlockExplorerAddressUrl(address: string): string | null {
-	// blockExplorers is optional, may exist in production deployments but not in generated types
-	const blockExplorers = (deploymentsFromFiles.chain as any).blockExplorers;
+	const blockExplorers = chain.blockExplorers;
 	if (!blockExplorers?.default?.url) return null;
 	return `${blockExplorers.default.url}/address/${address}`;
 }
@@ -32,8 +34,7 @@ export function getBlockExplorerAddressUrl(address: string): string | null {
  * Get the block explorer name if configured
  */
 export function getBlockExplorerName(): string | null {
-	// blockExplorers is optional, may exist in production deployments but not in generated types
-	const blockExplorers = (deploymentsFromFiles.chain as any).blockExplorers;
+	const blockExplorers = chain.blockExplorers;
 	return blockExplorers?.default?.name ?? null;
 }
 
@@ -41,8 +42,7 @@ export function getBlockExplorerName(): string | null {
  * Check if a block explorer is configured
  */
 export function hasBlockExplorer(): boolean {
-	// blockExplorers is optional, may exist in production deployments but not in generated types
-	const blockExplorers = (deploymentsFromFiles.chain as any).blockExplorers;
+	const blockExplorers = chain.blockExplorers;
 	return !!blockExplorers?.default?.url;
 }
 
