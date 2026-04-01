@@ -20,9 +20,10 @@ if (OFFLINE_CACHE === 'all') {
 	ASSETS = build
 		.concat(prerendered)
 		.concat(files.filter((v) => v.indexOf('pwa/') === -1));
-} // TODO support more offline option
+}
+// NOTE: could support more cache option than just 'all;
 
-let _logEnabled = true; // TODO false
+let _logEnabled = false;
 function log(...args: any[]) {
 	if (_logEnabled) {
 		console.debug(`[Service Worker #${ID}] ${args[0]}`, ...args.slice(1));
@@ -39,13 +40,9 @@ if (DEV) {
 
 const regexesOnlineOnly: string[] = [];
 
-const regexesCacheFirst = [
-	sw.location.origin,
-	// 'https://rsms.me/inter/', // TODO remove, used if using font from there
-	'cdn',
-	'.*\\.png$',
-	'.*\\.svg$',
-];
+// NOTE: we could add more caching option, fonts for example could come to a specific domain
+//  Also we might not want to cache all .pngs / .svgs
+const regexesCacheFirst = [sw.location.origin, 'cdn', '.*\\.png$', '.*\\.svg$'];
 
 const regexesCacheOnly: string[] = [];
 
@@ -161,7 +158,9 @@ async function getResponse(event: FetchEvent): Promise<Response> {
 		return response;
 	}
 
-	// TODO remove query param from matching, query param are used as config (why not use hashes then ?) const normalizedUrl = normalizeUrl(event.request.url);
+	// Note we could remove query param from matching
+	//  that is, if query param are used as config
+	//  we could then do: const normalizedUrl = normalizeUrl(event.request.url);
 	const response = await caches.match(request).then((cache) => {
 		// The order matters !
 		const patterns = [onlineFirst, onlineOnly, cacheFirst, cacheOnly];
@@ -284,8 +283,8 @@ async function handlePush(data?: string) {
 		title: 'Notification',
 		options: {
 			body: 'You have a new notification',
-			icon: '/favicon.png', // TODO template it ?
-			badge: '/favicon.png', // TODO template it ?
+			icon: '/pwa/favicon-512.png', // TODO template it ?
+			badge: '/pwa/favicon-512.png', // TODO template it ?
 		},
 	};
 
