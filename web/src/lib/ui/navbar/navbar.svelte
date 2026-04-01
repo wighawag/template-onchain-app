@@ -8,7 +8,7 @@
 	import Address from '../../core/ui/ethereum/Address.svelte';
 	import Badge from '$lib/shadcn/ui/badge/badge.svelte';
 	import {formatBalance} from '$lib/core/utils/format/balance';
-	import {FaucetButton, hasFaucetLink} from '$lib/core/ui/faucet/index.js';
+	import {FaucetButton, hasFaucet} from '$lib/core/ui/faucet/index.js';
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
@@ -331,7 +331,7 @@
 							</div>
 						{/if}
 
-						{#if hasFaucetLink && $balance.step === 'Loaded' && $balance.value === 0n}
+						{#if hasFaucet && $balance.step === 'Loaded' && $balance.value === 0n}
 							<FaucetButton />
 						{/if}
 					</div>

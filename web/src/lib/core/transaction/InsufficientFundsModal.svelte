@@ -6,7 +6,7 @@
 	import {formatBalance} from '$lib/core/utils/format/balance';
 	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
-	import {FaucetButton, hasFaucetLink} from '$lib/core/ui/faucet/index.js';
+	import {FaucetButton, hasFaucet} from '$lib/core/ui/faucet/index.js';
 	import {deployments} from '$lib/deployments-store';
 
 	const state = balanceCheckStore;
@@ -103,7 +103,7 @@
 				{/if}
 			</div>
 
-			{#if !hasSufficientFunds && hasFaucetLink}
+			{#if !hasSufficientFunds && hasFaucet}
 				<FaucetButton />
 			{/if}
 		</div>

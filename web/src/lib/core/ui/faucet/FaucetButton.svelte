@@ -6,11 +6,44 @@
 	import CircleXIcon from '@lucide/svelte/icons/circle-x';
 	import {getUserContext} from '$lib';
 	import {claimFund} from 'faucet-client';
-	import {PUBLIC_FAUCET_LINK} from '$env/static/public';
+	import {PUBLIC_FAUCET_LINK, PUBLIC_FAUCET_API} from '$env/static/public';
 
-	const {account, balance, deployments} = getUserContext();
+	const {account, balance, deployments, publicClient} = getUserContext();
 
 	let status = $state<'idle' | 'pending' | 'success' | 'error'>('idle');
+
+	async function claimViaApi(address: `0x${string}`, chainId: number): Promise<void> {
+		// The faucet API expects POST /api/claim with JSON body {token, chainId, address}
+		// When captcha is disabled on server (DISABLE_CAPTCHA=true), token can be any value
+		const url = PUBLIC_FAUCET_API.endsWith('/') ? `${PUBLIC_FAUCET_API}api/claim` : `${PUBLIC_FAUCET_API}/api/claim`;
+
+		const response = await fetch(url, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				token: 'direct-api-call', // Dummy token for captcha-disabled mode
+				chainId: String(chainId),
+				address,
+			}),
+		});
+
+		const data = await response.json();
+
+		if (!response.ok) {
+			throw new Error(`Faucet API error: ${data.error || response.statusText}`);
+		}
+
+		const txHash = data.txHash as `0x${string}`;
+
+		if (!txHash || typeof txHash !== 'string' || !txHash.startsWith('0x')) {
+			throw new Error('Invalid txHash returned from faucet API');
+		}
+
+		// Wait for the transaction to be included
+		await publicClient.waitForTransactionReceipt({hash: txHash});
+	}
 
 	async function openFaucet() {
 		const address = $account;
@@ -20,17 +53,23 @@
 
 		status = 'pending';
 		try {
-			await claimFund(
-				{
-					faucetUrl: PUBLIC_FAUCET_LINK,
-					chainId: $deployments.chain.id,
-					address,
-				},
-				{
-					width: 600,
-					height: 700,
-				},
-			);
+			if (PUBLIC_FAUCET_API && PUBLIC_FAUCET_API.trim()) {
+				// Use direct API call instead of popup
+				await claimViaApi(address, $deployments.chain.id);
+			} else {
+				// Use popup flow
+				await claimFund(
+					{
+						faucetUrl: PUBLIC_FAUCET_LINK,
+						chainId: $deployments.chain.id,
+						address,
+					},
+					{
+						width: 600,
+						height: 700,
+					},
+				);
+			}
 			status = 'success';
 			// Trigger immediate balance refresh so modal updates
 			balance.update();

@@ -24,6 +24,35 @@ export interface WalletFixtures {
 }
 
 /**
+ * Fund a wallet address using Hardhat's JSON-RPC method
+ */
+async function fundWalletViaHardhat(
+	page: Page,
+	address: string,
+	amountInEther: string = '10',
+): Promise<void> {
+	// Convert ether to wei in hex
+	const weiAmount = BigInt(parseFloat(amountInEther) * 1e18);
+	const hexAmount = '0x' + weiAmount.toString(16);
+
+	await page.evaluate(
+		async ({addr, amount}) => {
+			await fetch('http://localhost:8545', {
+				method: 'POST',
+				headers: {'Content-Type': 'application/json'},
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					method: 'hardhat_setBalance',
+					params: [addr, amount],
+					id: 1,
+				}),
+			});
+		},
+		{addr: address, amount: hexAmount},
+	);
+}
+
+/**
  * Connect wallet using Dev Mode (burner wallet with test mnemonic)
  */
 async function connectWalletDevMode(page: Page): Promise<void> {
@@ -47,23 +76,73 @@ async function connectWalletDevMode(page: Page): Promise<void> {
 		// Modal might not have appeared if already connected
 		console.log('Wallet may already be connected or modal not shown');
 	}
+
+	// Handle Insufficient Funds modal - dismiss it and fund the wallet
+	try {
+		const dismissButton = page.getByRole('button', {name: /dismiss/i});
+		const isInsufficientFundsVisible = await dismissButton
+			.isVisible({timeout: 2000})
+			.catch(() => false);
+
+		if (isInsufficientFundsVisible) {
+			// Get the wallet address from the page header (shows "0 ETH" with avatar)
+			// Fund the wallet using Hardhat's setBalance
+			const walletAddress = await page.evaluate(() => {
+				// Try to get the address from localStorage where the burner wallet stores it
+				const storedWallet = localStorage.getItem('__burner_wallet__');
+				if (storedWallet) {
+					try {
+						const wallet = JSON.parse(storedWallet);
+						return wallet.address || wallet.account;
+					} catch {
+						return null;
+					}
+				}
+				return null;
+			});
+
+			if (walletAddress) {
+				await fundWalletViaHardhat(page, walletAddress);
+				// Wait for balance update to reflect
+				await page.waitForTimeout(500);
+			}
+
+			// Click dismiss to close the modal
+			await dismissButton.click();
+
+			// Wait for modal to close
+			await page.waitForFunction(
+				() => {
+					const modal = document.querySelector('[role="dialog"]');
+					return !modal || !modal.textContent?.includes('Insufficient Funds');
+				},
+				{timeout: 5000},
+			);
+		}
+	} catch {
+		// No insufficient funds modal, that's fine
+	}
 }
 
 /**
  * Wait for any pending transaction to be confirmed.
- * Looks for loading indicators and waits for them to disappear.
+ * Waits for the send button to be enabled (not submitting) or for success toast.
  */
 async function waitForTransactionComplete(page: Page): Promise<void> {
-	// Wait for any spinners to disappear
-	const spinner = page.locator('[class*="animate-spin"]');
-	if (await spinner.isVisible({timeout: 1000}).catch(() => false)) {
-		await spinner.waitFor({state: 'hidden', timeout: 30000});
-	}
-
-	// Also wait for pending indicators in message cards
+	// Wait for any pending indicators in message cards to disappear
 	const pendingIndicator = page.locator('text=Pending');
 	if (await pendingIndicator.isVisible({timeout: 500}).catch(() => false)) {
 		await pendingIndicator.waitFor({state: 'hidden', timeout: 30000});
+	}
+
+	// Alternatively, check for success toast
+	const successToast = page.locator('[data-sonner-toast][data-type="success"]');
+	try {
+		await successToast.waitFor({state: 'visible', timeout: 5000});
+		// Give the UI a moment to update after success
+		await page.waitForTimeout(500);
+	} catch {
+		// No success toast, that's okay - might have already dismissed
 	}
 }
 
@@ -84,15 +163,16 @@ export const test = base.extend<WalletFixtures>({
 
 		// Trigger connection by clicking send (this will open the modal)
 		const input = page.getByPlaceholder('Enter your greeting...');
-		await input.fill('test');
+		await input.fill('fixture-connection-test');
 		const sendButton = page.getByRole('button', {name: /send/i});
 		await sendButton.click();
 
 		// Connect using Dev Mode
 		await connectWalletDevMode(page);
 
-		// Wait for the input to be enabled (it's disabled during loading/connecting)
-		await expect(input).toBeEnabled({timeout: 30000});
+		// Wait for the input to be enabled (it's disabled during submitting)
+		// This also waits for the initial transaction to complete
+		await expect(input).toBeEnabled({timeout: 60000});
 
 		// Clear the input for tests
 		await input.clear();
