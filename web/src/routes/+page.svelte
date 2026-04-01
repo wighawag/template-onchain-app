@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {route} from '$lib';
+	import {url} from '$lib/core/utils/web/path';
 	import Button from '$lib/shadcn/ui/button/button.svelte';
 	import DefaultHead from '../lib/metadata/DefaultHead.svelte';
 	import {onMount} from 'svelte';
@@ -22,7 +23,7 @@
 	<!-- Hero Section -->
 	<div class="mb-16 flex flex-col items-center text-center">
 		<img
-			src="/icon.svg"
+			src={url('/icon.svg')}
 			alt="Jolly Roger"
 			class="mb-8 h-48 w-48 drop-shadow-lg"
 		/>
