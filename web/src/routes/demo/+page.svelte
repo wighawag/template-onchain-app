@@ -57,7 +57,7 @@
 					account: currentConnection.account.address,
 				},
 			});
-	
+
 			await walletClient.writeContract(contractRequest);
 			greetingInput = '';
 		} catch (error) {

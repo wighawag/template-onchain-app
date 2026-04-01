@@ -55,7 +55,10 @@ export function createENSService(): ENSContext {
 		string,
 		Promise<`0x${string}` | null>
 	>();
-	const pendingAvatarRequests = new Map<`0x${string}`, Promise<string | null>>();
+	const pendingAvatarRequests = new Map<
+		`0x${string}`,
+		Promise<string | null>
+	>();
 
 	/**
 	 * Get the current ENS state for an address (synchronous).
@@ -202,7 +205,9 @@ export function createENSService(): ENSContext {
 	 * If a request is already in progress for this address, returns the same promise.
 	 * If the result is cached, returns it immediately.
 	 */
-	async function fetchENSAvatar(address: `0x${string}`): Promise<string | null> {
+	async function fetchENSAvatar(
+		address: `0x${string}`,
+	): Promise<string | null> {
 		// Check if we already have a cached result
 		const cached = avatarCache.get(address);
 		if (cached && !cached.loading) {

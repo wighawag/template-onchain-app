@@ -11,7 +11,8 @@
 	>
 		<CloudOffIcon class="h-4 w-4 shrink-0 text-red-400" />
 		<span class="text-sm text-red-400">
-			You are offline. Some features may be unavailable until connectivity is restored.
+			You are offline. Some features may be unavailable until connectivity is
+			restored.
 		</span>
 	</div>
 {/if}

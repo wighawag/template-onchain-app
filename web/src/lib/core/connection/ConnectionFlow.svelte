@@ -19,8 +19,8 @@
 	let email: string = $state('');
 	let emailInput: HTMLInputElement | undefined = $state(undefined);
 
-	// TODO make it a specific `auto` mode ?
-	// or maybe on provider ?
+	// TODO instead of burner-wallet specific detection we could make it a specific `auto` mode ?
+	// or maybe a field on provider, like provider.requiresNoUserConfirmation ?
 	let pendingRequest = $derived(
 		!(
 			$connection.step !== 'Idle' &&

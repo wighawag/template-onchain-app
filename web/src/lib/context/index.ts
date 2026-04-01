@@ -55,7 +55,6 @@ export async function createContext(): Promise<{
 
 	let cleanupBurnerWallet: (() => void) | undefined;
 
-	// TODO use chainInfo if no publicNodeUrl ?
 	if (
 		PUBLIC_USE_BURNER_WALLET &&
 		(PUBLIC_USE_BURNER_WALLET.startsWith('http') || PUBLIC_NODE_URL)
@@ -179,7 +178,7 @@ export async function createContext(): Promise<{
 
 	// ----------------------------------------------------------------------------
 
-	// TODO use deployment store ?
+	// TODO use reactive deployment store ?
 	const gasFee = createGasFeeStore({
 		publicClient: publicClient,
 		deployments: deployments.get(),

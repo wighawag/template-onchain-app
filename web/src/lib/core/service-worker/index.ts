@@ -299,7 +299,6 @@ export function createServiceWorker(notifications?: NotificationsService) {
 
 	return {
 		subscribe: store.subscribe,
-		set: store.set, // TODO remove and move handler logic in here
 		get registration(): ServiceWorkerRegistration | undefined {
 			const $serviceWorker = get(store);
 			if ($serviceWorker && 'registration' in $serviceWorker) {

@@ -17,7 +17,7 @@ export function handleAutomaticUpdate(
 	);
 
 	// but we still do not an update every so often
-	// TODO improve upon this
+	// TODO improve upon this, we can have smarter interval for checking service-worker ?
 	return setInterval(() => registration.update(), intervals.checks);
 }
 

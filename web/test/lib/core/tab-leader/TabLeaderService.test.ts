@@ -12,7 +12,10 @@ const localStorageMock = {
 		delete store[key];
 	},
 };
-Object.defineProperty(globalThis, 'localStorage', {value: localStorageMock, writable: true});
+Object.defineProperty(globalThis, 'localStorage', {
+	value: localStorageMock,
+	writable: true,
+});
 
 function clearStore() {
 	for (const key of Object.keys(store)) {
@@ -38,7 +41,12 @@ class MockBroadcastChannel {
 		if (this.closed) return;
 		// Deliver to all other instances with the same channel name
 		for (const instance of MockBroadcastChannel.instances) {
-			if (instance !== this && instance.name === this.name && !instance.closed && instance.onmessage) {
+			if (
+				instance !== this &&
+				instance.name === this.name &&
+				!instance.closed &&
+				instance.onmessage
+			) {
 				instance.onmessage(new MessageEvent('message', {data}));
 			}
 		}
@@ -55,7 +63,10 @@ class MockBroadcastChannel {
 	}
 }
 
-Object.defineProperty(globalThis, 'BroadcastChannel', {value: MockBroadcastChannel, writable: true});
+Object.defineProperty(globalThis, 'BroadcastChannel', {
+	value: MockBroadcastChannel,
+	writable: true,
+});
 
 // Mock crypto.randomUUID
 let uuidCounter = 0;
@@ -210,7 +221,11 @@ describe('TabLeaderService', () => {
 		const originalBC = globalThis.BroadcastChannel;
 		// @ts-expect-error - removing BroadcastChannel
 		delete globalThis.BroadcastChannel;
-		Object.defineProperty(globalThis, 'BroadcastChannel', {value: undefined, writable: true, configurable: true});
+		Object.defineProperty(globalThis, 'BroadcastChannel', {
+			value: undefined,
+			writable: true,
+			configurable: true,
+		});
 
 		const service = createTabLeaderService();
 		service.start();
@@ -218,7 +233,11 @@ describe('TabLeaderService', () => {
 
 		service.stop();
 
-		Object.defineProperty(globalThis, 'BroadcastChannel', {value: originalBC, writable: true, configurable: true});
+		Object.defineProperty(globalThis, 'BroadcastChannel', {
+			value: originalBC,
+			writable: true,
+			configurable: true,
+		});
 	});
 
 	it('subscribers are notified of leadership changes', () => {

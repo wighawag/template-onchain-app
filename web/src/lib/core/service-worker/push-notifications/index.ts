@@ -2,7 +2,6 @@ import {derived, type Readable} from 'svelte/store';
 import {type ServiceWorkerState} from '..';
 import {urlB64ToUint8Array} from './utils';
 
-// TODO share with server
 export type NotificationAction = {
 	action: string;
 	title: string;
@@ -250,8 +249,7 @@ export function createPushNotificationService(params: {
 				registeredOnServer = json.registered;
 			}
 		} catch (err) {
-			// TODO
-			// show error ?
+			// TODO: show error ?
 		}
 
 		setState({

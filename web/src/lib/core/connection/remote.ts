@@ -10,14 +10,13 @@ import type {
 	TypedPublicClient,
 } from './types';
 
-// TODO allow to specify the expected DeploymentStore type
 export async function establishRemoteConnection(options?: {
 	nodeURL?: string;
 	chainInfoNodeURL?: string;
 }): Promise<EstablishedConnection> {
 	// Use deployments.get() for synchronous access
 	const currentDeployments = deployments.get();
-	
+
 	// Cast to ChainInfo to preserve the literal type even when modifying rpcUrls
 	// The structure is the same, just the RPC URL may change
 	const chainInfo: ChainInfo = options?.chainInfoNodeURL

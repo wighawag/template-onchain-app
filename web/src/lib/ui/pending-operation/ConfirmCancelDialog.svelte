@@ -33,8 +33,8 @@
 
 	<div class="space-y-4 py-4">
 		<p class="text-sm text-muted-foreground">
-			This will send a 0 {$deployments.chain.nativeCurrency.symbol} transaction
-			to yourself with the same nonce but higher gas price.
+			This will send a 0 {$deployments.chain.nativeCurrency.symbol} transaction to
+			yourself with the same nonce but higher gas price.
 		</p>
 		<p class="text-sm text-muted-foreground">
 			If successful, the original transaction will be replaced and effectively

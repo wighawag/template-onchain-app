@@ -16,7 +16,7 @@ export const ssr = true;
 console.log(`VERSION: ${version}`);
 
 if (!dev) {
-	// TODO add option to enable it in dev
+	// TODO add option to enable service-worker in dev mode
 	onDocumentLoaded(serviceWorker.register);
 } else {
 	console.warn(

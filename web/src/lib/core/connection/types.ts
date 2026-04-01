@@ -31,7 +31,11 @@ export type {
 } from '$lib/deployments-store';
 
 // Import type for local use
-import type {TypedDeployments, ChainInfo, DeploymentsStore} from '$lib/deployments-store';
+import type {
+	TypedDeployments,
+	ChainInfo,
+	DeploymentsStore,
+} from '$lib/deployments-store';
 
 // ============================================================================
 // Signer and Account Types

@@ -325,7 +325,7 @@ async function handlePush(data?: string) {
 						}
 					}
 				}
-				// TODO ?
+				// TODO handle other notification attributes ?
 				// notif.actions
 				// notif.vibrate
 				// notif.timestamp

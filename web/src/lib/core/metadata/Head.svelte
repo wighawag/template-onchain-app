@@ -12,7 +12,7 @@
 		host: string;
 		ENSName?: string | null;
 		themeColor?: string | null;
-		appleStatusBarStyle?: string | null; // TODO type
+		appleStatusBarStyle?: string | null; // TODO type for appleStatusBarStyle choices
 		iconExtension?: string;
 	}
 

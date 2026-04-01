@@ -19,9 +19,7 @@
 	);
 
 	// Get the current balance value reactively
-	let currentBalance = $derived(
-		liveBalanceValue ? $liveBalanceValue : null,
-	);
+	let currentBalance = $derived(liveBalanceValue ? $liveBalanceValue : null);
 
 	// Calculate if we now have sufficient funds
 	let hasSufficientFunds = $derived(

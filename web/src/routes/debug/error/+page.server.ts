@@ -1,10 +1,10 @@
-import { error, redirect } from '@sveltejs/kit';
-import { dev } from '$app/environment';
-import type { PageServerLoad } from './$types';
+import {error, redirect} from '@sveltejs/kit';
+import {dev} from '$app/environment';
+import type {PageServerLoad} from './$types';
 
 /**
  * Debug route for testing error page rendering.
- * 
+ *
  * Usage:
  * - /debug/error?status=404 → Throws 404 error
  * - /debug/error?status=500 → Throws 500 error
@@ -12,10 +12,10 @@ import type { PageServerLoad } from './$types';
  * - /debug/error?status=401 → Throws 401 error
  * - /debug/error?status=418 → Throws 418 "I'm a teapot" error
  * - /debug/error?message=Custom%20message → Custom error message
- * 
+ *
  * Default: Shows a page with links to test various scenarios
  */
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({url}) => {
 	// Only allow in development mode
 	if (!dev) {
 		redirect(302, '/');
@@ -26,10 +26,10 @@ export const load: PageServerLoad = async ({ url }) => {
 
 	if (status) {
 		const statusCode = parseInt(status, 10);
-		
+
 		if (isNaN(statusCode) || statusCode < 400 || statusCode > 599) {
 			error(400, {
-				message: `Invalid status code: ${status}. Must be between 400-599.`
+				message: `Invalid status code: ${status}. Must be between 400-599.`,
 			});
 		}
 
@@ -43,27 +43,28 @@ export const load: PageServerLoad = async ({ url }) => {
 			500: 'Internal Server Error - Something went wrong on our end',
 			502: 'Bad Gateway - Invalid response from upstream server',
 			503: 'Service Unavailable - Please try again later',
-			504: 'Gateway Timeout - Upstream server took too long'
+			504: 'Gateway Timeout - Upstream server took too long',
 		};
 
 		error(statusCode, {
-			message: message || defaultMessages[statusCode] || `HTTP ${statusCode} Error`
+			message:
+				message || defaultMessages[statusCode] || `HTTP ${statusCode} Error`,
 		});
 	}
 
 	// If no status param, return data for the test page
 	return {
 		availableErrors: [
-			{ status: 400, label: 'Bad Request' },
-			{ status: 401, label: 'Unauthorized' },
-			{ status: 403, label: 'Forbidden' },
-			{ status: 404, label: 'Not Found' },
-			{ status: 418, label: "I'm a Teapot" },
-			{ status: 429, label: 'Too Many Requests' },
-			{ status: 500, label: 'Internal Server Error' },
-			{ status: 502, label: 'Bad Gateway' },
-			{ status: 503, label: 'Service Unavailable' },
-			{ status: 504, label: 'Gateway Timeout' }
-		]
+			{status: 400, label: 'Bad Request'},
+			{status: 401, label: 'Unauthorized'},
+			{status: 403, label: 'Forbidden'},
+			{status: 404, label: 'Not Found'},
+			{status: 418, label: "I'm a Teapot"},
+			{status: 429, label: 'Too Many Requests'},
+			{status: 500, label: 'Internal Server Error'},
+			{status: 502, label: 'Bad Gateway'},
+			{status: 503, label: 'Service Unavailable'},
+			{status: 504, label: 'Gateway Timeout'},
+		],
 	};
 };

@@ -13,8 +13,14 @@
 	import type {ExtendedTransactionMetadata} from '$lib/account/AccountData';
 	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
 
-	const {walletClient, accountData, gasFee, publicClient, balance, deployments} =
-		getUserContext();
+	const {
+		walletClient,
+		accountData,
+		gasFee,
+		publicClient,
+		balance,
+		deployments,
+	} = getUserContext();
 
 	// Modal state
 	let showDismissConfirm = $state(false);
@@ -121,14 +127,20 @@
 				data: [],
 				operationId: operationKey,
 			};
-		await walletClient.sendTransaction({
-			...txRequest,
-			chain: $deployments.chain, // TODO? tx.chain ?
-			nonce: originalTx.nonce,
-			maxFeePerGas: gasPrice.maxFeePerGas,
-			maxPriorityFeePerGas: gasPrice.maxPriorityFeePerGas,
-			metadata: resubmitMetadata,
-		});
+
+			if (originalTx.chainId && originalTx.chainId !== $deployments.chain.id) {
+				throw new Error(
+					`tx to resubmit is from a different chain (${originalTx.chainId}) than the current (${$deployments.chain.id})`,
+				);
+			}
+			await walletClient.sendTransaction({
+				...txRequest,
+				chain: $deployments.chain,
+				nonce: originalTx.nonce,
+				maxFeePerGas: gasPrice.maxFeePerGas,
+				maxPriorityFeePerGas: gasPrice.maxPriorityFeePerGas,
+				metadata: resubmitMetadata,
+			});
 
 			handleClose();
 		} catch (err: unknown) {
@@ -187,18 +199,24 @@
 				},
 			});
 
-		await walletClient.sendTransaction({
-			...txRequest,
-			chain: $deployments.chain,
-			nonce: originalTx.nonce,
-			maxFeePerGas: cancelGasPrice,
-			maxPriorityFeePerGas: cancelGasPrice,
-			metadata: {
-				type: 'unknown',
-				name: 'Cancel Transaction',
-				data: [],
-			},
-		});
+			if (originalTx.chainId && originalTx.chainId !== $deployments.chain.id) {
+				throw new Error(
+					`tx to cancel is from a different chain (${originalTx.chainId}) than the current (${$deployments.chain.id})`,
+				);
+			}
+
+			await walletClient.sendTransaction({
+				...txRequest,
+				chain: $deployments.chain,
+				nonce: originalTx.nonce,
+				maxFeePerGas: cancelGasPrice,
+				maxPriorityFeePerGas: cancelGasPrice,
+				metadata: {
+					type: 'unknown',
+					name: 'Cancel Transaction',
+					data: [],
+				},
+			});
 
 			handleClose();
 		} catch (err: unknown) {
