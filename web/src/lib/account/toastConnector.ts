@@ -98,6 +98,20 @@ export function createToastConnector(params: {
 	const operationLastInclusion = new Map<string, string>();
 	// Map to track last final state to detect when Dropped becomes final (Inspect → Dismiss button)
 	const operationLastFinal = new Map<string, boolean>();
+	// Version counter per operation to guarantee unique toast IDs under rapid state changes
+	// This prevents collision when the same operation key goes through multiple state transitions quickly
+	const operationVersion = new Map<string, number>();
+
+	/**
+	 * Get the next version number for an operation, ensuring unique toast IDs
+	 */
+	function getNextVersion(key: string): number {
+		const current = operationVersion.get(key) ?? 0;
+		const next = current + 1;
+		operationVersion.set(key, next);
+		return next;
+	}
+
 	function deleteOperation(key: string) {
 		const currentAccountData = accountData.get();
 		if (currentAccountData) {
@@ -126,9 +140,12 @@ export function createToastConnector(params: {
 		const isFinal = !!state?.final;
 		const message = getStatusMessage(operation.transactionIntent);
 
-		// Use a unique toast ID per inclusion state and final flag to ensure proper updates
-		// Include final flag so button changes from Inspect to Dismiss when Dropped becomes final
-		const toastId = `${key}-${inclusion}-${isFinal ? 'final' : 'pending'}`;
+		// Get current version (already incremented by showToast)
+		const version = operationVersion.get(key) ?? 0;
+
+		// Use a unique toast ID per version, inclusion state and final flag to ensure proper updates
+		// Version ensures uniqueness under rapid state changes
+		const toastId = `${key}-v${version}-${inclusion}-${isFinal ? 'final' : 'pending'}`;
 
 		// For dropped AND final transactions, directly delete without modal
 		// For dropped but NOT final, show modal with Dismiss button
@@ -182,12 +199,15 @@ export function createToastConnector(params: {
 		operationLastInclusion.set(key, currentInclusion);
 		operationLastFinal.set(key, currentFinal);
 
-		// Create unique toast ID based on current state
-		// For error states, include inclusion and final flag to ensure proper updates
+		// Get version to ensure unique toast IDs under rapid state changes
+		const version = getNextVersion(key);
+
+		// Create unique toast ID based on current state and version
+		// Version ensures uniqueness even when status/inclusion cycle back to same values
 		const toastId =
 			statusType === 'error'
-				? `${key}-${currentInclusion}-${currentFinal ? 'final' : 'pending'}`
-				: `${key}-${statusType}`;
+				? `${key}-v${version}-${currentInclusion}-${currentFinal ? 'final' : 'pending'}`
+				: `${key}-v${version}-${statusType}`;
 
 		// Dismiss previous toast if ID changed
 		const previousToastId = operationToasts.get(key);
@@ -228,6 +248,7 @@ export function createToastConnector(params: {
 		operationLastStatus.delete(key);
 		operationLastInclusion.delete(key);
 		operationLastFinal.delete(key);
+		operationVersion.delete(key);
 	}
 
 	function clearAllToasts() {
@@ -238,6 +259,7 @@ export function createToastConnector(params: {
 		operationLastStatus.clear();
 		operationLastInclusion.clear();
 		operationLastFinal.clear();
+		operationVersion.clear();
 	}
 
 	let stopConnection: (() => void) | undefined;
