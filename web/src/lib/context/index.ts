@@ -101,7 +101,8 @@ export async function createContext(): Promise<{
 
 	// Extract chain-specific configuration with defaults
 	const finality = chainProperties.finality ?? DEFAULT_FINALITY;
-	const blockTimeMs = chainProperties.averageBlockTimeMs ?? DEFAULT_BLOCK_TIME_MS;
+	const blockTimeMs =
+		chainProperties.averageBlockTimeMs ?? DEFAULT_BLOCK_TIME_MS;
 	const txObserverProcessInterval = calculateProcessInterval(blockTimeMs);
 
 	// Reactive clock store that updates every second for smooth "time ago" displays
