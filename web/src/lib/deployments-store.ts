@@ -157,10 +157,13 @@ if (import.meta.hot) {
 		if (newModule?.default) {
 			const newDeployments = newModule.default as TypedDeployments;
 
-			// Check if we need a full reload of all dependent modules
+			// Check if we need a full page reload
 			if (requiresFullReload(currentDeployments, newDeployments)) {
-				// Invalidate will bubble up to all importers since we don't accept self-updates
-				import.meta.hot?.invalidate();
+				// Use explicit browser reload for critical changes
+				// HMR bubble-up doesn't work reliably due to Svelte components
+				// accepting HMR updates automatically
+				console.log('[HMR] Critical change detected, reloading page...');
+				location.reload();
 				return;
 			}
 
@@ -169,7 +172,6 @@ if (import.meta.hot) {
 		}
 	});
 
-	// NOTE: We intentionally do NOT call import.meta.hot.accept() for self-updates.
-	// This ensures that invalidate() will bubble up to all modules that import
-	// deployments-store.ts when chain ID or genesis hash changes.
+	// Accept self-updates for non-critical changes to store logic
+	import.meta.hot.accept();
 }
