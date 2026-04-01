@@ -1,4 +1,9 @@
-import {test as base, expect, type Page, type BrowserContext} from '@playwright/test';
+import {
+	test as base,
+	expect,
+	type Page,
+	type BrowserContext,
+} from '@playwright/test';
 
 /**
  * Extended test fixtures for E2E testing with wallet interactions.
@@ -26,11 +31,14 @@ const BASE_URL = 'http://localhost:4173';
  * Fund an address using Hardhat's hardhat_setBalance RPC method.
  * This is useful for tests where we need to ensure the wallet has ETH.
  */
-async function fundAddressViaHardhat(address: string, amountInEth = '100'): Promise<void> {
+async function fundAddressViaHardhat(
+	address: string,
+	amountInEth = '100',
+): Promise<void> {
 	// Convert ETH to wei (hex)
 	const weiAmount = BigInt(parseFloat(amountInEth) * 1e18);
 	const hexAmount = '0x' + weiAmount.toString(16);
-	
+
 	const response = await fetch(HARDHAT_RPC_URL, {
 		method: 'POST',
 		headers: {'Content-Type': 'application/json'},
@@ -41,7 +49,7 @@ async function fundAddressViaHardhat(address: string, amountInEth = '100'): Prom
 			id: 1,
 		}),
 	});
-	
+
 	if (!response.ok) {
 		throw new Error(`Failed to set balance: ${response.statusText}`);
 	}
@@ -70,7 +78,7 @@ export interface WalletFixtures {
 	 * Waits for a transaction to be confirmed.
 	 */
 	waitForTransaction: (page: Page) => Promise<void>;
-	
+
 	/**
 	 * Ensures the test wallet addresses have ETH on the Hardhat node.
 	 * Call this before tests that need funded wallets.
@@ -125,22 +133,24 @@ async function connectWalletDevMode(page: Page): Promise<void> {
  */
 async function handleInsufficientFundsModal(page: Page): Promise<void> {
 	const getEthButton = page.getByRole('button', {name: /get eth/i});
-	
+
 	try {
 		// Wait for the button to exist in the DOM
 		await getEthButton.waitFor({state: 'attached', timeout: 5000});
-		
+
 		// Wait for it to be enabled (not loading)
 		await expect(getEthButton).toBeEnabled({timeout: 30000});
-		
+
 		// Click "Get ETH" - this will call the faucet API
 		await getEthButton.click();
 
 		// Wait for "Continue Transaction" button to appear and be enabled
-		const continueButton = page.getByRole('button', {name: /continue transaction/i});
+		const continueButton = page.getByRole('button', {
+			name: /continue transaction/i,
+		});
 		await continueButton.waitFor({state: 'visible', timeout: 30000});
 		await expect(continueButton).toBeEnabled({timeout: 10000});
-		
+
 		// Click "Continue Transaction" to proceed with the original transaction
 		await continueButton.click();
 
@@ -269,7 +279,7 @@ export const test = base.extend<WalletFixtures>({
 		const input = page.getByPlaceholder('Enter your greeting...');
 		await input.click();
 		await input.fill('fixture-connection-test');
-		
+
 		// Wait for the button to be enabled after filling the input
 		const sendButton = page.getByRole('button', {name: /send/i});
 		await expect(sendButton).toBeEnabled({timeout: 5000});

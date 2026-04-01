@@ -5,9 +5,7 @@ describe('Demo Page - Greetings Registry', () => {
 		await page.goto('/demo');
 
 		// Check that the greeting input is visible
-		await expect(
-			page.getByPlaceholder('Enter your greeting...'),
-		).toBeVisible();
+		await expect(page.getByPlaceholder('Enter your greeting...')).toBeVisible();
 
 		// Check that the send button is visible
 		await expect(page.getByRole('button', {name: /send/i})).toBeVisible();
@@ -37,12 +35,12 @@ describe('Demo Page - Greetings Registry', () => {
 	}) => {
 		// Fund wallets before testing
 		await fundWallets();
-		
+
 		await page.goto('/demo');
 
 		// Use a unique greeting for this test
 		const uniqueGreeting = `Connect test ${Date.now()}`;
-		
+
 		// Fill in a greeting - use click then fill to ensure focus
 		const input = page.getByPlaceholder('Enter your greeting...');
 		await input.click();
@@ -64,11 +62,13 @@ describe('Demo Page - Greetings Registry', () => {
 		await waitForTransaction(page);
 
 		// The greeting should appear in the messages list (look for exact text match in a message card)
-		const messageCard = page.locator('[class*="rounded-lg border px-4 py-3"]').filter({
-			hasText: uniqueGreeting,
-		});
+		const messageCard = page
+			.locator('[class*="rounded-lg border px-4 py-3"]')
+			.filter({
+				hasText: uniqueGreeting,
+			});
 		await expect(messageCard).toBeVisible({timeout: 30000});
-		
+
 		// Wallet should now be connected (balance shown in navbar)
 		const navbarBalance = page.locator('text=/\\d+\\.?\\d*\\s*ETH/');
 		await expect(navbarBalance.first()).toBeVisible({timeout: 10000});
@@ -81,7 +81,7 @@ describe('Demo Page - Greetings Registry', () => {
 	}) => {
 		// Fund wallets before testing
 		await fundWallets();
-		
+
 		await page.goto('/demo');
 
 		// Wait for the page to fully load
@@ -90,7 +90,7 @@ describe('Demo Page - Greetings Registry', () => {
 
 		// Use unique greeting for this test
 		const uniqueGreeting = `Wallet test ${Date.now()}`;
-		
+
 		// Fill in a greeting - click first to ensure the input is ready
 		await input.click();
 		await input.fill(uniqueGreeting);
@@ -169,9 +169,11 @@ describe('Demo Page - Greetings Registry', () => {
 		await waitForTransaction(page);
 
 		// Find the message and check timestamp shows "Just now"
-		const messageContainer = page.locator('[class*="rounded-lg border px-4 py-3"]').filter({
-			hasText: uniqueGreeting,
-		});
+		const messageContainer = page
+			.locator('[class*="rounded-lg border px-4 py-3"]')
+			.filter({
+				hasText: uniqueGreeting,
+			});
 		await expect(messageContainer.getByText('Just now')).toBeVisible({
 			timeout: 30000,
 		});
@@ -192,9 +194,11 @@ describe('Demo Page - Greetings Registry', () => {
 		await waitForTransaction(page);
 
 		// Wait for the message to appear (confirms transaction completed)
-		const messageCard = page.locator('[class*="rounded-lg border px-4 py-3"]').filter({
-			hasText: uniqueMessage,
-		});
+		const messageCard = page
+			.locator('[class*="rounded-lg border px-4 py-3"]')
+			.filter({
+				hasText: uniqueMessage,
+			});
 		await expect(messageCard).toBeVisible({timeout: 30000});
 
 		// Input should be cleared after successful submission
@@ -202,7 +206,10 @@ describe('Demo Page - Greetings Registry', () => {
 		await expect(input).toHaveValue('', {timeout: 15000});
 	});
 
-	test('should replace previous message from same account', async ({connectedPage, waitForTransaction}) => {
+	test('should replace previous message from same account', async ({
+		connectedPage,
+		waitForTransaction,
+	}) => {
 		const page = connectedPage;
 
 		// The contract allows only ONE message per account - new messages replace old ones
@@ -217,9 +224,11 @@ describe('Demo Page - Greetings Registry', () => {
 		await waitForTransaction(page);
 
 		// Wait for first message to appear in a message card
-		const messageCard1 = page.locator('[class*="rounded-lg border px-4 py-3"]').filter({
-			hasText: message1,
-		});
+		const messageCard1 = page
+			.locator('[class*="rounded-lg border px-4 py-3"]')
+			.filter({
+				hasText: message1,
+			});
 		await expect(messageCard1).toBeVisible({timeout: 30000});
 
 		// Submit second message (this REPLACES the first message)
@@ -228,9 +237,11 @@ describe('Demo Page - Greetings Registry', () => {
 		await waitForTransaction(page);
 
 		// Wait for second message to appear
-		const messageCard2 = page.locator('[class*="rounded-lg border px-4 py-3"]').filter({
-			hasText: message2,
-		});
+		const messageCard2 = page
+			.locator('[class*="rounded-lg border px-4 py-3"]')
+			.filter({
+				hasText: message2,
+			});
 		await expect(messageCard2).toBeVisible({timeout: 30000});
 
 		// The first message should NO LONGER be visible (replaced by second)

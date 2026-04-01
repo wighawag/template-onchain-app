@@ -12,10 +12,15 @@
 
 	let status = $state<'idle' | 'pending' | 'success' | 'error'>('idle');
 
-	async function claimViaApi(address: `0x${string}`, chainId: number): Promise<void> {
+	async function claimViaApi(
+		address: `0x${string}`,
+		chainId: number,
+	): Promise<void> {
 		// The faucet API expects POST /api/claim with JSON body {token, chainId, address}
 		// When captcha is disabled on server (DISABLE_CAPTCHA=true), token can be any value
-		const url = PUBLIC_FAUCET_API.endsWith('/') ? `${PUBLIC_FAUCET_API}api/claim` : `${PUBLIC_FAUCET_API}/api/claim`;
+		const url = PUBLIC_FAUCET_API.endsWith('/')
+			? `${PUBLIC_FAUCET_API}api/claim`
+			: `${PUBLIC_FAUCET_API}/api/claim`;
 
 		const response = await fetch(url, {
 			method: 'POST',

@@ -61,8 +61,7 @@ describe('formatBalance', () => {
 		it('should use > prefix when decimals cannot be shown for large numbers', () => {
 			// Large number where decimals exceed maxSymbols
 			// 999999.1 ETH - integer part uses 6 symbols + 1 for dot = 7
-			const largeWithDecimal =
-				999_999_100_000_000_000_000_000n;
+			const largeWithDecimal = 999_999_100_000_000_000_000_000n;
 			expect(formatBalance(largeWithDecimal)).toBe('>999999');
 		});
 	});
@@ -87,7 +86,9 @@ describe('formatBalance', () => {
 
 		it('should show more precision with higher maxSymbols', () => {
 			// 1.123456 ETH with 10 max symbols
-			expect(formatBalance(1_123_456_000_000_000_000n, 18, 10)).toBe('1.123456');
+			expect(formatBalance(1_123_456_000_000_000_000n, 18, 10)).toBe(
+				'1.123456',
+			);
 		});
 	});
 
