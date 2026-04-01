@@ -1,7 +1,7 @@
 import {get} from 'svelte/store';
 import {onDocumentLoaded} from '$lib/core/utils/web/hooks.js';
 import {dev, version} from '$app/environment';
-import {serviceWorker, params} from '$lib';
+import {serviceWorker} from '$lib';
 
 import {logs} from 'named-logs';
 
