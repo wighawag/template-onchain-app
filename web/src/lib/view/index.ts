@@ -64,6 +64,45 @@ export function createViewState(params: {
 				}
 			}
 
+			/**
+			 * Compare two operations to determine which is "later".
+			 * Returns true if `current` should replace `existing`.
+			 *
+			 * Comparison order (most significant first):
+			 * 1. Higher nonce wins (later transaction)
+			 * 2. Same nonce: higher timestamp wins (later broadcast)
+			 * 3. Same nonce + timestamp: lexicographically greater operationID wins (deterministic tiebreaker)
+			 *
+			 * The operationID tiebreaker ensures deterministic results even under race conditions
+			 * where two operations with identical nonce/timestamp are being processed.
+			 */
+			function isLaterOperation(
+				current: (typeof validOperations)[number],
+				existing: (typeof validOperations)[number],
+			): boolean {
+				const currentNonce = current.operation.metadata.tx.nonce;
+				const existingNonce = existing.operation.metadata.tx.nonce;
+
+				// Higher nonce wins
+				if (currentNonce !== existingNonce) {
+					return currentNonce > existingNonce;
+				}
+
+				const currentTimestamp =
+					current.operation.metadata.tx.broadcastTimestampMs;
+				const existingTimestamp =
+					existing.operation.metadata.tx.broadcastTimestampMs;
+
+				// Same nonce: higher timestamp wins
+				if (currentTimestamp !== existingTimestamp) {
+					return currentTimestamp > existingTimestamp;
+				}
+
+				// Same nonce + timestamp: use operationID as deterministic tiebreaker
+				// This ensures consistent results regardless of iteration order
+				return current.operationID > existing.operationID;
+			}
+
 			// Group operations by account and find the latest for each account
 			const latestOperationByAccount = new Map<
 				string,
@@ -72,23 +111,8 @@ export function createViewState(params: {
 			for (const entry of validOperations) {
 				const account = entry.operation.metadata.tx.from.toLowerCase();
 				const existing = latestOperationByAccount.get(account);
-				if (!existing) {
+				if (!existing || isLaterOperation(entry, existing)) {
 					latestOperationByAccount.set(account, entry);
-				} else {
-					const existingNonce = existing.operation.metadata.tx.nonce;
-					const currentNonce = entry.operation.metadata.tx.nonce;
-					const existingTimestamp =
-						existing.operation.metadata.tx.broadcastTimestampMs;
-					const currentTimestamp =
-						entry.operation.metadata.tx.broadcastTimestampMs;
-
-					if (
-						currentNonce > existingNonce ||
-						(currentNonce === existingNonce &&
-							currentTimestamp > existingTimestamp)
-					) {
-						latestOperationByAccount.set(account, entry);
-					}
 				}
 			}
 
