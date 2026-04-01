@@ -51,3 +51,11 @@ export {getUserContext, setUserContext};
 (globalThis as any).env = env;
 // Dev/debug: attaching to globalThis for console access
 (globalThis as any).vite_env = import.meta.env;
+
+// HMR cleanup: Remove service worker listeners when module is hot-replaced in dev
+// This prevents listener accumulation during development
+if (import.meta.hot) {
+	import.meta.hot.dispose(() => {
+		serviceWorker.cleanup();
+	});
+}

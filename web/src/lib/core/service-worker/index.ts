@@ -86,6 +86,10 @@ function fromPushNotification(
 export function createServiceWorker(notifications?: NotificationsService) {
 	const store = writable<ServiceWorkerState>(undefined);
 
+	// Track registered listeners for cleanup
+	let controllerChangeHandler: (() => void) | null = null;
+	let messageHandler: ((event: MessageEvent) => void) | null = null;
+
 	function pingServideWorker(
 		state: 'installing' | 'waiting' | 'active' = 'active',
 	) {
@@ -179,30 +183,65 @@ export function createServiceWorker(notifications?: NotificationsService) {
 		});
 	}
 
+	/**
+	 * Remove all registered event listeners.
+	 * Call this when unmounting to prevent listener accumulation.
+	 */
+	function cleanup() {
+		if (
+			controllerChangeHandler &&
+			typeof navigator !== 'undefined' &&
+			'serviceWorker' in navigator
+		) {
+			navigator.serviceWorker.removeEventListener(
+				'controllerchange',
+				controllerChangeHandler,
+			);
+			controllerChangeHandler = null;
+		}
+
+		if (
+			messageHandler &&
+			typeof navigator !== 'undefined' &&
+			'serviceWorker' in navigator
+		) {
+			navigator.serviceWorker.removeEventListener('message', messageHandler);
+			messageHandler = null;
+		}
+	}
+
 	function register() {
 		if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+			// Clean up any existing listeners before registering new ones
+			cleanup();
+
 			store.set({notSupported: false, registering: true});
 
 			// ------------------------------------------------------------------------------------------------
 			// FORCE RELOAD ON CONTROLLER CHANGE
 			// ------------------------------------------------------------------------------------------------
 			let refreshing = false;
-			navigator.serviceWorker.addEventListener('controllerchange', () => {
+			controllerChangeHandler = () => {
 				if (refreshing) {
 					return;
 				}
 				refreshing = true;
 				window.location.reload();
-			});
+			};
+			navigator.serviceWorker.addEventListener(
+				'controllerchange',
+				controllerChangeHandler,
+			);
 			// ------------------------------------------------------------------------------------------------
 
 			if (notifications) {
-				//listen to messages
-				navigator.serviceWorker.onmessage = (event) => {
+				// Listen to messages
+				messageHandler = (event: MessageEvent) => {
 					if (event.data && event.data.type === 'notification') {
 						notifications.add(fromPushNotification(event.data));
 					}
 				};
+				navigator.serviceWorker.addEventListener('message', messageHandler);
 			}
 
 			const swLocation = resolve<any>(`/service-worker.js`);
@@ -282,6 +321,11 @@ export function createServiceWorker(notifications?: NotificationsService) {
 		sendMessage,
 		skipWaiting,
 		skip,
+		/**
+		 * Clean up registered event listeners.
+		 * Call this when unmounting to prevent listener accumulation.
+		 */
+		cleanup,
 	};
 }
 
