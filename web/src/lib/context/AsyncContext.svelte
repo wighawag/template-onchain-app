@@ -22,14 +22,19 @@
 		{:else}
 			<div class="splash-screen">
 				<img src="/icon.svg" alt="Loading" class="splash-logo" />
+				<span class="sr-only">Loading ...</span>
 			</div>
 		{/if}
 	{:then context}
 		<ContextComponent {context}>{@render children?.()}</ContextComponent>
 	{:catch error}
-		<div class="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
-			<p class="text-lg font-semibold text-destructive">Failed to initialize application</p>
-			<p class="max-w-md text-sm text-muted-foreground">{error?.message || 'Unknown error'}</p>
+		<div
+			class="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center"
+		>
+			<p class="text-lg font-semibold text-destructive">Failed to initialize</p>
+			<p class="max-w-md text-sm text-muted-foreground">
+				{error?.message || 'Unknown error'}
+			</p>
 			<button
 				class="rounded-md border px-4 py-2 text-sm hover:bg-muted"
 				onclick={() => window.location.reload()}
@@ -43,6 +48,7 @@
 {:else}
 	<div class="splash-screen">
 		<img src="/icon.svg" alt="Loading" class="splash-logo" />
+		<span class="sr-only">Loading ...</span>
 	</div>
 {/if}
 
@@ -53,7 +59,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background-color: var(--background, #000);
+		background-color: var(--background, hsl(var(--background)));
+		z-index: 9999;
 	}
 
 	.splash-logo {
@@ -74,5 +81,17 @@
 			opacity: 0.7;
 			transform: scale(0.95);
 		}
+	}
+
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border-width: 0;
 	}
 </style>
