@@ -71,26 +71,26 @@ E2E tests automatically handle:
 Tests can use custom fixtures for common operations:
 
 ```typescript
-import { test, expect } from '../fixtures/test';
+import {test, expect} from '../fixtures/test';
 
 // Using connectedPage fixture - wallet is pre-connected
-test('submit greeting', async ({ connectedPage }) => {
-  await connectedPage.getByPlaceholder('Enter your greeting...').fill('Hello!');
-  await connectedPage.getByRole('button', { name: /send/i }).click();
-  // ...
+test('submit greeting', async ({connectedPage}) => {
+	await connectedPage.getByPlaceholder('Enter your greeting...').fill('Hello!');
+	await connectedPage.getByRole('button', {name: /send/i}).click();
+	// ...
 });
 
 // Manual wallet connection
-test('connect manually', async ({ page, connectWallet }) => {
-  await page.goto('/demo');
-  // ... trigger connection modal ...
-  await connectWallet(page);
+test('connect manually', async ({page, connectWallet}) => {
+	await page.goto('/demo');
+	// ... trigger connection modal ...
+	await connectWallet(page);
 });
 
 // Wait for transactions
-test('wait for tx', async ({ connectedPage, waitForTransaction }) => {
-  // Submit something
-  await waitForTransaction(connectedPage);
+test('wait for tx', async ({connectedPage, waitForTransaction}) => {
+	// Submit something
+	await waitForTransaction(connectedPage);
 });
 ```
 
@@ -100,13 +100,13 @@ test('wait for tx', async ({ connectedPage, waitForTransaction }) => {
 
 ```typescript
 // test/lib/mymodule.test.ts
-import { describe, it, expect, vi } from 'vitest';
-import { myFunction } from '$lib/mymodule';
+import {describe, it, expect, vi} from 'vitest';
+import {myFunction} from '$lib/mymodule';
 
 describe('myFunction', () => {
-  it('should do something', () => {
-    expect(myFunction()).toBe(true);
-  });
+	it('should do something', () => {
+		expect(myFunction()).toBe(true);
+	});
 });
 ```
 
@@ -114,19 +114,19 @@ describe('myFunction', () => {
 
 ```typescript
 // e2e/tests/mypage.e2e.ts
-import { test, expect, describe } from '../fixtures/test';
+import {test, expect, describe} from '../fixtures/test';
 
 describe('My Page', () => {
-  test('should display title', async ({ page }) => {
-    await page.goto('/mypage');
-    await expect(page.getByRole('heading')).toContainText('My Title');
-  });
+	test('should display title', async ({page}) => {
+		await page.goto('/mypage');
+		await expect(page.getByRole('heading')).toContainText('My Title');
+	});
 
-  test('should interact with wallet', async ({ connectedPage }) => {
-    // connectedPage already has wallet connected
-    await connectedPage.getByRole('button', { name: 'Submit' }).click();
-    // ...
-  });
+	test('should interact with wallet', async ({connectedPage}) => {
+		// connectedPage already has wallet connected
+		await connectedPage.getByRole('button', {name: 'Submit'}).click();
+		// ...
+	});
 });
 ```
 

@@ -23,7 +23,8 @@
 		splashImage?: string;
 	}
 
-	let {getContext, children, loading, minLoading, splashImage}: Props = $props();
+	let {getContext, children, loading, minLoading, splashImage}: Props =
+		$props();
 
 	const defaultSplashImage = url('/icon.svg');
 	let splashImageUrl = $derived(splashImage ?? defaultSplashImage);
@@ -62,7 +63,10 @@
 	 * 2. Then starts the minimum loading timer
 	 * 3. Waits for both the context AND the min timer to complete
 	 */
-	async function createCombinedPromise(): Promise<{context: Context; start: () => () => void}> {
+	async function createCombinedPromise(): Promise<{
+		context: Context;
+		start: () => () => void;
+	}> {
 		const contextPromise = getContext();
 
 		if (!minLoading || minLoading <= 0) {

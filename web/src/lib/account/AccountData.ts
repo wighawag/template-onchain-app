@@ -31,7 +31,8 @@ function getOperationRetentionMs(): number {
 		? parseInt(PUBLIC_OPERATION_RETENTION_DAYS, 10)
 		: DEFAULT_OPERATION_RETENTION_DAYS;
 	// Fallback to default if parsing fails or value is invalid
-	const validDays = isNaN(days) || days <= 0 ? DEFAULT_OPERATION_RETENTION_DAYS : days;
+	const validDays =
+		isNaN(days) || days <= 0 ? DEFAULT_OPERATION_RETENTION_DAYS : days;
 	return validDays * 24 * 60 * 60 * 1000;
 }
 
