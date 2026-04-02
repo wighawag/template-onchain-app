@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "cross-var": "^1.1.0",
+    "husky": "^9.1.7",
     "ldenv": "^0.5.0",
     "zellij-launcher": "^0.0.1"
   },
@@ -17,6 +20,7 @@
     }
   },
   "scripts": {
+    "prepare": "husky",
     "preinstall": "npx only-allow pnpm",
     "cleandep": "rm -rf node_modules && pnpm -r exec rm -rf node_modules",
     "---------------------- FORMAT ----------------------": "",
