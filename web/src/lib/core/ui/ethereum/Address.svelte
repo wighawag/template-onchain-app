@@ -42,7 +42,7 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import {getContext, onMount} from 'svelte';
+	import {getContext} from 'svelte';
 	import {route} from '$lib';
 	import {
 		getBlockExplorerAddressUrl,
@@ -72,22 +72,35 @@
 	let loading = $state(false);
 	let copied = $state(false);
 
-	onMount(() => {
-		if (value && ensContext && resolveENS) {
-			loadENS();
+	// Reactive effect to load ENS when address changes
+	// This handles component reuse by Svelte's {#each} optimization
+	$effect(() => {
+		const currentAddress = value;
+
+		// Reset state for new address
+		ensName = null;
+		loading = false;
+
+		if (currentAddress && ensContext && resolveENS) {
+			loadENS(currentAddress);
 		}
 	});
 
-	async function loadENS() {
-		if (!value || !ensContext) {
+	async function loadENS(addr: `0x${string}`) {
+		if (!addr || !ensContext) {
 			return;
 		}
 		loading = true;
-		ensName = null;
 		try {
-			ensName = await ensContext.fetchENS(value);
+			const result = await ensContext.fetchENS(addr);
+			// Only update if address hasn't changed during async fetch
+			if (addr === value) {
+				ensName = result;
+			}
 		} finally {
-			loading = false;
+			if (addr === value) {
+				loading = false;
+			}
 		}
 	}
 
