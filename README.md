@@ -56,9 +56,18 @@ This template extends the [template-ethereum-contracts](https://github.com/wigha
 │   ├── static/                   # Static assets
 │   └── svelte.config.js          # SvelteKit configuration
 ├── dev/                          # Zellij layout configurations
+├── scripts/                      # Repo-level shell scripts
 ├── package.json                  # Root monorepo configuration
 └── pnpm-workspace.yaml           # PNPM workspace definition
 ```
+
+### Package documentation
+
+- [`contracts/README.md`](./contracts/README.md) — smart contract package: layout, scripts, deploy patterns, and publication.
+- [`web/README.md`](./web/README.md) — SvelteKit app: stack, generated deployments, scripts, e2e setup.
+- [`dev/README.md`](./dev/README.md) — Zellij layouts behind `pnpm start`, `pnpm attach`, and `pnpm remote-chain`.
+- [`scripts/README.md`](./scripts/README.md) — repo-level scripts (e.g. the e2e driver).
+- [`AGENTS.md`](./AGENTS.md) — conventions for AI/coding agents working in this repo.
 
 ## Initial Setup
 
