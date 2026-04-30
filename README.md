@@ -381,3 +381,7 @@ pnpm contracts:lint
 pnpm format        # Format all code
 pnpm format:check  # Check formatting
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the commit message convention (Conventional Commits) and other guidelines. Commit messages are validated locally by a husky hook and in CI on every pull request.
