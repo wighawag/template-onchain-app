@@ -1,0 +1,53 @@
+#!/usr/bin/env sh
+# Validates commit messages against the Conventional Commits convention.
+# Configured per-repo via `git config core.hooksPath .githooks` (see scripts/setup-git-hooks.sh).
+
+set -eu
+
+msg_file="$1"
+
+# Read the first non-empty, non-comment line as the subject.
+subject=$(grep -v '^#' "$msg_file" | sed '/^[[:space:]]*$/d' | head -n 1 || true)
+
+# Allow special git-generated commits to pass without validation.
+case "$subject" in
+  "Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*)
+    exit 0
+    ;;
+esac
+
+if [ -z "$subject" ]; then
+  echo "commit-msg: empty commit message" >&2
+  exit 1
+fi
+
+# Conventional Commits: <type>(optional-scope)!?: <subject>
+# Types accepted: feat, fix, chore, docs, style, refactor, perf, test, build, ci, revert
+pattern='^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\([a-z0-9._/-]+\))?!?:[[:space:]].+'
+
+if ! printf '%s' "$subject" | grep -Eq "$pattern"; then
+  cat >&2 <<EOF
+commit-msg: subject does not follow Conventional Commits.
+
+  got:      $subject
+
+  expected: <type>(<scope>): <subject>
+            types: feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert
+
+  examples:
+    feat(web): add wallet connect button
+    fix(contracts): handle zero-address transfer revert
+    chore: bump pnpm lockfile
+
+  See .gitmessage for the full template.
+EOF
+  exit 1
+fi
+
+# Reject too-short subjects (after the "type(scope): " prefix).
+description=$(printf '%s' "$subject" | sed -E 's/^[a-z]+(\([a-z0-9._/-]+\))?!?:[[:space:]]+//')
+description_len=$(printf '%s' "$description" | wc -c | tr -d ' ')
+if [ "$description_len" -lt 3 ]; then
+  echo "commit-msg: subject description is too short (min 3 chars after the type prefix)" >&2
+  exit 1
+fi
