@@ -1,0 +1,30 @@
+# <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+#
+# --- COMMIT MESSAGE GUIDELINES ---
+#
+# Format follows the Conventional Commits spec (https://www.conventionalcommits.org/).
+#
+# Subject line:
+#   - <type>: one of feat, fix, chore, docs, style, refactor, perf, test, build, ci, revert
+#   - <scope> (optional): area of the codebase, e.g. web, contracts, deploy
+#   - <subject>: short imperative description, no trailing period, lowercase preferred
+#   - Keep the whole subject under ~72 characters
+#   - Append "!" before the colon (or add a "BREAKING CHANGE:" footer) for breaking changes
+#
+# Body (optional):
+#   - Wrap at ~72 characters
+#   - Explain the *why* of the change, not the *what*
+#
+# Footer (optional):
+#   - Reference issues:        Closes #123
+#   - Mark breaking changes:   BREAKING CHANGE: <description>
+#
+# Examples:
+#   feat(web): add wallet connect button
+#   fix(contracts): handle zero-address transfer revert
+#   docs: clarify deploy script options
+#   refactor(web)!: drop legacy svelte store API

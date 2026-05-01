@@ -18,6 +18,7 @@
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
+    "prepare": "sh ./scripts/setup-git-hooks.sh",
     "cleandep": "rm -rf node_modules && pnpm -r exec rm -rf node_modules",
     "---------------------- FORMAT ----------------------": "",
     "format": "pnpm -r format",

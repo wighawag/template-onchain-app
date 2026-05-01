@@ -381,3 +381,39 @@ pnpm contracts:lint
 pnpm format        # Format all code
 pnpm format:check  # Check formatting
 ```
+
+## Commit Messages
+
+This repo follows the [Conventional Commits](https://www.conventionalcommits.org/) spec, validated locally by a `commit-msg` git hook. The hook is wired automatically by `pnpm install` via the `prepare` script (it points `core.hooksPath` at [`.githooks/`](./.githooks/) and sets `commit.template` to [`.gitmessage`](./.gitmessage)).
+
+### Format
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+- **type** (required): `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `revert`
+- **scope** (optional): area of the codebase, e.g. `web`, `contracts`
+- **subject** (required): short imperative description, no trailing period
+- Append `!` before the colon (or add a `BREAKING CHANGE:` footer) for breaking changes
+
+### Examples
+
+```
+feat(web): add wallet connect button
+fix(contracts): handle zero-address transfer revert
+docs: clarify deploy script options
+refactor(web)!: drop legacy svelte store API
+```
+
+### Manual setup
+
+If you cloned without running `pnpm install`, configure the hook by hand:
+
+```bash
+sh ./scripts/setup-git-hooks.sh
+```
