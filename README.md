@@ -381,3 +381,11 @@ pnpm contracts:lint
 pnpm format        # Format all code
 pnpm format:check  # Check formatting
 ```
+
+## Commit Messages
+
+This repository enforces [Conventional Commits](https://www.conventionalcommits.org/) via `commitlint` and a `husky` `commit-msg` hook. Every commit must use one of the allowed types:
+
+`feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `style`, `perf`, `build`, `ci`, `revert`
+
+Format: `<type>(<optional scope>): <subject>` (header capped at 100 characters). The hook is installed automatically by the `prepare` script when you run `pnpm i`.
