@@ -121,7 +121,8 @@
 		</div>
 
 		<Modal.Footer>
-			{#if hasSufficientFunds}
+			<!-- isWaitingForBalanceUpdate allow optimistic continuation of the tx assuming the faucet will give enough -->
+			{#if hasSufficientFunds || isWaitingForBalanceUpdate}
 				<Button onclick={$state.onContinue} class="w-full">
 					Continue Transaction
 				</Button>
