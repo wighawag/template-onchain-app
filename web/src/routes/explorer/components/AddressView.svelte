@@ -48,6 +48,7 @@
 		balance: balanceStore,
 		gasFee,
 		deployments,
+		balanceCheck,
 	} = getUserContext();
 
 	let balance = $state<bigint>(0n);
@@ -303,6 +304,7 @@
 												{walletClient}
 												balance={balanceStore}
 												{gasFee}
+												{balanceCheck}
 											/>
 										{/each}
 									</div>
@@ -334,6 +336,7 @@
 												{walletClient}
 												balance={balanceStore}
 												{gasFee}
+												{balanceCheck}
 											/>
 										{/each}
 									</div>

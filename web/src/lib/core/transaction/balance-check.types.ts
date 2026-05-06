@@ -1,6 +1,7 @@
 import type {PublicClient, Abi} from 'viem';
 import type {BalanceStore} from '$lib/core/connection/balance';
 import type {GasFeeStore} from '$lib/core/connection/gasFee';
+import type {BalanceCheckStore} from './balance-check-store';
 
 export type GasSpeed = 'slow' | 'average' | 'fast';
 
@@ -8,6 +9,7 @@ export interface EnsureCanAffordBase {
 	publicClient: PublicClient;
 	balance: BalanceStore;
 	gasFee: GasFeeStore;
+	balanceCheck: BalanceCheckStore;
 	gasSpeed?: GasSpeed;
 	forceUpdate?: boolean;
 }

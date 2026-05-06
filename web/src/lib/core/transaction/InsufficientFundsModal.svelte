@@ -2,14 +2,15 @@
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import {Button} from '$lib/shadcn/ui/button/index.js';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
-	import {balanceCheckStore} from './balance-check-store';
 	import {formatBalance} from '$lib/core/utils/format/balance';
 	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import {FaucetButton, hasFaucet} from '$lib/core/ui/faucet/index.js';
 	import {deployments} from '$lib/deployments-store';
+	import {getUserContext} from '$lib';
 
-	const state = balanceCheckStore;
+	const {balanceCheck} = getUserContext();
+	const state = balanceCheck;
 
 	let isOpen = $derived($state.step !== 'idle');
 

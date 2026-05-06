@@ -25,6 +25,7 @@
 	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
 	import type {BalanceStore} from '$lib/core/connection/balance';
 	import type {GasFeeStore} from '$lib/core/connection/gasFee';
+	import type {BalanceCheckStore} from '$lib/core/transaction/balance-check-store';
 
 	interface Props {
 		functionName: string;
@@ -35,6 +36,7 @@
 		walletClient: WalletClient;
 		balance: BalanceStore;
 		gasFee: GasFeeStore;
+		balanceCheck: BalanceCheckStore;
 	}
 
 	let {
@@ -46,6 +48,7 @@
 		walletClient,
 		balance,
 		gasFee,
+		balanceCheck,
 	}: Props = $props();
 
 	let inputValues = $state<Record<string, string>>({});
@@ -113,6 +116,7 @@
 				publicClient,
 				balance,
 				gasFee,
+				balanceCheck,
 				contract: {
 					address: contractAddress as `0x${string}`,
 					abi: [abiItem],

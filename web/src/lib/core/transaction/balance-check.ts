@@ -2,7 +2,7 @@ import {get} from 'svelte/store';
 import type {PublicClient} from 'viem';
 import type {BalanceStore} from '$lib/core/connection/balance';
 import type {GasFeeStore} from '$lib/core/connection/gasFee';
-import {balanceCheckStore} from './balance-check-store';
+import type {BalanceCheckStore} from './balance-check-store';
 import {InsufficientFundsError} from './InsufficientFundsError';
 import type {
 	EnsureCanAfford,
@@ -55,6 +55,7 @@ async function estimateRawGas(
 async function checkBalanceAndShowModal(
 	balance: BalanceStore,
 	estimatedCost: bigint,
+	balanceCheck: BalanceCheckStore,
 ): Promise<void> {
 	// Ensure balance is loaded
 	const balanceValue = get(balance);
@@ -69,22 +70,22 @@ async function checkBalanceAndShowModal(
 
 	if (currentBalance.value >= estimatedCost) {
 		// Sufficient funds - close modal and proceed
-		balanceCheckStore.close();
+		balanceCheck.close();
 		return;
 	}
 
 	// Insufficient funds - show modal and wait for user action
 	// The modal subscribes to balanceStore for live updates
 	return new Promise((resolve, reject) => {
-		balanceCheckStore.showInsufficientFunds({
+		balanceCheck.showInsufficientFunds({
 			balanceStore: balance,
 			estimatedCost,
 			onContinue: () => {
-				balanceCheckStore.close();
+				balanceCheck.close();
 				resolve(); // Continue with transaction
 			},
 			onDismiss: () => {
-				balanceCheckStore.close();
+				balanceCheck.close();
 				const currentBal = get(balance);
 				const balValue = currentBal.step === 'Loaded' ? currentBal.value : 0n;
 				reject(new InsufficientFundsError(balValue, estimatedCost));
@@ -100,10 +101,15 @@ export const ensureCanAfford: EnsureCanAfford = async (options: any) => {
 		gasFee,
 		gasSpeed = 'fast',
 		forceUpdate = false,
-	} = options as EnsureCanAffordBase;
+		balanceCheck,
+	} = options as EnsureCanAffordBase & {balanceCheck?: BalanceCheckStore};
+
+	if (!balanceCheck) {
+		throw new Error('balanceCheck is required');
+	}
 
 	// Step 1: Show estimating modal
-	balanceCheckStore.startEstimating();
+	balanceCheck.startEstimating();
 
 	try {
 		// Step 2: Force update balance and gas fee if requested
@@ -133,7 +139,7 @@ export const ensureCanAfford: EnsureCanAfford = async (options: any) => {
 		const estimatedCost = gasCost + value;
 
 		// Step 6: Check balance and handle insufficient funds
-		await checkBalanceAndShowModal(balance, estimatedCost);
+		await checkBalanceAndShowModal(balance, estimatedCost, balanceCheck);
 
 		// Step 7: Return the params for use with writeContract/sendTransaction
 		if ('contract' in options) {
@@ -142,7 +148,7 @@ export const ensureCanAfford: EnsureCanAfford = async (options: any) => {
 			return {...options.transaction, gas: gasEstimate, maxFeePerGas: gasPrice};
 		}
 	} catch (error) {
-		balanceCheckStore.close();
+		balanceCheck.close();
 		throw error;
 	}
 };

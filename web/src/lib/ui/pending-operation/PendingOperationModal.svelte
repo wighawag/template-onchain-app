@@ -20,6 +20,7 @@
 		publicClient,
 		balance,
 		deployments,
+		balanceCheck,
 	} = getUserContext();
 
 	// Modal state
@@ -112,6 +113,7 @@
 				publicClient,
 				balance,
 				gasFee,
+				balanceCheck,
 				transaction: {
 					account: originalTx.from,
 					to: originalTx.to as `0x${string}`,
@@ -192,6 +194,7 @@
 				publicClient,
 				balance,
 				gasFee,
+				balanceCheck,
 				transaction: {
 					account: originalTx.from,
 					to: originalTx.from,

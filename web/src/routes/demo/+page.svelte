@@ -26,6 +26,7 @@
 		publicClient,
 		balance,
 		gasFee,
+		balanceCheck,
 	} = getUserContext();
 
 	const viewStatus = viewState.status;
@@ -50,6 +51,7 @@
 				publicClient,
 				balance,
 				gasFee,
+				balanceCheck,
 				contract: {
 					...$deployments.contracts.GreetingsRegistry,
 					functionName: 'setMessage',

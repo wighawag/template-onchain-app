@@ -15,7 +15,7 @@
 	import {getContractFunctions, isViewFunction} from './lib/utils';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 
-	let {publicClient, walletClient, connection, deployments, balance, gasFee} =
+	let {publicClient, walletClient, connection, deployments, balance, gasFee, balanceCheck} =
 		getUserContext();
 
 	// Get all contract names
@@ -156,6 +156,7 @@
 													{walletClient}
 													{balance}
 													{gasFee}
+													{balanceCheck}
 												/>
 											{/each}
 										</div>
@@ -187,6 +188,7 @@
 													{walletClient}
 													{balance}
 													{gasFee}
+													{balanceCheck}
 												/>
 											{/each}
 										</div>

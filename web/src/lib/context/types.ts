@@ -20,6 +20,7 @@ import type {OnchainStateStore} from '$lib/onchain/state';
 import type {ViewStateStore} from '$lib/view';
 import type {ClockStore} from '$lib/core/clock';
 import type {TransactionObserver} from '@etherkit/tx-observer';
+import type {BalanceCheckStore} from '$lib/core/transaction/balance-check-store';
 
 /**
  * TrackedWalletClient with chain info from deployments.
@@ -63,4 +64,5 @@ export type Context = {
 	clock: Clock;
 	txObserver: TransactionObserver;
 	txObserverDebug: TxObserverDebugStore;
+	balanceCheck: BalanceCheckStore;
 };

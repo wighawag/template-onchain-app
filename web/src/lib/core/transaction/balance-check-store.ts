@@ -16,7 +16,7 @@ export type BalanceCheckState =
 			isWaitingForBalanceUpdate: boolean;
 	  };
 
-function createBalanceCheckStore() {
+export function createBalanceCheckStore() {
 	const {subscribe, set, update} = writable<BalanceCheckState>({step: 'idle'});
 
 	let pollingInterval: NodeJS.Timeout | undefined;
@@ -112,4 +112,4 @@ function createBalanceCheckStore() {
 	};
 }
 
-export const balanceCheckStore = createBalanceCheckStore();
+export type BalanceCheckStore = ReturnType<typeof createBalanceCheckStore>;

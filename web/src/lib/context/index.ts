@@ -2,7 +2,7 @@ import type {Context, TxObserverDebugState} from './types.js';
 import {writable} from 'svelte/store';
 import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
-import {createBalanceStore} from '$lib/core/connection/balance.js';
+import {createBalanceStore} from '$lib/core/connection/balance';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
 import {createRpcHealthStore} from '$lib/core/connection/rpcHealth';
 import {createOfflineStore} from '$lib/core/connection/offline';
@@ -21,6 +21,7 @@ import {createToastConnector} from '$lib/account/toastConnector.js';
 import {initBurnerWallet} from '@etherkit/burner-wallet';
 import {PUBLIC_NODE_URL, PUBLIC_USE_BURNER_WALLET} from '$env/static/public';
 import type {AugmentedChainInfo} from '$lib/core/connection/types.js';
+import {createBalanceCheckStore} from '$lib/core/transaction/balance-check-store.js';
 
 // ============================================================================
 // Default Configuration Values
@@ -198,6 +199,9 @@ export async function createContext(): Promise<{
 	});
 	window.viewState = viewState;
 
+	const balanceCheck = createBalanceCheckStore();
+	window.balanceCheck = balanceCheck;
+
 	// Debug store for tx-observer processing stats
 	const txObserverDebug = writable<TxObserverDebugState>({
 		processCount: 0,
@@ -222,6 +226,7 @@ export async function createContext(): Promise<{
 			clock,
 			txObserver,
 			txObserverDebug: {subscribe: txObserverDebug.subscribe},
+			balanceCheck,
 		},
 		start: () => {
 			// we trigger it so it is always availabe

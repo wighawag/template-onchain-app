@@ -7,9 +7,8 @@
 	import {getUserContext} from '$lib';
 	import {claimFund} from 'faucet-client';
 	import {PUBLIC_FAUCET_LINK, PUBLIC_FAUCET_API} from '$env/static/public';
-	import {balanceCheckStore} from '$lib/core/transaction/balance-check-store';
 
-	const {account, balance, deployments, publicClient} = getUserContext();
+	const {account, balance, deployments, publicClient, balanceCheck} = getUserContext();
 
 	let status = $state<'idle' | 'pending' | 'success' | 'error'>('idle');
 
@@ -82,7 +81,7 @@
 			// Trigger immediate balance refresh
 			balance.update();
 			// Notify the balance check store to poll for balance change
-			balanceCheckStore.markFaucetClaimed(preFaucetBalance);
+			balanceCheck.markFaucetClaimed(preFaucetBalance);
 		} catch {
 			status = 'error';
 			setTimeout(() => {
