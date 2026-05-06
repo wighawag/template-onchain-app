@@ -10,7 +10,6 @@
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import EthereumAvatar from '$lib/core/ui/ethereum/EthereumAvatar.svelte';
 	import {
-		ensureCanAfford,
 		InsufficientFundsError,
 		isUserRejectionError,
 	} from '$lib/core/transaction';
@@ -23,9 +22,6 @@
 		walletClient,
 		deployments,
 		clock,
-		publicClient,
-		balance,
-		gasFee,
 		balanceCheck,
 	} = getUserContext();
 
@@ -47,13 +43,10 @@
 		try {
 			const currentConnection = await connection.ensureConnected();
 
-			const contractRequest = await ensureCanAfford({
-				publicClient,
-				balance,
-				gasFee,
-				balanceCheck,
+			const contractRequest = await balanceCheck.ensureCanAfford({
 				contract: {
-					...$deployments.contracts.GreetingsRegistry,
+					address: $deployments.contracts.GreetingsRegistry.address,
+					abi: $deployments.contracts.GreetingsRegistry.abi,
 					functionName: 'setMessage',
 					args: [greetingInput],
 					account: currentConnection.account.address,

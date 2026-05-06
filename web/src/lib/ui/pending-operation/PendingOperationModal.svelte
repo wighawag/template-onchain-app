@@ -11,16 +11,14 @@
 	import ConfirmCancelDialog from './ConfirmCancelDialog.svelte';
 	import type {GasPrice} from '$lib/core/connection/gasFee';
 	import type {ExtendedTransactionMetadata} from '$lib/account/AccountData';
-	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
+	import {InsufficientFundsError} from '$lib/core/transaction';
 
 	const {
 		walletClient,
 		accountData,
-		gasFee,
-		publicClient,
-		balance,
 		deployments,
 		balanceCheck,
+		gasFee,
 	} = getUserContext();
 
 	// Modal state
@@ -109,11 +107,7 @@
 			const originalTx = operation.metadata.tx;
 
 			// Check balance before resubmitting
-			const txRequest = await ensureCanAfford({
-				publicClient,
-				balance,
-				gasFee,
-				balanceCheck,
+			const txRequest = await balanceCheck.ensureCanAfford({
 				transaction: {
 					account: originalTx.from,
 					to: originalTx.to as `0x${string}`,
@@ -190,11 +184,7 @@
 				originalGasPrice >= fastPrice ? originalGasPrice + 1n : fastPrice;
 
 			// Check balance before cancelling
-			const txRequest = await ensureCanAfford({
-				publicClient,
-				balance,
-				gasFee,
-				balanceCheck,
+			const txRequest = await balanceCheck.ensureCanAfford({
 				transaction: {
 					account: originalTx.from,
 					to: originalTx.from,

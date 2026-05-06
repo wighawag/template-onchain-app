@@ -154,8 +154,6 @@
 													{connection}
 													{publicClient}
 													{walletClient}
-													{balance}
-													{gasFee}
 													{balanceCheck}
 												/>
 											{/each}
@@ -186,8 +184,6 @@
 													{connection}
 													{publicClient}
 													{walletClient}
-													{balance}
-													{gasFee}
 													{balanceCheck}
 												/>
 											{/each}

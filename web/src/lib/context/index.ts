@@ -199,7 +199,11 @@ export async function createContext(): Promise<{
 	});
 	window.viewState = viewState;
 
-	const balanceCheck = createBalanceCheckStore();
+	const balanceCheck = createBalanceCheckStore({
+		publicClient,
+		balance,
+		gasFee,
+	});
 	window.balanceCheck = balanceCheck;
 
 	// Debug store for tx-observer processing stats

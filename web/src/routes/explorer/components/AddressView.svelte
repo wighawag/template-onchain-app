@@ -302,8 +302,6 @@
 												{connection}
 												{publicClient}
 												{walletClient}
-												balance={balanceStore}
-												{gasFee}
 												{balanceCheck}
 											/>
 										{/each}
@@ -334,8 +332,6 @@
 												{connection}
 												{publicClient}
 												{walletClient}
-												balance={balanceStore}
-												{gasFee}
 												{balanceCheck}
 											/>
 										{/each}

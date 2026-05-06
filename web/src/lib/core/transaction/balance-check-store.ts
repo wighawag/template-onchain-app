@@ -1,5 +1,16 @@
 import {writable, get} from 'svelte/store';
 import type {BalanceStore} from '$lib/core/connection/balance';
+import type {GasFeeStore} from '$lib/core/connection/gasFee';
+import type {
+	Abi,
+	PublicClient,
+	ContractFunctionName,
+	ContractFunctionArgs,
+	WriteContractParameters,
+	SendTransactionParameters,
+} from 'viem';
+import {InsufficientFundsError} from './InsufficientFundsError';
+import type {Chain, Account} from 'viem';
 
 export type BalanceCheckState =
 	| {step: 'idle'}
@@ -16,7 +27,22 @@ export type BalanceCheckState =
 			isWaitingForBalanceUpdate: boolean;
 	  };
 
-export function createBalanceCheckStore() {
+export type GasSpeed = 'slow' | 'average' | 'fast';
+
+export interface EnsureCanAffordOptions {
+	gasSpeed?: GasSpeed;
+	forceUpdate?: boolean;
+}
+
+export function createBalanceCheckStore({
+	publicClient,
+	balance,
+	gasFee,
+}: {
+	publicClient: PublicClient;
+	balance: BalanceStore;
+	gasFee: GasFeeStore;
+}) {
 	const {subscribe, set, update} = writable<BalanceCheckState>({step: 'idle'});
 
 	let pollingInterval: NodeJS.Timeout | undefined;
@@ -34,12 +60,8 @@ export function createBalanceCheckStore() {
 		pollingInterval = setInterval(() => {
 			const currentBalance = get(balanceStore);
 			if (currentBalance.step === 'Loaded') {
-				// Check if balance has changed from pre-faucet value
 				if (currentBalance.value !== preFaucetBalance) {
-					// Balance has changed, stop polling
 					stopPolling();
-
-					// Update state to indicate we're no longer waiting
 					update((state) => {
 						if (state.step === 'insufficient') {
 							return {
@@ -55,7 +77,6 @@ export function createBalanceCheckStore() {
 			}
 		}, 1000);
 
-		// Also set a timeout to stop polling after 30 seconds
 		setTimeout(() => {
 			stopPolling();
 			update((state) => {
@@ -72,43 +93,209 @@ export function createBalanceCheckStore() {
 		}, 30000);
 	}
 
+	const startEstimating = () => set({step: 'estimating'});
+
+	const showInsufficientFunds = (data: {
+		balanceStore: BalanceStore;
+		estimatedCost: bigint;
+		onContinue: () => void;
+		onDismiss: () => void;
+	}) =>
+		set({
+			step: 'insufficient',
+			balanceStore: data.balanceStore,
+			estimatedCost: data.estimatedCost,
+			onContinue: data.onContinue,
+			onDismiss: data.onDismiss,
+			isWaitingForBalanceUpdate: false,
+		});
+
+	const close = () => {
+		stopPolling();
+		set({step: 'idle'});
+	};
+
+	const markFaucetClaimed = (preFaucetBalance: bigint) => {
+		update((state) => {
+			if (state.step === 'insufficient') {
+				startPolling(state.balanceStore, preFaucetBalance);
+				return {
+					...state,
+					faucetClaimedAt: Date.now(),
+					preFaucetBalance,
+					isWaitingForBalanceUpdate: true,
+				};
+			}
+			return state;
+		});
+	};
+
+	function getGasPrice(speed: GasSpeed): bigint {
+		const gasFeeValue = get(gasFee);
+		if (gasFeeValue.step !== 'Loaded') {
+			throw new Error('Gas fee not loaded');
+		}
+		return gasFeeValue[speed].maxFeePerGas;
+	}
+
+	async function checkBalanceAndShowModal(estimatedCost: bigint): Promise<void> {
+		const balanceValue = get(balance);
+		if (balanceValue.step !== 'Loaded') {
+			await balance.update();
+		}
+
+		const currentBalance = get(balance);
+		if (currentBalance.step !== 'Loaded') {
+			throw new Error('Could not load balance');
+		}
+
+		if (currentBalance.value >= estimatedCost) {
+			close();
+			return;
+		}
+
+		return new Promise((resolve, reject) => {
+			showInsufficientFunds({
+				balanceStore: balance,
+				estimatedCost,
+				onContinue: () => {
+					close();
+					resolve();
+				},
+				onDismiss: () => {
+					close();
+					const currentBal = get(balance);
+					const balValue =
+						currentBal.step === 'Loaded' ? currentBal.value : 0n;
+					reject(new InsufficientFundsError(balValue, estimatedCost));
+				},
+			});
+		});
+	}
+
+	async function ensureCanAfford<
+		const TAbi extends Abi | readonly unknown[],
+		TFunctionName extends ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
+		TArgs extends ContractFunctionArgs<TAbi, 'nonpayable' | 'payable', TFunctionName>,
+		TChain extends Chain | undefined,
+		TAccount extends Account | undefined,
+		TChainOverride extends Chain | undefined = undefined,
+	>(
+		options: {
+			contract: Omit<
+				WriteContractParameters<
+					TAbi,
+					TFunctionName,
+					TArgs,
+					TChain,
+					TAccount,
+					TChainOverride
+				>,
+				'chain'
+			> & {chain?: TChainOverride | null};
+		},
+		config?: EnsureCanAffordOptions,
+	): Promise<
+		Omit<
+			WriteContractParameters<
+				TAbi,
+				TFunctionName,
+				TArgs,
+				TChain,
+				TAccount,
+				TChainOverride
+			>,
+			'chain'
+		> & {chain?: TChainOverride | null}
+	>;
+
+	async function ensureCanAfford<
+		TChain extends Chain | undefined,
+		TAccount extends Account | undefined,
+		TChainOverride extends Chain | undefined = undefined,
+	>(
+		options: {
+			transaction: Omit<
+				SendTransactionParameters<TChain, TAccount, TChainOverride>,
+				'chain'
+			> & {chain?: TChainOverride | null};
+		},
+		config?: EnsureCanAffordOptions,
+	): Promise<
+		Omit<
+			SendTransactionParameters<TChain, TAccount, TChainOverride>,
+			'chain'
+		> & {chain?: TChainOverride | null}
+	>;
+
+	async function ensureCanAfford(options: any, config: EnsureCanAffordOptions = {}): Promise<any> {
+		const {gasSpeed = 'fast', forceUpdate = false} = config;
+
+		startEstimating();
+
+		try {
+			if (forceUpdate) {
+				await Promise.all([balance.update(), gasFee.update()]);
+			}
+
+			const gasPrice = getGasPrice(gasSpeed);
+
+			let gasEstimate: bigint;
+			let value: bigint = 0n;
+
+			if ('contract' in options) {
+				const contract = options.contract;
+				gasEstimate = await publicClient.estimateContractGas({
+					address: contract.address,
+					abi: contract.abi,
+					functionName: contract.functionName,
+					args: contract.args,
+					account: contract.account,
+					value: contract.value,
+				});
+				value = contract.value ?? 0n;
+			} else {
+				const transaction = options.transaction;
+				gasEstimate = await publicClient.estimateGas({
+					to: transaction.to,
+					data: transaction.data,
+					value: transaction.value,
+					account: transaction.account,
+				});
+				value = transaction.value ?? 0n;
+			}
+
+			const gasCost = gasEstimate * gasPrice;
+			const estimatedCost = gasCost + value;
+
+			await checkBalanceAndShowModal(estimatedCost);
+
+			if ('contract' in options) {
+				return {
+					...options.contract,
+					gas: gasEstimate,
+					maxFeePerGas: gasPrice,
+				};
+			} else {
+				return {
+					...options.transaction,
+					gas: gasEstimate,
+					maxFeePerGas: gasPrice,
+				};
+			}
+		} catch (error) {
+			close();
+			throw error;
+		}
+	}
+
 	return {
 		subscribe,
-		startEstimating: () => set({step: 'estimating'}),
-		showInsufficientFunds: (data: {
-			balanceStore: BalanceStore;
-			estimatedCost: bigint;
-			onContinue: () => void;
-			onDismiss: () => void;
-		}) =>
-			set({
-				step: 'insufficient',
-				balanceStore: data.balanceStore,
-				estimatedCost: data.estimatedCost,
-				onContinue: data.onContinue,
-				onDismiss: data.onDismiss,
-				isWaitingForBalanceUpdate: false,
-			}),
-		close: () => {
-			stopPolling();
-			set({step: 'idle'});
-		},
-		markFaucetClaimed: (preFaucetBalance: bigint) => {
-			update((state) => {
-				if (state.step === 'insufficient') {
-					// Start polling for balance change
-					startPolling(state.balanceStore, preFaucetBalance);
-
-					return {
-						...state,
-						faucetClaimedAt: Date.now(),
-						preFaucetBalance,
-						isWaitingForBalanceUpdate: true,
-					};
-				}
-				return state;
-			});
-		},
+		startEstimating,
+		showInsufficientFunds,
+		close,
+		markFaucetClaimed,
+		ensureCanAfford,
 	};
 }
 

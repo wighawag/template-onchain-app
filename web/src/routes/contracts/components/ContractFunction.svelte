@@ -22,9 +22,7 @@
 	import {route} from '$lib';
 	import type {WalletClient} from '$lib/context/types';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
-	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
-	import type {BalanceStore} from '$lib/core/connection/balance';
-	import type {GasFeeStore} from '$lib/core/connection/gasFee';
+	import {InsufficientFundsError} from '$lib/core/transaction';
 	import type {BalanceCheckStore} from '$lib/core/transaction/balance-check-store';
 
 	interface Props {
@@ -34,8 +32,6 @@
 		connection: AnyConnectionStore<UnderlyingEthereumProvider>;
 		publicClient: PublicClient;
 		walletClient: WalletClient;
-		balance: BalanceStore;
-		gasFee: GasFeeStore;
 		balanceCheck: BalanceCheckStore;
 	}
 
@@ -46,8 +42,6 @@
 		connection,
 		publicClient,
 		walletClient,
-		balance,
-		gasFee,
 		balanceCheck,
 	}: Props = $props();
 
@@ -112,16 +106,11 @@
 			const currentConnection = await connection.ensureConnected();
 
 			// Check balance before executing transaction
-			const contractRequest = await ensureCanAfford({
-				publicClient,
-				balance,
-				gasFee,
-				balanceCheck,
+			const contractRequest = await balanceCheck.ensureCanAfford({
 				contract: {
 					address: contractAddress as `0x${string}`,
 					abi: [abiItem],
 					functionName: abiItem.name,
-					// Dynamic args from user input - type cannot be inferred at compile time
 					args: args as any,
 					account: currentConnection.account.address,
 				},
