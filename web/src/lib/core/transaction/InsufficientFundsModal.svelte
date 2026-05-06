@@ -13,13 +13,12 @@
 
 	let isOpen = $derived($state.step !== 'idle');
 
-	// Subscribe to live balance from the balance store
-	let liveBalanceValue = $derived(
+	// Get the current balance value reactively by subscribing to the balance store
+	// We need to use $ on the store itself to get its value
+	let balanceStoreRef = $derived.by(() =>
 		$state.step === 'insufficient' ? $state.balanceStore : null,
 	);
-
-	// Get the current balance value reactively
-	let currentBalance = $derived(liveBalanceValue ? $liveBalanceValue : null);
+	let currentBalance = $derived(balanceStoreRef ? $balanceStoreRef : null);
 
 	// Calculate if we now have sufficient funds
 	let hasSufficientFunds = $derived(
