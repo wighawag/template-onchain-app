@@ -10,3 +10,5 @@ node_modules/
 tmp/
 # Nightshift plan artifacts (keep out of version control)
 .nightshift-plan
+
+.kilo/

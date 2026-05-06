@@ -32,6 +32,11 @@
 		currentBalance?.step === 'Loaded' ? currentBalance.value : 0n,
 	);
 
+	// Check if waiting for balance update after faucet claim
+	let isWaitingForBalanceUpdate = $derived(
+		$state.step === 'insufficient' && $state.isWaitingForBalanceUpdate === true,
+	);
+
 	// Calculate shortfall reactively
 	let shortfall = $derived(
 		$state.step === 'insufficient'
@@ -72,6 +77,11 @@
 				<p class="text-muted-foreground">
 					You now have enough funds to complete this transaction.
 				</p>
+			{:else if $state.isWaitingForBalanceUpdate}
+				<p class="flex items-center gap-2 text-muted-foreground">
+					<Spinner class="h-4 w-4" />
+					Waiting for balance update...
+				</p>
 			{:else}
 				<p class="text-muted-foreground">
 					You don't have enough funds to complete this transaction.
@@ -105,7 +115,7 @@
 				{/if}
 			</div>
 
-			{#if !hasSufficientFunds && hasFaucet}
+			{#if !hasSufficientFunds && !isWaitingForBalanceUpdate && hasFaucet}
 				<FaucetButton />
 			{/if}
 		</div>

@@ -7,6 +7,7 @@
 	import {getUserContext} from '$lib';
 	import {claimFund} from 'faucet-client';
 	import {PUBLIC_FAUCET_LINK, PUBLIC_FAUCET_API} from '$env/static/public';
+	import {balanceCheckStore} from '$lib/core/transaction/balance-check-store';
 
 	const {account, balance, deployments, publicClient} = getUserContext();
 
@@ -76,8 +77,12 @@
 				);
 			}
 			status = 'success';
-			// Trigger immediate balance refresh so modal updates
+			// Record pre-faucet balance before triggering update
+			const preFaucetBalance = $balance.step === 'Loaded' ? $balance.value : 0n;
+			// Trigger immediate balance refresh
 			balance.update();
+			// Notify the balance check store to poll for balance change
+			balanceCheckStore.markFaucetClaimed(preFaucetBalance);
 		} catch {
 			status = 'error';
 			setTimeout(() => {
