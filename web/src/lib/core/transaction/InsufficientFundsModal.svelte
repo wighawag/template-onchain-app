@@ -42,7 +42,10 @@
 	);
 </script>
 
-<Modal.Root openWhen={isOpen}>
+<Modal.Root
+	openWhen={isOpen}
+	onCancel={() => $state.step === 'insufficient' && $state.onDismiss?.()}
+>
 	{#if $state.step === 'estimating'}
 		<Modal.Title>Preparing Transaction</Modal.Title>
 		<div class="flex flex-col items-center gap-4 py-8">
