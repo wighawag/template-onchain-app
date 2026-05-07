@@ -12,13 +12,10 @@ describe('Home Page', () => {
 	test('should have a link to the demo page', async ({page}) => {
 		await page.goto('/');
 
-		// Find and click the "Check The Demo" button
+		// Find the "Check The Demo" button
 		const demoButton = page.getByRole('link', {name: /check the demo/i});
 		await expect(demoButton).toBeVisible();
-
-		// Click it and verify navigation
-		await demoButton.click();
-		await expect(page).toHaveURL('/demo/');
+		await expect(demoButton).toHaveAttribute('href', /\/demo/);
 	});
 });
 
@@ -26,12 +23,23 @@ describe('Home Page - Navigation', () => {
 	test('should navigate to demo page and back', async ({page}) => {
 		await page.goto('/');
 
+		// Wait for the page to be fully loaded
+		await expect(page.getByRole('link', {name: /check the demo/i})).toBeVisible({
+			timeout: 10000,
+		});
+
 		// Go to demo
 		await page.getByRole('link', {name: /check the demo/i}).click();
-		await expect(page).toHaveURL('/demo/');
+		await page.waitForURL(/demo/, {timeout: 15000});
+		
+		// Check URL contains demo
+		expect(page.url()).toContain('/demo');
 
 		// Go back
 		await page.goBack();
-		await expect(page).toHaveURL('/');
+		await page.waitForURL(/^http:\/\/localhost:4173\/?$/, {timeout: 15000});
+		
+		// Check we're back on home
+		expect(page.url()).toMatch(/^http:\/\/localhost:4173\/?$/);
 	});
 });

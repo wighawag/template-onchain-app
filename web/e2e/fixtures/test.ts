@@ -271,29 +271,34 @@ export const test = base.extend<WalletFixtures>({
 		await page.goto('/demo');
 
 		// Wait for app to initialize
-		await page.waitForSelector('input[placeholder="Enter your greeting..."]', {
-			timeout: 30000,
-		});
-
-		// Trigger connection by clicking send (this will open the modal)
 		const input = page.getByPlaceholder('Enter your greeting...');
-		await input.click();
-		await input.fill('fixture-connection-test');
+		await expect(input).toBeVisible({timeout: 30000});
 
-		// Wait for the button to be enabled after filling the input
-		const sendButton = page.getByRole('button', {name: /send/i});
-		await expect(sendButton).toBeEnabled({timeout: 5000});
-		await sendButton.click();
+		// Check if wallet is already connected (balance shown in navbar)
+		const navbarBalance = page.locator('text=/\\d+\\.?\\d*\\s*ETH/');
+		const isConnected = await navbarBalance.first().isVisible({timeout: 5000}).catch(() => false);
 
-		// Connect using Dev Mode (handles both connection modal and funding if needed)
-		await connectWalletDevMode(page);
+		if (!isConnected) {
+			// Fill input first to enable the button
+			await input.fill('fixture-connection-test');
+			
+			// Click send to trigger wallet connection - use force to avoid timing issues
+			const sendButton = page.getByRole('button', {name: /send/i});
+			await sendButton.click({force: true});
 
-		// Wait for the input to be enabled (it's disabled during submitting)
-		// This also waits for the initial transaction to complete
-		await expect(input).toBeEnabled({timeout: 60000});
+			// Connect using Dev Mode (handles both connection modal and funding if needed)
+			await connectWalletDevMode(page);
 
-		// Clear the input for tests
-		await input.clear();
+			// Wait for the input to be enabled (it's disabled during submitting)
+			// This also waits for the initial transaction to complete
+			await expect(input).toBeEnabled({timeout: 120000});
+
+			// Clear the input for tests
+			await input.clear();
+		}
+
+		// Wait a moment for the UI to settle
+		await page.waitForTimeout(500);
 
 		await use(page);
 	},

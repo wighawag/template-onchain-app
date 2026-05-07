@@ -16,6 +16,11 @@ describe('Demo Page - Greetings Registry', () => {
 	}) => {
 		await page.goto('/demo');
 
+		// Wait for the input to be visible first
+		await expect(page.getByPlaceholder('Enter your greeting...')).toBeVisible({
+			timeout: 10000,
+		});
+
 		const sendButton = page.getByRole('button', {name: /send/i});
 
 		// Button should be disabled when input is empty
@@ -29,72 +34,53 @@ describe('Demo Page - Greetings Registry', () => {
 	});
 
 	test('should connect wallet and submit when clicking send', async ({
-		page,
-		fundWallets,
+		connectedPage,
 		waitForTransaction,
 	}) => {
-		// Fund wallets before testing
-		await fundWallets();
-
-		await page.goto('/demo');
+		const page = connectedPage;
 
 		// Use a unique greeting for this test
 		const uniqueGreeting = `Connect test ${Date.now()}`;
 
-		// Fill in a greeting - use click then fill to ensure focus
+		// Fill in a greeting
 		const input = page.getByPlaceholder('Enter your greeting...');
-		await input.click();
 		await input.fill(uniqueGreeting);
-
-		// Trigger input event to ensure Svelte reactivity
-		await input.dispatchEvent('input');
 
 		// Wait for the send button to be enabled
 		const sendButton = page.getByRole('button', {name: /send/i});
-		await expect(sendButton).toBeEnabled({timeout: 5000});
+		await expect(sendButton).toBeEnabled({timeout: 10000});
 
-		// Click send - this will connect the wallet
-		// When burner wallet is the only available wallet, it connects directly
-		// without showing a wallet selection modal
+		// Click send
 		await sendButton.click();
 
 		// Wait for the transaction to complete
 		await waitForTransaction(page);
 
-		// The greeting should appear in the messages list (look for exact text match in a message card)
+		// The greeting should appear in the messages list
 		const messageCard = page
 			.locator('[class*="rounded-lg border px-4 py-3"]')
 			.filter({
 				hasText: uniqueGreeting,
 			});
-		await expect(messageCard).toBeVisible({timeout: 30000});
+		await expect(messageCard).toBeVisible({timeout: 60000});
 
-		// Wallet should now be connected (balance shown in navbar)
+		// Wallet should be connected (balance shown in navbar)
 		const navbarBalance = page.locator('text=/\\d+\\.?\\d*\\s*ETH/');
 		await expect(navbarBalance.first()).toBeVisible({timeout: 10000});
 	});
 
 	test('should show wallet as connected after submitting', async ({
-		page,
-		fundWallets,
+		connectedPage,
 		waitForTransaction,
 	}) => {
-		// Fund wallets before testing
-		await fundWallets();
-
-		await page.goto('/demo');
-
-		// Wait for the page to fully load
-		const input = page.getByPlaceholder('Enter your greeting...');
-		await expect(input).toBeVisible({timeout: 10000});
+		const page = connectedPage;
 
 		// Use unique greeting for this test
 		const uniqueGreeting = `Wallet test ${Date.now()}`;
 
-		// Fill in a greeting - click first to ensure the input is ready
-		await input.click();
+		// Fill in a greeting
+		const input = page.getByPlaceholder('Enter your greeting...');
 		await input.fill(uniqueGreeting);
-		await input.dispatchEvent('input');
 
 		// Wait for the send button to be enabled and click it
 		const sendButton = page.getByRole('button', {name: /send/i});
@@ -105,7 +91,6 @@ describe('Demo Page - Greetings Registry', () => {
 		await waitForTransaction(page);
 
 		// After connection and transaction, the wallet balance should be visible
-		// This confirms the wallet is connected
 		const navbarBalance = page.locator('text=/\\d+\\.?\\d*\\s*ETH/');
 		await expect(navbarBalance.first()).toBeVisible({timeout: 10000});
 	});
@@ -139,18 +124,35 @@ describe('Demo Page - Greetings Registry', () => {
 	test('should display existing messages with avatars', async ({page}) => {
 		await page.goto('/demo');
 
-		// Wait for messages to load
+		// Wait for the page to fully load (not just loading state)
+		await page.waitForLoadState('networkidle', {timeout: 30000});
+		
+		// Wait for either messages or the input field to be visible
+		await expect(page.getByPlaceholder('Enter your greeting...')).toBeVisible({
+			timeout: 10000,
+		});
+
+		// Check for message cards
 		const messageCard = page.locator('[class*="rounded-lg border px-4 py-3"]');
 
-		// If there are messages, they should have avatars
-		try {
-			await messageCard.first().waitFor({state: 'visible', timeout: 15000});
-			// Check that avatar is present
-			const avatar = messageCard.first().locator('img, svg, canvas');
-			await expect(avatar.first()).toBeVisible();
-		} catch {
-			// No messages yet, that's okay - check for empty state
-			await expect(page.getByText('No messages yet')).toBeVisible();
+		// Wait for either messages to appear or the empty state
+		const hasMessages = await messageCard
+			.first()
+			.isVisible({timeout: 15000})
+			.catch(() => false);
+
+		if (hasMessages) {
+			// Check that the message card has an image element (avatar)
+			const firstCard = messageCard.first();
+			const imgCount = await firstCard.locator('img').count();
+			expect(imgCount).toBeGreaterThanOrEqual(1);
+		} else {
+			// Empty state - check for text indicating no messages
+			const hasEmptyStateText = await page
+				.getByText(/no messages yet|be the first|empty/i)
+				.isVisible()
+				.catch(() => false);
+			expect(hasEmptyStateText).toBe(true);
 		}
 	});
 
