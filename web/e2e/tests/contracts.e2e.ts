@@ -188,6 +188,9 @@ describe('Contracts Page - Write Functions', () => {
 
 		// Navigate to contracts page (connectedPage starts at /demo)
 		await page.goto('/contracts');
+		
+		// Wait for page to load
+		await expect(page.getByText('Interact with deployed smart contracts')).toBeVisible({timeout: 10000});
 
 		// Wait for Write tab to be visible and click it
 		const writeTab = page.getByRole('tab', {name: 'Write'});
@@ -212,7 +215,7 @@ describe('Contracts Page - Write Functions', () => {
 
 		// Click the Execute button (wallet already connected)
 		const executeButton = functionSection.getByRole('button', {
-			name: /^execute$/i,
+			name: /execute/i,
 		});
 		await executeButton.click();
 
@@ -221,6 +224,11 @@ describe('Contracts Page - Write Functions', () => {
 
 		// Should show success or the message should be visible on demo page
 		await page.goto('/demo');
+		
+		// Wait for demo page to load
+		await expect(page.getByPlaceholder('Enter your greeting...')).toBeVisible({timeout: 10000});
+		
+		// Check for the message (might have prefix from contract)
 		await expect(page.getByText(uniqueMessage)).toBeVisible({
 			timeout: 30000,
 		});

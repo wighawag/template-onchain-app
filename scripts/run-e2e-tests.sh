@@ -9,24 +9,35 @@ NC='\033[0m' # No Color
 
 # Track PIDs for cleanup
 NODE_PID=""
-PREVIEW_PID=""
 
 # Cleanup function to kill background processes
 cleanup() {
     echo -e "\n${YELLOW}🧹 Cleaning up...${NC}"
     
     # Kill the Hardhat node if we started it
-    if [ -n "$NODE_PID" ] && kill -0 "$NODE_PID" 2>/dev/null; then
+    if [ -n "$NODE_PID" ]; then
         echo "Stopping Hardhat node (PID: $NODE_PID)..."
-        kill "$NODE_PID" 2>/dev/null || true
-        wait "$NODE_PID" 2>/dev/null || true
+        kill -9 "$NODE_PID" 2>/dev/null || true
     fi
     
     # Kill any preview server on port 4173
-    if lsof -ti:4173 >/dev/null 2>&1; then
-        echo "Stopping preview server on port 4173..."
-        lsof -ti:4173 | xargs kill -9 2>/dev/null || true
+    PREVIEW_PIDS=$(lsof -ti:4173 2>/dev/null || true)
+    if [ -n "$PREVIEW_PIDS" ]; then
+        echo "Stopping preview server on port 4173 (PIDs: $PREVIEW_PIDS)..."
+        echo "$PREVIEW_PIDS" | xargs kill -9 2>/dev/null || true
     fi
+    
+    # Kill any remaining hardhat node processes on port 8545
+    NODE_PIDS=$(lsof -ti:8545 2>/dev/null || true)
+    if [ -n "$NODE_PIDS" ]; then
+        echo "Stopping Hardhat node on port 8545 (PIDs: $NODE_PIDS)..."
+        echo "$NODE_PIDS" | xargs kill -9 2>/dev/null || true
+    fi
+    
+    # Kill any orphaned processes from this script run
+    pkill -9 -f "hardhat.*node.*local" 2>/dev/null || true
+    pkill -9 -f "vite.*preview" 2>/dev/null || true
+    pkill -9 -f "pnpm.*preview" 2>/dev/null || true
     
     echo -e "${GREEN}✓ Cleanup complete${NC}"
 }
@@ -41,6 +52,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONTRACTS_DIR="$ROOT_DIR/contracts"
 WEB_DIR="$ROOT_DIR/web"
+
+# Initial cleanup - ensure ports are free before starting
+echo "Ensuring ports are free..."
+lsof -ti:4173 | xargs kill -9 2>/dev/null || true
+lsof -ti:8545 | xargs kill -9 2>/dev/null || true
+pkill -9 -f "hardhat.*node.*local" 2>/dev/null || true
+pkill -9 -f "vite.*preview" 2>/dev/null || true
+pkill -9 -f "pnpm.*preview" 2>/dev/null || true
+sleep 1
 
 # Check if node is already running
 if curl -s -X POST http://localhost:8545 \
@@ -101,5 +121,9 @@ cd "$WEB_DIR"
 # Run playwright without global-setup (we've done everything already)
 # The webServer in playwright.config.ts will start the preview server
 pnpm exec playwright test
+TEST_EXIT_CODE=$?
 
 echo -e "\n${GREEN}✅ E2E tests complete!${NC}"
+
+# Return the test exit code
+exit $TEST_EXIT_CODE
