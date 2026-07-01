@@ -150,6 +150,77 @@ describe('convertInputValues', () => {
 			/Invalid tuple format/,
 		);
 	});
+
+	it('accepts a tuple already given as an object (not a JSON string)', () => {
+		const inputs = [
+			p('tuple', 'point', {
+				components: [p('uint256', 'x'), p('uint256', 'y')],
+			}),
+		];
+		expect(convertInputValues(inputs, {point: {x: '5', y: '6'}})).toEqual([
+			{x: 5n, y: 6n},
+		]);
+	});
+
+	it('accepts a tuple given positionally as an array', () => {
+		const inputs = [
+			p('tuple', 'point', {
+				components: [p('uint256', 'x'), p('uint256', 'y')],
+			}),
+		];
+		expect(convertInputValues(inputs, {point: '["7", "8"]'})).toEqual([
+			[7n, 8n],
+		]);
+	});
+
+	it('converts a nested tuple (tuple inside a tuple)', () => {
+		const inputs = [
+			p('tuple', 'line', {
+				components: [
+					p('tuple', 'start', {
+						components: [p('uint256', 'x'), p('uint256', 'y')],
+					}),
+					p('address', 'owner'),
+				],
+			}),
+		];
+		const owner = '0x1111111111111111111111111111111111111111';
+		expect(
+			convertInputValues(inputs, {
+				line: {start: {x: '1', y: '2'}, owner},
+			}),
+		).toEqual([{start: {x: 1n, y: 2n}, owner}]);
+	});
+
+	it('throws a descriptive error on malformed tuple[] JSON', () => {
+		const inputs = [
+			p('tuple[]', 'points', {components: [p('uint256', 'x')]}),
+		];
+		expect(() => convertInputValues(inputs, {points: '[bad'})).toThrow(
+			/Invalid tuple array format/,
+		);
+	});
+
+	it('throws when tuple[] JSON is valid but not an array', () => {
+		const inputs = [
+			p('tuple[]', 'points', {components: [p('uint256', 'x')]}),
+		];
+		expect(() => convertInputValues(inputs, {points: '{"x":"1"}'})).toThrow(
+			/Expected array for tuple\[\] type/,
+		);
+	});
+
+	it('accepts a dynamic array already given as a JS array', () => {
+		const inputs = [p('uint256[]', 'vals')];
+		expect(convertInputValues(inputs, {vals: ['1', '2']})).toEqual([[1n, 2n]]);
+	});
+
+	it('parses a bytes array, keeping each element as hex', () => {
+		const inputs = [p('bytes32[]', 'hashes')];
+		expect(
+			convertInputValues(inputs, {hashes: '0xdead, 0xbeef'}),
+		).toEqual([['0xdead', '0xbeef']]);
+	});
 });
 
 describe('formatOutputJSON', () => {
