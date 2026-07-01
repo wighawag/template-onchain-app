@@ -4,6 +4,7 @@ import {
 	type Page,
 	type BrowserContext,
 } from '@playwright/test';
+import {IMPERSONATE_ADDRESSES} from '../../src/lib/dev-accounts';
 
 /**
  * Extended test fixtures for E2E testing with wallet interactions.
@@ -14,12 +15,8 @@ import {
  *    before any test code runs, ensuring complete isolation from auto-connect behavior
  */
 
-// The addresses that can be impersonated via the burner wallet
-// These are configured in web/src/lib/context/index.ts
-const IMPERSONATE_ADDRESSES = [
-	'0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', // Vitalik
-	'0xF78cD306b23031dE9E739A5BcDE61764e82AD5eF',
-];
+// The addresses the burner wallet can impersonate come from the single source
+// of truth shared with the app wiring: src/lib/dev-accounts.ts.
 
 // Hardhat node URL
 const HARDHAT_RPC_URL = 'http://localhost:8545';

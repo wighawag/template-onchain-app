@@ -22,38 +22,14 @@ import {initBurnerWallet} from '@etherkit/burner-wallet';
 import {PUBLIC_NODE_URL, PUBLIC_USE_BURNER_WALLET} from '$env/static/public';
 import type {AugmentedChainInfo} from '$lib/core/connection/types.js';
 import {createBalanceCheckStore} from '$lib/core/transaction/balance-check-store.js';
-
-// ============================================================================
-// Default Configuration Values
-// ============================================================================
-
-/** Default finality for chains without explicit configuration (Ethereum mainnet default) */
-const DEFAULT_FINALITY = 12;
-
-/** Default block time in ms for chains without explicit configuration (Ethereum mainnet ~12s) */
-const DEFAULT_BLOCK_TIME_MS = 12000;
-
-/** Minimum process interval to avoid excessive polling */
-const MIN_PROCESS_INTERVAL_MS = 1000;
-
-/** Default number of messages to display */
-const DEFAULT_MAX_MESSAGES = 10;
-
-/**
- * Calculate tx-observer process interval from block time.
- * Uses half the block time, clamped to a minimum threshold.
- */
-function calculateProcessInterval(blockTimeMs: number): number {
-	return Math.max(Math.floor(blockTimeMs / 2), MIN_PROCESS_INTERVAL_MS);
-}
+import {resolveAppConfig} from './config.js';
+import {startTxObserverLoop} from '$lib/core/tx-observer';
+import {IMPERSONATE_ADDRESSES} from '$lib/dev-accounts.js';
 
 export async function createContext(): Promise<{
 	context: Context;
 	start: () => () => void;
 }> {
-	// Dev/debug: window alias for attaching debug properties to globalThis
-	const window = globalThis as any;
-
 	let cleanupBurnerWallet: (() => void) | undefined;
 
 	if (
@@ -64,10 +40,7 @@ export async function createContext(): Promise<{
 			nodeURL: PUBLIC_USE_BURNER_WALLET.startsWith('http')
 				? PUBLIC_USE_BURNER_WALLET
 				: PUBLIC_NODE_URL,
-			impersonateAddresses: [
-				'0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
-				'0xF78cD306b23031dE9E739A5BcDE61764e82AD5eF',
-			],
+			impersonateAddresses: [...IMPERSONATE_ADDRESSES],
 		});
 		cleanupBurnerWallet = cleanup;
 	}
@@ -87,27 +60,18 @@ export async function createContext(): Promise<{
 		// chainInfoNodeURL
 	});
 
-	window.connection = connection;
-	window.publicClient = publicClient;
-	window.deployments = deployments;
-
 	// ----------------------------------------------------------------------------
 	// CHAIN CONFIGURATION
 	// ----------------------------------------------------------------------------
 
-	// Cast chain to augmented type for access to optional properties
+	// Resolve chain-specific configuration (finality, block time, intervals)
+	// from the chain's optional properties + defaults.
 	const chain = deployments.get().chain as AugmentedChainInfo;
-	const chainProperties = chain.properties ?? {};
-
-	// Extract chain-specific configuration with defaults
-	const finality = chainProperties.finality ?? DEFAULT_FINALITY;
-	const blockTimeMs =
-		chainProperties.averageBlockTimeMs ?? DEFAULT_BLOCK_TIME_MS;
-	const txObserverProcessInterval = calculateProcessInterval(blockTimeMs);
+	const {finality, txObserverProcessInterval, maxMessages} =
+		resolveAppConfig(chain);
 
 	// Reactive clock store that updates every second for smooth "time ago" displays
 	const clock = createClockStore();
-	window.clock = clock;
 
 	// ----------------------------------------------------------------------------
 	// TRACKED WALLET CLIENT
@@ -120,36 +84,29 @@ export async function createContext(): Promise<{
 		populateMetadata: true,
 		clock: () => clock.now(),
 	}).using(rawWalletClient, publicClient);
-	window.walletClient = walletClient;
 
 	// ----------------------------------------------------------------------------
 
-	const config = {
-		maxMessages: DEFAULT_MAX_MESSAGES,
-	};
+	const config = {maxMessages};
 
 	const onchainState = createOnchainState({
 		publicClient,
 		deployments: deployments.get(),
 		config,
 	});
-	window.onchainState = onchainState;
 
 	const accountData = createAccountData({
 		accountStore: account,
 		deployments: deployments.get(),
 		clock,
 	});
-	window.accountData = accountData;
 
 	const txObserver = createTransactionObserver({
 		finality,
 		provider: connection.provider,
 	});
-	window.txObserver = txObserver;
 
 	const tabLeader = createTabLeaderService();
-	window.tabLeader = tabLeader;
 
 	const trackedWalletConnector = createTrackedWalletConnector({
 		walletClient,
@@ -175,35 +132,26 @@ export async function createContext(): Promise<{
 	// ----------------------------------------------------------------------------
 
 	const balance = createBalanceStore({publicClient, account});
-	window.balance = balance;
-
-	// ----------------------------------------------------------------------------
 
 	const gasFee = createGasFeeStore({
 		publicClient: publicClient,
 		deployments: deployments.get(),
 	});
-	window.gasFee = gasFee;
 
 	const rpcHealth = createRpcHealthStore({balance, gasFee});
-	window.rpcHealth = rpcHealth;
 	const offline = createOfflineStore();
-	window.offline = offline;
-	// ----------------------------------------------------------------------------
 
 	const viewState = createViewState({
 		onchainState,
 		operations: accountData.watchField('operations'),
 		config,
 	});
-	window.viewState = viewState;
 
 	const balanceCheck = createBalanceCheckStore({
 		publicClient,
 		balance,
 		gasFee,
 	});
-	window.balanceCheck = balanceCheck;
 
 	// Debug store for tx-observer processing stats
 	const txObserverDebug = writable<TxObserverDebugState>({
@@ -212,25 +160,32 @@ export async function createContext(): Promise<{
 		isLeader: false,
 	});
 
+	const context: Context = {
+		gasFee,
+		balance,
+		rpcHealth,
+		offline,
+		connection,
+		walletClient,
+		publicClient,
+		account,
+		deployments,
+		accountData,
+		onchainState,
+		viewState,
+		clock,
+		txObserver,
+		txObserverDebug: {subscribe: txObserverDebug.subscribe},
+		balanceCheck,
+	};
+
+	// Dev/debug: expose the whole context on globalThis for console access
+	// (e.g. `context.balance`). Self-maintaining: new context members appear
+	// automatically. Delete this line if you don't want it.
+	(globalThis as any).context = context;
+
 	return {
-		context: {
-			gasFee,
-			balance,
-			rpcHealth,
-			offline,
-			connection,
-			walletClient,
-			publicClient,
-			account,
-			deployments,
-			accountData,
-			onchainState,
-			viewState,
-			clock,
-			txObserver,
-			txObserverDebug: {subscribe: txObserverDebug.subscribe},
-			balanceCheck,
-		},
+		context,
 		start: () => {
 			// we trigger it so it is always availabe
 			const unsubscribeFromBalance = balance.subscribe(() => {});
@@ -239,34 +194,20 @@ export async function createContext(): Promise<{
 
 			tabLeader.start();
 
-			let txObserverInterval: ReturnType<typeof setInterval> | undefined;
-
-			const unsubscribeFromLeader = tabLeader.isLeader.subscribe((isLeader) => {
-				if (isLeader) {
-					// Became leader: start processing immediately
+			const stopTxObserverLoop = startTxObserverLoop({
+				tabLeader,
+				txObserver,
+				intervalMs: txObserverProcessInterval,
+				// App concern: record debug stats. The core loop stays free of any
+				// app-specific state shape.
+				onProcess: () =>
 					txObserverDebug.update((state) => ({
 						...state,
-						isLeader: true,
 						processCount: state.processCount + 1,
 						lastProcessTime: Date.now(),
-					}));
-					txObserver.process();
-					txObserverInterval = setInterval(() => {
-						txObserverDebug.update((state) => ({
-							...state,
-							processCount: state.processCount + 1,
-							lastProcessTime: Date.now(),
-						}));
-						txObserver.process();
-					}, txObserverProcessInterval);
-				} else {
-					// Lost leadership: stop processing
-					txObserverDebug.update((state) => ({...state, isLeader: false}));
-					if (txObserverInterval !== undefined) {
-						clearInterval(txObserverInterval);
-						txObserverInterval = undefined;
-					}
-				}
+					})),
+				onLeadershipChange: (isLeader) =>
+					txObserverDebug.update((state) => ({...state, isLeader})),
 			});
 
 			trackedWalletConnector.connect();
@@ -280,10 +221,7 @@ export async function createContext(): Promise<{
 				txObserverConnector.disconnect();
 				toastConnector.disconnect();
 				onchainStateRefreshConnector.disconnect();
-				unsubscribeFromLeader();
-				if (txObserverInterval !== undefined) {
-					clearInterval(txObserverInterval);
-				}
+				stopTxObserverLoop();
 				tabLeader.stop();
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();
