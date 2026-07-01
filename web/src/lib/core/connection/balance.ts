@@ -91,9 +91,7 @@ export function createBalanceStore(
 			clearTimeout(timeout);
 			timeout = undefined;
 		}
-		if ($account) {
-			await fetchNow($account);
-		}
+		await fetchNow($account);
 	}
 
 	let consecutiveErrors = 0;

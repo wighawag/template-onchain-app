@@ -9,6 +9,7 @@
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import BasicModal from '../ui/modal/basic-modal.svelte';
 	import NoWalletFlow from './NoWalletFlow.svelte';
+	import {dev} from '$lib';
 
 	interface Props {
 		connection: AnyConnectionStore<UnderlyingEthereumProvider>;
@@ -19,15 +20,20 @@
 	let email: string = $state('');
 	let emailInput: HTMLInputElement | undefined = $state(undefined);
 
-	// TODO instead of burner-wallet specific detection we could make it a specific `auto` mode ?
-	// or maybe a field on provider, like provider.requiresNoUserConfirmation ?
-	let pendingRequest = $derived(
-		!(
+	function isBurnerWalletInSelectionPhase(): boolean {
+		// TODO instead of burner-wallet specific detection we could make it a specific `auto` mode ?
+		// or maybe a field on provider, like provider.requiresNoUserConfirmation ?
+		return (
 			$connection.step !== 'Idle' &&
 			$connection.step !== 'MechanismToChoose' &&
 			$connection.mechanism.type === 'wallet' &&
 			$connection.mechanism.name === 'Burner Wallet'
-		) && ($connection.wallet?.pendingRequests?.length ?? 0) > 0,
+		);
+	}
+
+	let pendingRequest = $derived(
+		($connection.wallet?.pendingRequests?.length ?? 0) > 0 &&
+			!isBurnerWalletInSelectionPhase(),
 	);
 </script>
 
@@ -124,7 +130,7 @@
 		/>
 	{/if}
 
-	{#if connection.targetStep == 'SignedIn' && !connection.walletOnly}
+	{#if dev && connection.targetStep == 'SignedIn' && !connection.walletOnly}
 		<!-- Dev option -->
 		<Button
 			variant="ghost"

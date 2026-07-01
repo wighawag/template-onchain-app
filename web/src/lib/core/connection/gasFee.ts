@@ -51,7 +51,7 @@ export function createGasFeeStore(
 	params: {publicClient: PublicClient; deployments: TypedDeployments},
 	options?: {fetchInterval?: number; expectedWorstGasPrice?: bigint},
 ): GasFeeStore {
-	let feeHistoryNotSupported: boolean | undefined;
+	let feeHistorySupport: 'unknown' | 'supported' | 'unsupported' = 'unknown';
 	const {publicClient, deployments} = params;
 	const fetchInterval = options?.fetchInterval || 10 * 60 * 1000; // 10 minute
 
@@ -77,7 +77,7 @@ export function createGasFeeStore(
 		const blockCount = 20;
 		const rewardPercentiles = [10, 50, 80];
 
-		if (!feeHistoryNotSupported) {
+		if (feeHistorySupport === 'unknown' || feeHistorySupport === 'supported') {
 			try {
 				const feeHistory: GetFeeHistoryReturnType =
 					await publicClient.getFeeHistory({
@@ -89,6 +89,17 @@ export function createGasFeeStore(
 
 				let blockNum = Number(feeHistory.oldestBlock);
 				const lastBlock = blockNum + reward.length;
+
+				if (feeHistory.baseFeePerGas.length < reward.length) {
+					throw new Error(
+						`feeHistory.baseFeePerGas has less values than feeHistory.reward`,
+					);
+				}
+				if (feeHistory.gasUsedRatio.length < reward.length) {
+					throw new Error(
+						`feeHistory.gasUsedRatio has less values than feeHistory.reward`,
+					);
+				}
 				let index = 0;
 				const blocksHistory: {
 					number: number;
@@ -124,6 +135,7 @@ export function createGasFeeStore(
 						maxPriorityFeePerGas: percentilePriorityFeeAverages[i],
 					});
 				}
+				feeHistorySupport = 'supported';
 				return {
 					slow: result[0],
 					average: result[1],
@@ -134,13 +146,13 @@ export function createGasFeeStore(
 						: false,
 				};
 			} catch (err: any) {
-				if (feeHistoryNotSupported === undefined) {
+				if (feeHistorySupport === 'unknown') {
 					if (
 						'details' in err &&
 						(err.details.indexOf('unknown method eth_feeHistory') != -1 ||
 							err.details.indexOf('Unknown method eth_feeHistory') != -1)
 					) {
-						feeHistoryNotSupported = true;
+						feeHistorySupport = 'unsupported';
 					} else {
 						throw err;
 					}
@@ -150,7 +162,7 @@ export function createGasFeeStore(
 			}
 		}
 
-		if (feeHistoryNotSupported) {
+		if (feeHistorySupport === 'unsupported') {
 			const gasPrice = await publicClient.getGasPrice();
 			return {
 				slow: {

@@ -17,6 +17,7 @@ export const {isParentRoute, isSameRoute, route, params} = createRouteHandler(
 	paramFromLocation,
 	{
 		globalQueryParams: [
+			'dev',
 			'transactions',
 			'debug',
 			'debugLevel',
@@ -38,6 +39,8 @@ export const {isParentRoute, isSameRoute, route, params} = createRouteHandler(
 		],
 	},
 );
+
+export const dev = params.dev || import.meta.env.DEV;
 
 export const notifications = createNotificationsService();
 export const serviceWorker = createServiceWorker(notifications);

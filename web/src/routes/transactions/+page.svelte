@@ -11,7 +11,7 @@
 	let accountDataState = $derived(accountData.state$);
 	let operationIds = $derived(accountData.watchItemIds('operations'));
 	let sortedOperationIds = $derived(
-		$operationIds.sort((a, b) => (a < b ? 1 : -1)),
+		$operationIds.sort((a, b) => Number(b) - Number(a)),
 	);
 </script>
 

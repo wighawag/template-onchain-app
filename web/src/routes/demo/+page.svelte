@@ -74,7 +74,7 @@
 	}
 
 	function formatRelativeTime(timestamp: number): string {
-		const now = Date.now();
+		const now = clock.now();
 		const diff = now - timestamp;
 
 		const seconds = Math.floor(diff / 1000);
