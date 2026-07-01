@@ -2,6 +2,7 @@ import type {Abi, Transaction, TransactionReceipt, PublicClient} from 'viem';
 import {
 	decodeFunctionData,
 	decodeErrorResult,
+	decodeAbiParameters,
 	BaseError,
 	ContractFunctionRevertedError,
 } from 'viem';
@@ -126,20 +127,14 @@ export function parseStandardRevertReason(data: `0x${string}`): string | null {
 	}
 
 	try {
-		// Decode the string from the ABI-encoded data
-		// Skip the 4-byte selector, then decode as string
-		const hexData = data.slice(10); // Remove '0x' and selector
-		// The string is ABI-encoded: offset (32 bytes) + length (32 bytes) + data
-		const offset = parseInt(hexData.slice(0, 64), 16);
-		const length = parseInt(hexData.slice(64, 128), 16);
-		const stringHex = hexData.slice(128, 128 + length * 2);
-
-		// Convert hex to string
-		let result = '';
-		for (let i = 0; i < stringHex.length; i += 2) {
-			result += String.fromCharCode(parseInt(stringHex.slice(i, i + 2), 16));
-		}
-		return result;
+		// Decode the ABI-encoded string that follows the 4-byte selector. viem
+		// honours the ABI offset and decodes UTF-8 correctly (the previous
+		// hand-rolled parse assumed offset 0x20 and mangled multi-byte chars).
+		const [reason] = decodeAbiParameters(
+			[{type: 'string'}],
+			`0x${data.slice(10)}`,
+		);
+		return reason;
 	} catch {
 		return null;
 	}
@@ -156,8 +151,11 @@ export function parsePanicError(data: `0x${string}`): DecodedErrorData | null {
 	}
 
 	try {
-		const codeHex = data.slice(10, 74);
-		const code = parseInt(codeHex, 16);
+		const [codeBig] = decodeAbiParameters(
+			[{type: 'uint256'}],
+			`0x${data.slice(10)}`,
+		);
+		const code = Number(codeBig);
 
 		const panicMessages: Record<number, string> = {
 			0x00: 'Generic compiler panic',

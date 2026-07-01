@@ -40,6 +40,11 @@ describe('parseStandardRevertReason', () => {
 		expect(parseStandardRevertReason(encodeStandardRevert(msg))).toBe(msg);
 	});
 
+	it('round-trips a non-ASCII (multi-byte UTF-8) message', () => {
+		const msg = 'non-ASCII: café ✓ 日本語';
+		expect(parseStandardRevertReason(encodeStandardRevert(msg))).toBe(msg);
+	});
+
 	it('returns null when the data is not an Error(string) selector', () => {
 		expect(parseStandardRevertReason('0xdeadbeef')).toBeNull();
 	});
