@@ -43,6 +43,7 @@
 	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import {useRoute, useENS} from '$lib/core/capabilities';
+	import {useCopyToClipboard} from '$lib/core/ui/clipboard/copy-to-clipboard.svelte';
 	import {truncateHex} from '$lib/core/utils/format';
 	import {
 		getBlockExplorerAddressUrl,
@@ -68,10 +69,10 @@
 	// optional and may be undefined, so every use of it is guarded.
 	const route = useRoute();
 	const ensService = useENS();
+	const clipboard = useCopyToClipboard();
 
 	let ensName: string | null = $state(null);
 	let loading = $state(false);
-	let copied = $state(false);
 
 	// Reactive effect to load ENS when address changes
 	// This handles component reuse by Svelte's {#each} optimization
@@ -113,9 +114,7 @@
 	async function copyAddress(event: MouseEvent) {
 		event.stopPropagation();
 		event.preventDefault();
-		await navigator.clipboard.writeText(value);
-		copied = true;
-		setTimeout(() => (copied = false), 1000);
+		await clipboard.copy(value);
 	}
 
 	const displayText = $derived(ensName || formatAddress(value));
@@ -176,7 +175,7 @@
 			onclick={copyAddress}
 			aria-label="Copy address"
 		>
-			{#if copied}
+			{#if clipboard.copied}
 				<CheckIcon class="size-3 text-green-500" />
 			{:else}
 				<CopyIcon class="size-3" />

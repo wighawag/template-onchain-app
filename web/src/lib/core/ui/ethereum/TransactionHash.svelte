@@ -41,6 +41,7 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import {useRoute} from '$lib/core/capabilities';
+	import {useCopyToClipboard} from '$lib/core/ui/clipboard/copy-to-clipboard.svelte';
 	import {truncateHex} from '$lib/core/utils/format';
 	import {
 		getBlockExplorerTxUrl,
@@ -62,8 +63,7 @@
 
 	// Ambient route resolver - falls back to base-path resolution when unprovided.
 	const route = useRoute();
-
-	let copied = $state(false);
+	const clipboard = useCopyToClipboard();
 
 	function formatHash(hash: string): string {
 		if (truncate === false) return hash;
@@ -73,9 +73,7 @@
 	async function copyHash(event: MouseEvent) {
 		event.stopPropagation();
 		event.preventDefault();
-		await navigator.clipboard.writeText(value);
-		copied = true;
-		setTimeout(() => (copied = false), 1000);
+		await clipboard.copy(value);
 	}
 
 	const displayText = $derived(formatHash(value));
@@ -132,7 +130,7 @@
 			onclick={copyHash}
 			aria-label="Copy transaction hash"
 		>
-			{#if copied}
+			{#if clipboard.copied}
 				<CheckIcon class="size-3 text-green-500" />
 			{:else}
 				<CopyIcon class="size-3" />
