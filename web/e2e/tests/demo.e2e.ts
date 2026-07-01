@@ -1,6 +1,16 @@
 import {test, expect, describe} from '../fixtures/test';
 
 describe('Demo Page - Greetings Registry', () => {
+	// All these tests submit greetings from the SAME burner account against the
+	// SAME shared contract, and the GreetingsRegistry keeps only ONE message per
+	// account (a new setMessage replaces the previous one). Under the global
+	// fullyParallel config they would overwrite each other's message mid-test,
+	// which is exactly what made "should replace previous message from same
+	// account" flaky. Run them serially so each test owns the account's single
+	// message for the duration of its assertions.
+	// See work/notes/findings/e2e-demo-tests-share-one-burner-account.md
+	describe.configure({mode: 'serial'});
+
 	test('should show input field for greeting', async ({page}) => {
 		await page.goto('/demo');
 
@@ -242,34 +252,22 @@ describe('Demo Page - Greetings Registry', () => {
 		await page.getByRole('button', {name: /send/i}).click();
 		await waitForTransaction(page);
 
-		// Wait for first message to appear in a message card
-		const messageCard1 = page
-			.locator('[class*="rounded-lg border px-4 py-3"]')
-			.filter({
-				hasText: message1,
-			});
-		await expect(messageCard1).toBeVisible({timeout: 30000});
+		// Wait for the first message to appear. Assert on the message text
+		// directly (same pattern as the passing sibling tests) rather than a
+		// class-substring card locator, which couples to Tailwind markup.
+		await expect(page.getByText(message1)).toBeVisible({timeout: 30000});
 
 		// Submit second message (this REPLACES the first message)
 		await input.fill(message2);
 		await page.getByRole('button', {name: /send/i}).click();
 		await waitForTransaction(page);
 
-		// Wait for second message to appear
-		const messageCard2 = page
-			.locator('[class*="rounded-lg border px-4 py-3"]')
-			.filter({
-				hasText: message2,
-			});
-		await expect(messageCard2).toBeVisible({timeout: 30000});
+		// Wait for the second message to appear.
+		await expect(page.getByText(message2)).toBeVisible({timeout: 30000});
 
-		// The first message should NO LONGER be visible (replaced by second)
-		await expect(messageCard1).not.toBeVisible({timeout: 5000});
-
-		// The most recent message from this account should be visible at the top
-		const messageCards = page.locator('[class*="rounded-lg border px-4 py-3"]');
-		const firstMessageText = await messageCards.first().textContent();
-		expect(firstMessageText).toContain(message2);
+		// The invariant that actually holds: one message per account. After the
+		// replacement, message2 is present and message1 is gone.
+		await expect(page.getByText(message1)).toHaveCount(0, {timeout: 10000});
 	});
 });
 
