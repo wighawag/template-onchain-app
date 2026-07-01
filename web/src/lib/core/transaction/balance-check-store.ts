@@ -1,6 +1,6 @@
 import {writable, get} from 'svelte/store';
 import type {BalanceStore} from '$lib/core/connection/balance';
-import type {GasFeeStore} from '$lib/core/connection/gasFee';
+import type {GasFeeStore, GasPrice} from '$lib/core/connection/gasFee';
 import type {
 	Abi,
 	PublicClient,
@@ -130,12 +130,14 @@ export function createBalanceCheckStore({
 		});
 	};
 
-	function getGasPrice(speed: GasSpeed): bigint {
+	// Returns the fee PRICE pair (maxFeePerGas/maxPriorityFeePerGas) for a speed.
+	// Distinct from `gasEstimate` below, which is the gas AMOUNT from eth_call.
+	function getGasPrice(speed: GasSpeed): GasPrice {
 		const gasFeeValue = get(gasFee);
 		if (gasFeeValue.step !== 'Loaded') {
 			throw new Error('Gas fee not loaded');
 		}
-		return gasFeeValue[speed].maxFeePerGas;
+		return gasFeeValue[speed];
 	}
 
 	async function checkBalanceAndShowModal(estimatedCost: bigint): Promise<void> {
@@ -238,7 +240,7 @@ export function createBalanceCheckStore({
 				await Promise.all([balance.update(), gasFee.update()]);
 			}
 
-			const gasPrice = getGasPrice(gasSpeed);
+			const {maxFeePerGas, maxPriorityFeePerGas} = getGasPrice(gasSpeed);
 
 			let gasEstimate: bigint;
 			let value: bigint = 0n;
@@ -265,22 +267,29 @@ export function createBalanceCheckStore({
 				value = transaction.value ?? 0n;
 			}
 
-			const gasCost = gasEstimate * gasPrice;
+			// Worst-case cost uses maxFeePerGas (the ceiling actually charged).
+			const gasCost = gasEstimate * maxFeePerGas;
 			const estimatedCost = gasCost + value;
 
 			await checkBalanceAndShowModal(estimatedCost);
 
+			// Set BOTH fee fields: on chains (and fresh local nodes) that enforce a
+			// minimum priority fee, sending only maxFeePerGas lets the node/viem
+			// pick a default maxPriorityFeePerGas that can exceed a low maxFeePerGas
+			// ("maxFeePerGas cannot be less than maxPriorityFeePerGas").
 			if ('contract' in options) {
 				return {
 					...options.contract,
 					gas: gasEstimate,
-					maxFeePerGas: gasPrice,
+					maxFeePerGas,
+					maxPriorityFeePerGas,
 				};
 			} else {
 				return {
 					...options.transaction,
 					gas: gasEstimate,
-					maxFeePerGas: gasPrice,
+					maxFeePerGas,
+					maxPriorityFeePerGas,
 				};
 			}
 		} catch (error) {
