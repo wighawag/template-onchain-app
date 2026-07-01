@@ -7,6 +7,7 @@ import {toast} from 'svelte-sonner';
 import type {TransactionIntent} from '@etherkit/tx-observer';
 import {subscribeToAccountDataMap} from '$lib/core/utils/data/account-data-subscription';
 import {pendingOperationModal} from '$lib/ui/pending-operation';
+import {createConnector} from './connector';
 
 /**
  * Gets a human-readable name for an operation from its metadata
@@ -240,13 +241,7 @@ export function createToastConnector(params: {
 		operationToastStates.clear();
 	}
 
-	let stopConnection: (() => void) | undefined;
-
-	function connect() {
-		// Clean up any existing connection
-		stopConnection?.();
-		stopConnection = undefined;
-
+	return createConnector(() => {
 		const unsubscribe = subscribeToAccountDataMap<Schema, 'operations'>({
 			accountData,
 			mapKey: 'operations',
@@ -279,15 +274,5 @@ export function createToastConnector(params: {
 			unsubscribe();
 			clearAllToasts();
 		};
-	}
-
-	return {
-		connect: () => {
-			stopConnection = connect();
-		},
-		disconnect: () => {
-			stopConnection?.();
-			stopConnection = undefined;
-		},
-	};
+	});
 }

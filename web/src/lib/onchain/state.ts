@@ -1,9 +1,11 @@
 import type {TypedDeployments} from '$lib/core/connection/types';
-import {logs} from 'named-logs';
-import {writable, type Readable} from 'svelte/store';
+import {
+	createPollingStore,
+	type PollingStore,
+	type PollingValue,
+	type PollingStatus,
+} from '$lib/core/connection/polling-store';
 import type {PublicClient} from 'viem';
-
-const logger = logs('onchain:state');
 
 export type Message = {
 	readonly account: `0x${string}`;
@@ -11,30 +13,9 @@ export type Message = {
 	readonly timestamp: number;
 };
 
-// New types for dual-store architecture
-export type OnchainStateValue =
-	| {step: 'Unloaded'}
-	| {step: 'Loaded'; messages: readonly Message[]};
-
-export type OnchainStateStatus = {
-	loading: boolean;
-	error?: {message: string};
-	lastSuccessfulFetch?: number;
-};
-
-export type OnchainStateStore = {
-	subscribe: Readable<OnchainStateValue>['subscribe'];
-	status: Readable<OnchainStateStatus>;
-	update(): void;
-};
-
-function defaultState(): OnchainStateValue {
-	return {step: 'Unloaded'};
-}
-
-function defaultStatus(): OnchainStateStatus {
-	return {loading: false};
-}
+export type OnchainStateValue = PollingValue<{messages: readonly Message[]}>;
+export type OnchainStateStatus = PollingStatus;
+export type OnchainStateStore = PollingStore<{messages: readonly Message[]}>;
 
 export function createOnchainState(params: {
 	publicClient: PublicClient;
@@ -45,112 +26,22 @@ export function createOnchainState(params: {
 	};
 }): OnchainStateStore {
 	const {publicClient, deployments, config} = params;
-	const fetchInterval = config.fetchInterval ?? 5_000;
 
-	// Main store - discriminated union with data
-	let $state: OnchainStateValue = defaultState();
-	const _mainStore = writable<OnchainStateValue>($state, start);
-
-	// Status store - loading/error only
-	let $status: OnchainStateStatus = defaultStatus();
-	const _statusStore = writable<OnchainStateStatus>($status);
-
-	function setState(state: OnchainStateValue) {
-		$state = state;
-		_mainStore.set($state);
-	}
-
-	function setStatus(status: OnchainStateStatus) {
-		$status = status;
-		_statusStore.set($status);
-	}
-
-	async function fetchState(): Promise<boolean> {
-		// Set loading=true, preserve lastSuccessfulFetch (only triggers status subscribers)
-		setStatus({
-			loading: true,
-			error: undefined,
-			lastSuccessfulFetch: $status.lastSuccessfulFetch,
-		});
-
-		try {
+	return createPollingStore(
+		async () => {
 			const valueFromContracts = await publicClient.readContract({
 				...deployments.contracts.GreetingsRegistry,
 				functionName: 'getLastMessages',
 				args: [BigInt(config.maxMessages)],
 			});
-			const messages = valueFromContracts.map((v) => ({
+			const messages: readonly Message[] = valueFromContracts.map((v) => ({
 				...v,
 				timestamp: Number(v.timestamp) * 1000,
 			}));
-
-			// Update main store with data (triggers main subscribers)
-			setState({step: 'Loaded', messages});
-			// Update status with new lastSuccessfulFetch timestamp (triggers status subscribers)
-			setStatus({loading: false, lastSuccessfulFetch: Date.now()});
-			return true;
-		} catch (err) {
-			console.error(`failed to fetch`, err);
-			// On error, preserve lastSuccessfulFetch
-			setStatus({
-				loading: false,
-				error: {
-					message:
-						err instanceof Error ? err.message : 'Failed to fetch messages',
-				},
-				lastSuccessfulFetch: $status.lastSuccessfulFetch,
-			});
-			return false;
-		}
-	}
-
-	let started = false;
-	let timeout: NodeJS.Timeout | undefined;
-	let consecutiveErrors = 0;
-
-	async function fetchContinuously() {
-		let interval = fetchInterval;
-		const success = await fetchState();
-		if (success) {
-			consecutiveErrors = 0;
-		} else {
-			consecutiveErrors++;
-			interval = Math.min(
-				fetchInterval * Math.pow(2, consecutiveErrors),
-				60_000,
-			);
-		}
-		if (timeout) {
-			clearTimeout(timeout);
-		}
-		if (started) {
-			timeout = setTimeout(fetchContinuously, interval);
-		} else {
-			timeout = undefined;
-		}
-	}
-
-	function start() {
-		started = true;
-		fetchContinuously();
-		return stop;
-	}
-
-	function stop() {
-		started = false;
-		if (timeout) {
-			clearTimeout(timeout);
-			timeout = undefined;
-		}
-	}
-
-	async function update() {
-		await fetchState();
-	}
-
-	return {
-		subscribe: _mainStore.subscribe,
-		status: {subscribe: _statusStore.subscribe},
-		update,
-	};
+			return {messages};
+		},
+		{
+			fetchInterval: config.fetchInterval ?? 5_000,
+		},
+	);
 }
