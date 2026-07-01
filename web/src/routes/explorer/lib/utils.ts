@@ -1,6 +1,15 @@
 import type {Abi, Address, Log} from 'viem';
 import {deployments} from '$lib/deployments-store';
-import {decodeEventLog, formatEther, formatGwei} from 'viem';
+import {decodeEventLog} from 'viem';
+import {
+	formatGas,
+	formatGasPrice,
+	formatValue,
+	toPlainJson,
+	truncateHex,
+} from '$lib/core/utils/format';
+
+export {formatGas, formatGasPrice, formatValue};
 
 export interface ContractInfo {
 	name: string;
@@ -49,7 +58,9 @@ function decodeLogWithAbi(log: Log, abi: Abi): DecodedEvent | null {
 		return {
 			eventName: decoded.eventName ?? 'Unknown Event',
 			signature: log.topics[0] ?? '0x0',
-			args: JSON.parse(JSON.stringify(decoded.args ?? {})),
+			// Decoded args can contain bigints, which JSON.stringify throws on;
+			// toPlainJson converts them to decimal strings.
+			args: toPlainJson(decoded.args ?? {}),
 			address: log.address,
 			blockNumber: log.blockNumber ?? 0n,
 			txHash: log.transactionHash ?? '0x0',
@@ -77,27 +88,6 @@ export function decodeLogs(logs: Log[]): DecodedEvent[] {
 	}
 
 	return decodedEvents;
-}
-
-/**
- * Format gas values to human-readable format
- */
-export function formatGas(gas: bigint): string {
-	return gas.toLocaleString();
-}
-
-/**
- * Format gas price to Gwei
- */
-export function formatGasPrice(gasPrice: bigint): string {
-	return `${formatGwei(gasPrice)} Gwei`;
-}
-
-/**
- * Format value to ETH
- */
-export function formatValue(value: bigint): string {
-	return `${formatEther(value)} ETH`;
 }
 
 /**
@@ -153,11 +143,8 @@ export function formatTransactionType(type: string): string {
 /**
  * Truncate transaction hash for display
  */
-export function truncateTxHash(hash: string, length: number = 10): string {
-	if (hash.length <= length) {
-		return hash;
-	}
-	return `${hash.slice(0, length)}...${hash.slice(-4)}`;
+export function truncateTxHash(hash: string, length: number = 8): string {
+	return truncateHex(hash, {start: length, end: 4});
 }
 
 /**

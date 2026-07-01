@@ -59,6 +59,7 @@
 	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 	import type {ENSContext} from '$lib/core/ens';
+	import {truncateHex} from '$lib/core/utils/format';
 	import ImgBlockie from './ImgBlockie.svelte';
 	import Address from './Address.svelte';
 
@@ -204,7 +205,7 @@
 
 	// Format address for display (truncated)
 	function formatAddress(addr: string): string {
-		return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+		return truncateHex(addr, {start: 4, end: 4});
 	}
 </script>
 

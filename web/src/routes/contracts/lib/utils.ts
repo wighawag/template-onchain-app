@@ -1,4 +1,5 @@
 import type {Abi, AbiFunction, AbiParameter, AbiStateMutability} from 'viem';
+import {bigIntReplacer} from '$lib/core/utils/format';
 
 export type {AbiFunction};
 
@@ -253,16 +254,6 @@ export function convertInputValues(
 }
 
 /**
- * Custom JSON replacer that converts BigInt values to strings
- */
-function bigIntReplacer(_key: string, value: unknown): unknown {
-	if (typeof value === 'bigint') {
-		return value.toString();
-	}
-	return value;
-}
-
-/**
  * Format output as pretty JSON
  */
 export function formatOutputJSON(output: any): string {
@@ -324,14 +315,16 @@ export function getInputPlaceholder(abiType: string): string {
 		case 'bool':
 			return 'Select true/false';
 		default:
+			// Array check must come before the primitive checks below, otherwise
+			// e.g. `uint256[]` would match the `uint` prefix and never reach here.
+			if (abiType.includes('[]')) {
+				return 'Enter comma-separated values...';
+			}
 			if (abiType.startsWith('uint') || abiType.startsWith('int')) {
 				return 'Enter number...';
 			}
 			if (abiType.startsWith('bytes')) {
 				return '0x...';
-			}
-			if (abiType.includes('[]')) {
-				return 'Enter comma-separated values...';
 			}
 			return 'Enter value...';
 	}

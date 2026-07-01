@@ -312,7 +312,7 @@ import deployments from "$lib/deployments";
 const address = deployments.contracts.GreetingsRegistry.address;
 
 // Access contract ABI
-const abi = deployments.contracts..GreetingsRegistry.abi;
+const abi = deployments.contracts.GreetingsRegistry.abi;
 ```
 
 ## Environment Variables
@@ -359,10 +359,10 @@ pnpm contracts:build
 
 ```typescript
 // Import ABIs
-import { Abi_GreetingsRegistry } from "template-ethereum-contracts/abis/GreetingsRegistry.js";
+import { Abi_GreetingsRegistry } from "template-onchain-app-contracts/abis/GreetingsRegistry.js";
 
 // Import deployment info
-import GreetingsRegistry from "template-ethereum-contracts/deployments/sepolia/GreetingsRegistry.json";
+import GreetingsRegistry from "template-onchain-app-contracts/deployments/sepolia/GreetingsRegistry.json";
 ```
 
 ## Linting

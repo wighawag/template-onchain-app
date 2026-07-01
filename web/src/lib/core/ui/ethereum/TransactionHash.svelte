@@ -41,6 +41,7 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import {route} from '$lib';
+	import {truncateHex} from '$lib/core/utils/format';
 	import {
 		getBlockExplorerTxUrl,
 		hasBlockExplorer,
@@ -62,9 +63,8 @@
 	let copied = $state(false);
 
 	function formatHash(hash: string): string {
-		if (!hash) return '';
 		if (truncate === false) return hash;
-		return `${hash.slice(0, 2 + truncate.start)}...${hash.slice(-truncate.end)}`;
+		return truncateHex(hash, truncate);
 	}
 
 	async function copyHash(event: MouseEvent) {

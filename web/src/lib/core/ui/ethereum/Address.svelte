@@ -44,6 +44,7 @@
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import {getContext} from 'svelte';
 	import {route} from '$lib';
+	import {truncateHex} from '$lib/core/utils/format';
 	import {
 		getBlockExplorerAddressUrl,
 		hasBlockExplorer,
@@ -105,9 +106,8 @@
 	}
 
 	function formatAddress(addr: string): string {
-		if (!addr) return '';
 		if (truncate === false) return addr;
-		return `${addr.slice(0, 2 + truncate.start)}...${addr.slice(-truncate.end)}`;
+		return truncateHex(addr, truncate);
 	}
 
 	async function copyAddress(event: MouseEvent) {
