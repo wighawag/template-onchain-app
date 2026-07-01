@@ -8,6 +8,18 @@ import {
 	type PollingStatus,
 } from './polling-store';
 
+/**
+ * Intentional template building block (not wired into the default app context).
+ *
+ * Unlike `createBalanceStore` (which tracks a single account), this store polls
+ * BOTH the signer's and its owner's balance. It exists for smart-account /
+ * session-key setups where the signer (a session key) is distinct from the
+ * owner, and a UI wants to show both balances. Wire it up in
+ * `src/lib/context/index.ts` if your app needs that; it is kept here as a
+ * ready-made piece rather than deleted. See
+ * work/notes/observations/signer-balance-store-appears-unused.md.
+ */
+
 export type SignerBalanceValue = PollingValue<{signer: bigint; owner: bigint}>;
 export type SignerBalanceStatus = PollingStatus;
 export type SignerBalanceStore = PollingStore<{signer: bigint; owner: bigint}>;
