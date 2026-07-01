@@ -135,7 +135,6 @@ export async function createContext(): Promise<{
 
 	const gasFee = createGasFeeStore({
 		publicClient: publicClient,
-		deployments: deployments.get(),
 	});
 
 	const rpcHealth = createRpcHealthStore({balance, gasFee});

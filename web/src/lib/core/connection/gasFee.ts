@@ -1,5 +1,4 @@
 import type {GetFeeHistoryReturnType, PublicClient} from 'viem';
-import type {TypedDeployments} from './types';
 import {
 	createPollingStore,
 	type PollingStore,
@@ -32,7 +31,7 @@ function avg(arr: bigint[]) {
 }
 
 export function createGasFeeStore(
-	params: {publicClient: PublicClient; deployments: TypedDeployments},
+	params: {publicClient: PublicClient},
 	options?: {fetchInterval?: number; expectedWorstGasPrice?: bigint},
 ): GasFeeStore {
 	let feeHistorySupport: 'unknown' | 'supported' | 'unsupported' = 'unknown';

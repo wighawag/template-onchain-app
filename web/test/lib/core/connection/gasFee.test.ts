@@ -2,9 +2,6 @@ import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import {get} from 'svelte/store';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
 import type {PublicClient} from 'viem';
-import type {TypedDeployments} from '$lib/core/connection/types';
-
-const deployments = {} as unknown as TypedDeployments;
 
 function activate<T>(store: {subscribe: (r: (v: T) => void) => () => void}) {
 	return store.subscribe(() => {});
@@ -33,7 +30,7 @@ describe('createGasFeeStore (adapter)', () => {
 		const getFeeHistory = vi.fn(async () => feeHistoryOneBlock());
 		const publicClient = {getFeeHistory} as unknown as PublicClient;
 
-		const store = createGasFeeStore({publicClient, deployments});
+		const store = createGasFeeStore({publicClient});
 		const off = activate(store);
 
 		await vi.waitFor(() => expect(get(store).step).toBe('Loaded'));
@@ -53,7 +50,7 @@ describe('createGasFeeStore (adapter)', () => {
 		const publicClient = {getFeeHistory} as unknown as PublicClient;
 
 		const store = createGasFeeStore(
-			{publicClient, deployments},
+			{publicClient},
 			{expectedWorstGasPrice: 150n}, // fast.maxFeePerGas is 180n > 150n
 		);
 		const off = activate(store);
@@ -78,7 +75,7 @@ describe('createGasFeeStore (adapter)', () => {
 			getGasPrice,
 		} as unknown as PublicClient;
 
-		const store = createGasFeeStore({publicClient, deployments});
+		const store = createGasFeeStore({publicClient});
 		const off = activate(store);
 
 		await vi.waitFor(() => expect(get(store).step).toBe('Loaded'));
