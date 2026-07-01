@@ -110,6 +110,37 @@ describe('myFunction', () => {
 });
 ```
 
+### Component Test Example
+
+Component tests run in a real browser (the `client` project). Name them
+`*.svelte.test.ts` so Vitest routes them to the browser project. Prefer
+components with deterministic, prop-driven rendering (display components);
+leave wallet-connect / tx-submission / funds-modal flows to E2E.
+
+```typescript
+// test/lib/core/ui/ethereum/Address.svelte.test.ts
+import {describe, it, expect, vi} from 'vitest';
+import {render} from 'vitest-browser-svelte';
+
+// SvelteKit's generated `$env/*` modules are not available in the raw browser
+// test runtime. If the component (or its import chain) reads them, stub them:
+vi.mock('$env/dynamic/public', () => ({env: {}}));
+vi.mock('$env/static/public', () => ({PUBLIC_USE_INTERNAL_EXPLORER: 'true'}));
+
+import Address from '$lib/core/ui/ethereum/Address.svelte';
+
+describe('Address.svelte', () => {
+	it('truncates the address by default', async () => {
+		const screen = render(Address, {
+			value: '0x1234567890abcdef1234567890abcdef12345678',
+		});
+		await expect
+			.element(screen.getByText('0x1234...5678'))
+			.toBeInTheDocument();
+	});
+});
+```
+
 ### E2E Test Example
 
 ```typescript
