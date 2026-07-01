@@ -9,7 +9,7 @@
 	import HashIcon from '@lucide/svelte/icons/hash';
 	import {PUBLIC_EXPLORER_BLOCK_INDEX_ENABLED} from '$env/static/public';
 	import {getTransactionListStore} from '../lib/stores/transactionList';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import TransactionItem from './TransactionItem.svelte';
 
 	interface Props {
@@ -19,7 +19,7 @@
 	let {targetCount = 20}: Props = $props();
 
 	// Get publicClient from context - it doesn't change so no need for $derived
-	const {publicClient} = getUserContext();
+	const {publicClient} = getAppContext();
 
 	// Create store with publicClient in constructor
 	const transactionListStore = getTransactionListStore({

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import {Button} from '$lib/shadcn/ui/button/index.js';
 	import XCircleIcon from '@lucide/svelte/icons/x-circle';
 
-	const {deployments} = getUserContext();
+	const {deployments} = getAppContext();
 
 	interface Props {
 		open: boolean;

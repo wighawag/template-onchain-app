@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import * as Card from '$lib/shadcn/ui/card';
 	import * as Alert from '$lib/shadcn/ui/alert';
 	import * as Separator from '$lib/shadcn/ui/separator';
@@ -45,7 +45,7 @@
 
 	let {txHash}: Props = $props();
 
-	let {publicClient} = getUserContext();
+	let {publicClient} = getAppContext();
 
 	let tx = $state<Awaited<ReturnType<PublicClient['getTransaction']>> | null>(
 		null,

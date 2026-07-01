@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {getUserContext, route} from '$lib';
+	import {getAppContext, route} from '$lib';
 	import Button, {buttonVariants} from '$lib/shadcn/ui/button/button.svelte';
 	import EthereumAvatar from '../../core/ui/ethereum/EthereumAvatar.svelte';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
@@ -26,7 +26,7 @@
 	} = $props();
 
 	const {connection, accountData, balance, gasFee, clock, deployments} =
-		getUserContext();
+		getAppContext();
 
 	let showMenu = $state(false);
 	let accountsOpen = $state(false);

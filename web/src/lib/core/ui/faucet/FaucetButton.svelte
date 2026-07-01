@@ -4,11 +4,11 @@
 	import LoaderIcon from '@lucide/svelte/icons/loader';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import CircleXIcon from '@lucide/svelte/icons/circle-x';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import {claimFund} from 'faucet-client';
 	import {PUBLIC_FAUCET_LINK, PUBLIC_FAUCET_API} from '$env/static/public';
 
-	const {account, balance, deployments, publicClient, balanceCheck} = getUserContext();
+	const {account, balance, deployments, publicClient, balanceCheck} = getAppContext();
 
 	let status = $state<'idle' | 'pending' | 'success' | 'error'>('idle');
 

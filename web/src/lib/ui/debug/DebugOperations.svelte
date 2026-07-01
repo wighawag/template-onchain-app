@@ -1,11 +1,11 @@
 <script lang="ts">
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import {Badge} from '$lib/shadcn/ui/badge';
 	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import DebugOperationItem from './DebugOperationItem.svelte';
 
-	const {accountData} = getUserContext();
+	const {accountData} = getAppContext();
 
 	let expanded = $state(false);
 

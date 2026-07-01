@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import {Button} from '$lib/shadcn/ui/button/index.js';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import {formatGwei, parseGwei} from 'viem';
 	import type {GasPrice} from '$lib/core/connection/gasFee';
 
@@ -23,7 +23,7 @@
 		errorMessage = null,
 	}: Props = $props();
 
-	const {gasFee} = getUserContext();
+	const {gasFee} = getAppContext();
 
 	type GasOption = 'slow' | 'average' | 'fast' | 'custom';
 	let selectedOption = $state<GasOption>('fast');

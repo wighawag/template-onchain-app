@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import * as Card from '$lib/shadcn/ui/card';
 	import * as Alert from '$lib/shadcn/ui/alert';
 	import * as Separator from '$lib/shadcn/ui/separator';
@@ -49,7 +49,7 @@
 		gasFee,
 		deployments,
 		balanceCheck,
-	} = getUserContext();
+	} = getAppContext();
 
 	let balance = $state<bigint>(0n);
 	let nonce = $state<number>(0);

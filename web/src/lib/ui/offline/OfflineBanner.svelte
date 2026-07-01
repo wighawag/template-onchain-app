@@ -1,8 +1,8 @@
 <script lang="ts">
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import CloudOffIcon from '@lucide/svelte/icons/cloud-off';
 
-	const {offline} = getUserContext();
+	const {offline} = getAppContext();
 </script>
 
 {#if $offline.offline}

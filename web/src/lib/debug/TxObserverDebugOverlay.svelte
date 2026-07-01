@@ -1,9 +1,9 @@
 <script lang="ts">
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import {onMount} from 'svelte';
 	import {slide} from 'svelte/transition';
 
-	const context = getUserContext();
+	const context = getAppContext();
 	const {accountData, publicClient, txObserverDebug, txObserver} = context;
 
 	// State

@@ -6,7 +6,7 @@
 	import MessageSquareIcon from '@lucide/svelte/icons/message-square';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import EthereumAvatar from '$lib/core/ui/ethereum/EthereumAvatar.svelte';
 	import {
@@ -23,7 +23,7 @@
 		deployments,
 		clock,
 		balanceCheck,
-	} = getUserContext();
+	} = getAppContext();
 
 	const viewStatus = viewState.status;
 

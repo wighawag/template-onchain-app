@@ -45,10 +45,10 @@ export const dev = params.dev || import.meta.env.DEV;
 export const notifications = createNotificationsService();
 export const serviceWorker = createServiceWorker(notifications);
 
-const [getUserContextFunction, setUserContext] = createContext<() => Context>();
+const [getAppContextFunction, setAppContext] = createContext<() => Context>();
 
-const getUserContext = () => getUserContextFunction()();
-export {getUserContext, setUserContext};
+const getAppContext = () => getAppContextFunction()();
+export {getAppContext, setAppContext};
 
 // Dev/debug: attaching to globalThis for console access
 (globalThis as any).env = env;

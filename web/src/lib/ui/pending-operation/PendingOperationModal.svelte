@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import {Button} from '$lib/shadcn/ui/button/index.js';
 	import {Badge} from '$lib/shadcn/ui/badge/index.js';
@@ -19,7 +19,7 @@
 		deployments,
 		balanceCheck,
 		gasFee,
-	} = getUserContext();
+	} = getAppContext();
 
 	// Modal state
 	let showDismissConfirm = $state(false);

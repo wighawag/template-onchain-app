@@ -1,12 +1,12 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import * as Empty from '$lib/shadcn/ui/empty';
 	import * as Separator from '$lib/shadcn/ui/separator';
 	import ListIcon from '@lucide/svelte/icons/list';
 	import OperationCard from './components/OperationCard.svelte';
 
-	const {accountData} = getUserContext();
+	const {accountData} = getAppContext();
 
 	let accountDataState = $derived(accountData.state$);
 	let operationIds = $derived(accountData.watchItemIds('operations'));

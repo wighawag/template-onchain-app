@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {setUserContext} from '$lib';
+	import {setAppContext} from '$lib';
 	import type {Context} from './types';
 	import {onMount, type Snippet} from 'svelte';
 
@@ -9,7 +9,7 @@
 	}
 
 	let {context, children}: Props = $props();
-	setUserContext(() => context.context);
+	setAppContext(() => context.context);
 
 	onMount(() => {
 		return context.start();

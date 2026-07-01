@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {getUserContext, params} from '$lib';
+	import {getAppContext, params} from '$lib';
 	import ConnectionFlow from '$lib/core/connection/ConnectionFlow.svelte';
 	import {DebugOperations} from '$lib/ui/debug';
 	import {PendingOperationModal} from '$lib/ui/pending-operation';
@@ -7,7 +7,7 @@
 
 	import InsufficientFundsModal from '$lib/core/transaction/InsufficientFundsModal.svelte';
 
-	const {connection} = getUserContext();
+	const {connection} = getAppContext();
 </script>
 
 {#if params.transactions}
