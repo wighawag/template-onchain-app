@@ -118,7 +118,7 @@ function tryDecodeError(
  * Parse standard revert reason from error data
  * Standard revert reason starts with 0x08c379a0 (Error(string) selector)
  */
-function parseStandardRevertReason(data: `0x${string}`): string | null {
+export function parseStandardRevertReason(data: `0x${string}`): string | null {
 	// Error(string) selector
 	const errorSelector = '0x08c379a0';
 	if (!data.startsWith(errorSelector)) {
@@ -149,7 +149,7 @@ function parseStandardRevertReason(data: `0x${string}`): string | null {
  * Parse Panic(uint256) error code
  * Panic errors start with 0x4e487b71
  */
-function parsePanicError(data: `0x${string}`): DecodedErrorData | null {
+export function parsePanicError(data: `0x${string}`): DecodedErrorData | null {
 	const panicSelector = '0x4e487b71';
 	if (!data.startsWith(panicSelector)) {
 		return null;
@@ -305,7 +305,7 @@ async function decodeTransactionError(
 /**
  * Format a decoded error for display
  */
-function formatDecodedError(error: DecodedErrorData): string {
+export function formatDecodedError(error: DecodedErrorData): string {
 	if (!error.args) {
 		return error.errorName;
 	}
@@ -517,7 +517,7 @@ export function formatDecodedArgs(
  * @param value - The argument value
  * @returns Formatted string representation
  */
-function formatArgValue(value: unknown): string {
+export function formatArgValue(value: unknown): string {
 	if (value === null) {
 		return 'null';
 	}
