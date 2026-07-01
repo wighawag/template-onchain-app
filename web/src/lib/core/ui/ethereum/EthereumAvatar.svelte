@@ -4,9 +4,8 @@
 	import * as Popover from '$lib/shadcn/ui/popover';
 	import Address from './Address.svelte';
 	import type {HTMLImgAttributes} from 'svelte/elements';
-	import {getContext} from 'svelte';
 	import {untrack} from 'svelte';
-	import type {ENSContext} from '$lib/core/ens';
+	import {useENS} from '$lib/core/capabilities';
 
 	interface EthereumAvatarProps extends HTMLImgAttributes {
 		address: `0x${string}`;
@@ -23,8 +22,8 @@
 
 	let blockieUri = $derived(Blockie.getURI(address, offset));
 
-	// ENS context for resolving names and avatars
-	const ensContext = getContext<ENSContext | undefined>('ens');
+	// Ambient ENS capability - optional, the avatar falls back to a blockie.
+	const ensService = useENS();
 
 	let ensName: string | null = $state(null);
 	let ensAvatar: string | null = $state(null);
@@ -47,14 +46,14 @@
 		avatarAttempted = false;
 		ensAttempted = false;
 
-		if (!ensContext || !currentAddress) {
+		if (!ensService || !currentAddress) {
 			ensAvatar = null;
 			ensName = null;
 			return;
 		}
 
 		// Check cache synchronously first - no blink for cached avatars
-		const cachedAvatarState = ensContext.getENSAvatarState(currentAddress);
+		const cachedAvatarState = ensService.getENSAvatarState(currentAddress);
 		if (cachedAvatarState.avatar) {
 			ensAvatar = cachedAvatarState.avatar;
 			avatarAttempted = true;
@@ -66,7 +65,7 @@
 		}
 
 		// Also check cached ENS name
-		const cachedNameState = ensContext.getENSState(currentAddress);
+		const cachedNameState = ensService.getENSState(currentAddress);
 		if (cachedNameState.name) {
 			ensName = cachedNameState.name;
 			ensAttempted = true;
@@ -77,7 +76,7 @@
 
 	// Load ENS name when popover opens (if not already loaded)
 	$effect(() => {
-		if (popoverOpen && showAddressOnTap && ensContext) {
+		if (popoverOpen && showAddressOnTap && ensService) {
 			// Use untrack to prevent re-triggering when ensName/ensNameLoading change
 			untrack(() => {
 				if (!ensAttempted && address) {
@@ -89,12 +88,12 @@
 	});
 
 	async function loadENSAvatar(addr: `0x${string}`) {
-		if (!ensContext) {
+		if (!ensService) {
 			return;
 		}
 		ensAvatarLoading = true;
 		try {
-			const result = await ensContext.fetchENSAvatar(addr);
+			const result = await ensService.fetchENSAvatar(addr);
 			// Only update if address hasn't changed
 			if (addr === address) {
 				ensAvatar = result;
@@ -107,12 +106,12 @@
 	}
 
 	async function loadENSName(addr: `0x${string}`) {
-		if (!ensContext) {
+		if (!ensService) {
 			return;
 		}
 		ensNameLoading = true;
 		try {
-			const result = await ensContext.fetchENS(addr);
+			const result = await ensService.fetchENS(addr);
 			// Only update if address hasn't changed
 			if (addr === address) {
 				ensName = result;

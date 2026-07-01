@@ -1,7 +1,8 @@
 <script lang="ts">
 	import '../app.css';
 
-	import {serviceWorker, notifications, params} from '$lib';
+	import {serviceWorker, notifications, params, route} from '$lib';
+	import {provideRoute, provideENS} from '$lib/core/capabilities';
 	import NotificationOverlay from '$lib/core/notifications/NotificationOverlay.svelte';
 	import Notifications from '$lib/core/notifications/Notifications.svelte';
 	import VersionAndInstallNotfications from '$lib/core/service-worker/VersionAndInstallNotfications.svelte';
@@ -12,14 +13,14 @@
 	import RpcHealthBanner from '$lib/ui/rpc-health/RpcHealthBanner.svelte';
 	import OfflineBanner from '$lib/ui/offline/OfflineBanner.svelte';
 	import {createENSService} from '$lib/core/ens';
-	import {setContext} from 'svelte';
 	import {Toaster} from '$lib/shadcn/ui/sonner';
 	import AcrossPages from '$lib/context/AcrossPages.svelte';
 
 	let {children} = $props();
 
-	const ensService = createENSService();
-	setContext('ens', ensService);
+	// Provide ambient capabilities to core UI components.
+	provideRoute(route);
+	provideENS(createENSService());
 </script>
 
 <AsyncContext getContext={createContext}>

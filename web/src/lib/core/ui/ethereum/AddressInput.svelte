@@ -54,11 +54,10 @@
 </script>
 
 <script lang="ts">
-	import {getContext, onMount, tick} from 'svelte';
 	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
 	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-	import type {ENSContext} from '$lib/core/ens';
+	import {useENS} from '$lib/core/capabilities';
 	import {truncateHex} from '$lib/core/utils/format';
 	import ImgBlockie from './ImgBlockie.svelte';
 	import Address from './Address.svelte';
@@ -76,8 +75,8 @@
 		...restProps
 	}: AddressInputProps = $props();
 
-	// Get ENS context if available
-	const ensContext = getContext<ENSContext | undefined>('ens');
+	// Ambient ENS capability - optional, the input works without it.
+	const ensService = useENS();
 
 	let resolving = $state(false);
 	let resolvedAddress = $state<`0x${string}` | null>(null);
@@ -137,7 +136,7 @@
 
 		// ENS name - debounced resolution
 		if (isENSName(trimmedValue)) {
-			if (!ensContext) {
+			if (!ensService) {
 				resolveError = 'ENS resolution not available';
 				resolving = false;
 				resolvedAddress = null;
@@ -151,7 +150,7 @@
 
 			debounceTimeout = setTimeout(async () => {
 				try {
-					const address = await ensContext.resolveAddress(trimmedValue);
+					const address = await ensService.resolveAddress(trimmedValue);
 					if (address) {
 						resolvedAddress = address;
 						value = address;

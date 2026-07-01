@@ -1,9 +1,9 @@
 import {describe, it, expect, vi} from 'vitest';
 import {render} from 'vitest-browser-svelte';
 
-// SvelteKit's generated env modules are not available in the raw browser test
-// runtime; provide minimal stand-ins so the component's import chain resolves.
-vi.mock('$env/dynamic/public', () => ({env: {}}));
+// blockExplorer reads $env/static/public; stub it so the internal-link branch
+// is deterministic. The component itself no longer imports the $lib app barrel,
+// so no $env/dynamic/public stub is needed.
 vi.mock('$env/static/public', () => ({PUBLIC_USE_INTERNAL_EXPLORER: 'true'}));
 
 import Address from '$lib/core/ui/ethereum/Address.svelte';

@@ -42,8 +42,7 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import {getContext} from 'svelte';
-	import {route} from '$lib';
+	import {useRoute, useENS} from '$lib/core/capabilities';
 	import {truncateHex} from '$lib/core/utils/format';
 	import {
 		getBlockExplorerAddressUrl,
@@ -64,10 +63,11 @@
 		...restProps
 	}: AddressProps = $props();
 
-	// Get ENS context if available - component works without it
-	const ensContext = getContext<
-		{fetchENS: (address: `0x${string}`) => Promise<string | null>} | undefined
-	>('ens');
+	// Ambient capabilities. `route` always resolves (falls back to base-path
+	// resolution when unprovided), so it is safe to call directly. `ens` is
+	// optional and may be undefined, so every use of it is guarded.
+	const route = useRoute();
+	const ensService = useENS();
 
 	let ensName: string | null = $state(null);
 	let loading = $state(false);
@@ -82,18 +82,18 @@
 		ensName = null;
 		loading = false;
 
-		if (currentAddress && ensContext && resolveENS) {
+		if (currentAddress && ensService && resolveENS) {
 			loadENS(currentAddress);
 		}
 	});
 
 	async function loadENS(addr: `0x${string}`) {
-		if (!addr || !ensContext) {
+		if (!addr || !ensService) {
 			return;
 		}
 		loading = true;
 		try {
-			const result = await ensContext.fetchENS(addr);
+			const result = await ensService.fetchENS(addr);
 			// Only update if address hasn't changed during async fetch
 			if (addr === value) {
 				ensName = result;

@@ -40,7 +40,7 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import {route} from '$lib';
+	import {useRoute} from '$lib/core/capabilities';
 	import {truncateHex} from '$lib/core/utils/format';
 	import {
 		getBlockExplorerTxUrl,
@@ -59,6 +59,9 @@
 		ref = $bindable(null),
 		...restProps
 	}: TransactionHashProps = $props();
+
+	// Ambient route resolver - falls back to base-path resolution when unprovided.
+	const route = useRoute();
 
 	let copied = $state(false);
 
