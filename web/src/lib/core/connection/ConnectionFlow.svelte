@@ -21,8 +21,8 @@
 	let emailInput: HTMLInputElement | undefined = $state(undefined);
 
 	function isBurnerWalletInSelectionPhase(): boolean {
-		// TODO instead of burner-wallet specific detection we could make it a specific `auto` mode ?
-		// or maybe a field on provider, like provider.requiresNoUserConfirmation ?
+		// TODO: replace burner-wallet-specific detection with a generic signal,
+		// e.g. an `auto` mode or a provider field like `requiresNoUserConfirmation`.
 		return (
 			$connection.step !== 'Idle' &&
 			$connection.step !== 'MechanismToChoose' &&
@@ -148,7 +148,7 @@
 	{/if}
 </Modal.Root>
 
-<!-- TODO? not a modal -->
+<!-- TODO: this uses Modal.Root but is not visually a modal; revisit the presentation. -->
 <Modal.Root
 	openWhen={connection.targetStep !== 'WalletConnected' &&
 		$connection.step === 'WalletConnected'}

@@ -16,8 +16,8 @@ export function handleAutomaticUpdate(
 		window.addEventListener(evt, wakeup),
 	);
 
-	// but we still do not an update every so often
-	// TODO improve upon this, we can have smarter interval for checking service-worker ?
+	// We still trigger an update check every so often.
+	// TODO: use a smarter interval/backoff for service-worker update checks.
 	return setInterval(() => registration.update(), intervals.checks);
 }
 

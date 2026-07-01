@@ -1,6 +1,9 @@
 import {derived, type Readable} from 'svelte/store';
+import {logs} from 'named-logs';
 import {type ServiceWorkerState} from '..';
 import {urlB64ToUint8Array} from './utils';
+
+const logger = logs('push-notifications');
 
 export type NotificationAction = {
 	action: string;
@@ -194,7 +197,7 @@ export function createPushNotificationService(params: {
 					applicationServerKey: applicationServerKey,
 				})
 				.then(async function (subscription) {
-					// TODO one more state update to show registrating on server
+					// TODO: emit a state update here so the UI can show "registering on server" progress.
 
 					if (_account?.signer?.address != accountBeingUsed) {
 						return;
@@ -249,7 +252,7 @@ export function createPushNotificationService(params: {
 				registeredOnServer = json.registered;
 			}
 		} catch (err) {
-			// TODO: show error ?
+			logger.error(`failed to check server registration status`, err);
 		}
 
 		setState({

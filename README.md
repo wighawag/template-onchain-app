@@ -254,17 +254,31 @@ Networks are configured in [`contracts/hardhat.config.ts`](contracts/hardhat.con
 
 ### Web Configuration
 
-Configure the web app in [`web/src/web-config.json`](web/src/web-config.json):
+Configure the web app in [`web/src/web-config.json`](web/src/web-config.json). This is the single place to rebrand: `name` drives the landing page hero, the document `<title>`, the social/meta tags, and the PWA manifest, and `pnpm generate-pwa-icons` regenerates the icons from `icon`.
 
 ```json
 {
-  "name": "Template Website",
-  "title": "Template Website",
-  "description": "A template to build website",
-  "canonicalURL": "https://localhost",
-  "themeColor": "#000000"
+  "name": "Jolly Roger",
+  "title": "Jolly Roger",
+  "description": "Build and Deploy for Eternity",
+  "canonicalURL": "http://localhost:8080",
+  "themeColor": "#000000",
+  "icon": "static/icon.svg"
 }
 ```
+
+Replace `icon` (`web/static/icon.svg`) with your own logo; the landing page and every PWA icon derive from it.
+
+### Reference Features
+
+The frontend ships several ready-made routes you can keep, adapt, or remove:
+
+- **Demo** (`/demo`) - the canonical read/write-a-contract example (GreetingsRegistry).
+- **Transactions** (`/transactions`) - the pending-operation / transaction tracker UI.
+- **Contracts** (`/contracts`) - a generic read/write UI generated from deployed ABIs.
+- **Explorer** (`/explorer`) - a built-in block/transaction/address explorer.
+
+These are wired only through links in [`web/src/lib/ui/navbar/navbar.svelte`](web/src/lib/ui/navbar/navbar.svelte) (and the landing page for Demo). To **disable** a feature, remove its link there; to remove it entirely, also delete its folder under `web/src/routes/`. The reusable building blocks live in `web/src/lib/core/` and are independent of these routes.
 
 ## Writing Deploy Scripts
 

@@ -179,7 +179,6 @@ export async function createContext(): Promise<{
 
 	// ----------------------------------------------------------------------------
 
-	// TODO use reactive deployment store ?
 	const gasFee = createGasFeeStore({
 		publicClient: publicClient,
 		deployments: deployments.get(),

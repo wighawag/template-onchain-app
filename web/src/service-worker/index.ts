@@ -214,7 +214,8 @@ async function getClientsStatus(): Promise<{
 	atLeastOneFocused: WindowClient | undefined;
 	atLeastOneVisibleAndFocused: WindowClient | undefined;
 }> {
-	// TODO compute last active so that if none are both "focused and visible", we know where to jump in
+	// TODO: track last-active client so that when none is both focused and visible,
+	// we can pick the best window to focus/navigate to.
 	const windowClients = await sw.clients.matchAll({
 		type: 'window',
 		includeUncontrolled: true,
@@ -283,8 +284,8 @@ async function handlePush(data?: string) {
 		title: 'Notification',
 		options: {
 			body: 'You have a new notification',
-			icon: '/pwa/favicon-512.png', // TODO template it ?
-			badge: '/pwa/favicon-512.png', // TODO template it ?
+			icon: '/pwa/favicon-512.png',
+			badge: '/pwa/favicon-512.png',
 		},
 	};
 
@@ -325,7 +326,7 @@ async function handlePush(data?: string) {
 						}
 					}
 				}
-				// TODO handle other notification attributes ?
+				// TODO: handle additional notification attributes (e.g. actions, image, vibrate).
 				// notif.actions
 				// notif.vibrate
 				// notif.timestamp
@@ -382,7 +383,8 @@ async function handleNotificationClick(notification: Notification) {
 
 	for (const client of windowClients) {
 		log(`${'focus' in client ? 'focus-available: ' : ''}: ${client.url}`);
-		// TODO url checks: client.url === '/' &&  ?
+		// TODO: prefer a client already on the target URL (or on '/') instead of
+		// focusing the first focusable client.
 		if ('focus' in client) {
 			if (url && 'navigate' in client) {
 				return client.focus().then(() => client.navigate(url));
