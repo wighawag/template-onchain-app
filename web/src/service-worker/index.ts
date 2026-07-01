@@ -13,6 +13,12 @@ const sw = self as unknown as ServiceWorkerGlobalScope;
 // ------------------- CONFIG ---------------------------
 const DEV = true;
 const OFFLINE_CACHE = 'all';
+// Icon/badge used for the DEFAULT push notification (when the push payload
+// carries no icon of its own). pwag regenerates /pwa/favicon-512.png from
+// src/web-config.json's `icon` on every build, so the image content is already
+// config-driven; keep the path here in ONE place so a fork that renames the
+// generated file only edits this line.
+const NOTIFICATION_ICON = '/pwa/favicon-512.png';
 // ------------------------------------------------------
 
 let ASSETS: string[] = [];
@@ -284,8 +290,8 @@ async function handlePush(data?: string) {
 		title: 'Notification',
 		options: {
 			body: 'You have a new notification',
-			icon: '/pwa/favicon-512.png',
-			badge: '/pwa/favicon-512.png',
+			icon: NOTIFICATION_ICON,
+			badge: NOTIFICATION_ICON,
 		},
 	};
 
