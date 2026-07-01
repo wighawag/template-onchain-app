@@ -4,6 +4,12 @@
 	import {getAppContext} from '$lib';
 	import {formatGwei, parseGwei} from 'viem';
 	import type {GasPrice} from '$lib/core/connection/gasFee';
+	import {
+		bumpForReplacement,
+		isValidReplacement,
+		minReplacementFee,
+		type GasReplacementPolicy,
+	} from '$lib/core/connection/gas-replacement';
 
 	interface Props {
 		open: boolean;
@@ -12,6 +18,8 @@
 		isSubmitting?: boolean;
 		minGasPrice?: GasPrice;
 		errorMessage?: string | null;
+		/** How much a resubmit must exceed the previous fee (default 12.5% / +1 wei). */
+		replacementPolicy?: GasReplacementPolicy;
 	}
 
 	let {
@@ -21,6 +29,7 @@
 		isSubmitting = false,
 		minGasPrice,
 		errorMessage = null,
+		replacementPolicy,
 	}: Props = $props();
 
 	const {gasFee} = getAppContext();
@@ -33,28 +42,17 @@
 	let gasFeeValue = $derived($gasFee);
 	let isLoaded = $derived(gasFeeValue.step === 'Loaded');
 
-	// Helper to enforce minimum on a gas price
+	// A resubmit must EXCEED the previous fee (not merely equal it), or the
+	// mempool sees an identical tx and rejects it. bumpForReplacement raises a
+	// price to the minimum valid replacement; isValidReplacement validates it.
 	function enforceMinimum(price: GasPrice): GasPrice {
 		if (!minGasPrice) return price;
-		return {
-			maxFeePerGas:
-				price.maxFeePerGas >= minGasPrice.maxFeePerGas
-					? price.maxFeePerGas
-					: minGasPrice.maxFeePerGas + 1n,
-			maxPriorityFeePerGas:
-				price.maxPriorityFeePerGas >= minGasPrice.maxPriorityFeePerGas
-					? price.maxPriorityFeePerGas
-					: minGasPrice.maxPriorityFeePerGas + 1n,
-		};
+		return bumpForReplacement(price, minGasPrice, replacementPolicy);
 	}
 
-	// Check if a gas price meets minimum requirements (original network price)
 	function meetsMinimum(price: GasPrice): boolean {
 		if (!minGasPrice) return true;
-		return (
-			price.maxFeePerGas >= minGasPrice.maxFeePerGas &&
-			price.maxPriorityFeePerGas >= minGasPrice.maxPriorityFeePerGas
-		);
+		return isValidReplacement(price, minGasPrice, replacementPolicy);
 	}
 
 	// Raw gas prices from network
@@ -75,6 +73,20 @@
 			average: enforceMinimum(rawGasPrices.average),
 			fast: enforceMinimum(rawGasPrices.fast),
 		};
+	});
+
+	// On idle chains eth_feeHistory returns equal percentiles, so all three tiers
+	// collapse to the same price. Then a single "Suggested" option is clearer than
+	// three identical buttons.
+	let tiersIdentical = $derived.by(() => {
+		if (!gasPrices) return false;
+		const {slow, average, fast} = gasPrices;
+		return (
+			slow.maxFeePerGas === average.maxFeePerGas &&
+			average.maxFeePerGas === fast.maxFeePerGas &&
+			slow.maxPriorityFeePerGas === average.maxPriorityFeePerGas &&
+			average.maxPriorityFeePerGas === fast.maxPriorityFeePerGas
+		);
 	});
 
 	// Check which preset options have been adjusted (network price was below minimum)
@@ -134,7 +146,11 @@
 	let minPriceError = $derived.by((): string | null => {
 		if (!selectedGasPrice || !minGasPrice) return null;
 		if (isSelectedPriceValid) return null;
-		return `Gas price must be at least ${formatGwei(minGasPrice.maxFeePerGas)} gwei (previous transaction's gas price)`;
+		const min = minReplacementFee(
+			minGasPrice.maxFeePerGas,
+			replacementPolicy,
+		);
+		return `Gas price must be greater than the previous transaction's (at least ${formatGwei(min)} gwei)`;
 	});
 
 	function handleSubmit() {
@@ -167,7 +183,24 @@
 			</div>
 		{/if}
 
-		{#if isLoaded && gasPrices}
+		{#if isLoaded && gasPrices && tiersIdentical}
+			<button
+				type="button"
+				class="flex w-full flex-col items-center rounded-lg border p-3 transition-colors {selectedOption !==
+				'custom'
+					? 'border-primary bg-primary/10'
+					: 'hover:bg-muted/50'}"
+				onclick={() => (selectedOption = 'fast')}
+			>
+				<span class="text-sm font-medium">Suggested gas price</span>
+				<span class="mt-1 text-xs text-muted-foreground"
+					>{formatGas(gasPrices.fast)}</span
+				>
+				{#if adjustedOptions.fast}
+					<span class="text-warning mt-1 text-xs">bumped above previous</span>
+				{/if}
+			</button>
+		{:else if isLoaded && gasPrices}
 			<div class="grid grid-cols-3 gap-2">
 				<button
 					type="button"
@@ -182,7 +215,7 @@
 						>{formatGas(gasPrices.slow)}</span
 					>
 					{#if adjustedOptions.slow}
-						<span class="text-warning mt-1 text-xs">= min</span>
+						<span class="text-warning mt-1 text-xs">bumped</span>
 					{/if}
 				</button>
 				<button
@@ -198,7 +231,7 @@
 						>{formatGas(gasPrices.average)}</span
 					>
 					{#if adjustedOptions.average}
-						<span class="text-warning mt-1 text-xs">= min</span>
+						<span class="text-warning mt-1 text-xs">bumped</span>
 					{/if}
 				</button>
 				<button
@@ -214,7 +247,7 @@
 						>{formatGas(gasPrices.fast)}</span
 					>
 					{#if adjustedOptions.fast}
-						<span class="text-warning mt-1 text-xs">= min</span>
+						<span class="text-warning mt-1 text-xs">bumped</span>
 					{/if}
 				</button>
 			</div>
