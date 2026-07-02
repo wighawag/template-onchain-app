@@ -1,0 +1,91 @@
+import type {AbiFunction, PublicClient} from 'viem';
+import type {
+	AnyConnectionStore,
+	UnderlyingEthereumProvider,
+} from '@etherplay/connect';
+import type {WalletClient} from '$lib/context/types';
+import type {BalanceCheckStore} from '$lib/core/transaction/balance-check-store';
+import {InsufficientFundsError} from '$lib/core/transaction';
+import {convertInputValues} from './utils';
+
+/**
+ * Read a view/pure function on an arbitrary contract.
+ *
+ * Converts the raw UI input map to typed args and performs the `readContract`
+ * call. Throws on failure (the caller renders the message).
+ */
+export async function readContractValue(params: {
+	publicClient: PublicClient;
+	abiItem: AbiFunction;
+	contractAddress: string;
+	inputValues: Record<string, string>;
+}): Promise<unknown> {
+	const {publicClient, abiItem, contractAddress, inputValues} = params;
+
+	if (!publicClient) {
+		throw new Error('Public client not available');
+	}
+
+	const args = convertInputValues(abiItem.inputs, inputValues);
+
+	return publicClient.readContract({
+		address: contractAddress as `0x${string}`,
+		abi: [abiItem],
+		functionName: abiItem.name,
+		// Dynamic args from user input - type cannot be inferred at compile time
+		args: args as any,
+	});
+}
+
+export type ExecuteContractWriteResult =
+	| {status: 'submitted'; transactionHash: `0x${string}`}
+	| {status: 'cancelled'};
+
+/**
+ * Execute a state-changing function on an arbitrary contract.
+ *
+ * Owns the connect + balance-check + write flow. Returns `cancelled` when the
+ * user dismisses the insufficient-funds modal; throws on any other failure.
+ */
+export async function executeContractWrite(params: {
+	connection: AnyConnectionStore<UnderlyingEthereumProvider>;
+	walletClient: WalletClient;
+	balanceCheck: BalanceCheckStore;
+	abiItem: AbiFunction;
+	contractAddress: string;
+	inputValues: Record<string, string>;
+}): Promise<ExecuteContractWriteResult> {
+	const {
+		connection,
+		walletClient,
+		balanceCheck,
+		abiItem,
+		contractAddress,
+		inputValues,
+	} = params;
+
+	const args = convertInputValues(abiItem.inputs, inputValues);
+
+	const currentConnection = await connection.ensureConnected();
+
+	try {
+		const contractRequest = await balanceCheck.ensureCanAfford({
+			contract: {
+				address: contractAddress as `0x${string}`,
+				abi: [abiItem],
+				functionName: abiItem.name,
+				args: args as any,
+				account: currentConnection.account.address,
+			},
+		});
+
+		const hash = await walletClient.writeContract(contractRequest);
+		return {status: 'submitted', transactionHash: hash};
+	} catch (e) {
+		if (e instanceof InsufficientFundsError) {
+			// User dismissed the funds modal - silently cancel.
+			return {status: 'cancelled'};
+		}
+		throw e;
+	}
+}

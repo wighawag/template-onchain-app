@@ -6,9 +6,9 @@
 	import {
 		formatFunctionSignature,
 		isViewFunction,
-		convertInputValues,
 		formatOutputJSON,
 	} from '../lib/utils';
+	import {readContractValue, executeContractWrite} from '../lib/contractCall';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
 	import * as Alert from '$lib/shadcn/ui/alert';
 	import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
@@ -22,7 +22,6 @@
 	import {route} from '$lib';
 	import type {WalletClient} from '$lib/context/types';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
-	import {InsufficientFundsError} from '$lib/core/transaction';
 	import type {BalanceCheckStore} from '$lib/core/transaction/balance-check-store';
 
 	interface Props {
@@ -55,28 +54,18 @@
 	let isView = $derived(isViewFunction(abiItem.stateMutability));
 
 	async function handleFetch() {
-		if (!publicClient) {
-			error = 'Public client not available';
-			return;
-		}
-
 		loading = true;
 		error = null;
 		result = null;
 		transactionHash = null;
 
 		try {
-			const args = convertInputValues(abiItem.inputs, inputValues);
-
-			const data = await publicClient.readContract({
-				address: contractAddress as `0x${string}`,
-				abi: [abiItem],
-				functionName: abiItem.name,
-				// Dynamic args from user input - type cannot be inferred at compile time
-				args: args as any,
+			result = await readContractValue({
+				publicClient,
+				abiItem,
+				contractAddress,
+				inputValues,
 			});
-
-			result = data;
 		} catch (e: any) {
 			error = e.message || 'Failed to fetch value';
 			console.error('Error fetching value:', e);
@@ -101,32 +90,20 @@
 		transactionHash = null;
 
 		try {
-			const args = convertInputValues(abiItem.inputs, inputValues);
-
-			const currentConnection = await connection.ensureConnected();
-
-			// Check balance before executing transaction
-			const contractRequest = await balanceCheck.ensureCanAfford({
-				contract: {
-					address: contractAddress as `0x${string}`,
-					abi: [abiItem],
-					functionName: abiItem.name,
-					args: args as any,
-					account: currentConnection.account.address,
-				},
+			const outcome = await executeContractWrite({
+				connection,
+				walletClient,
+				balanceCheck,
+				abiItem,
+				contractAddress,
+				inputValues,
 			});
-
-			// Use walletClient (which is now TrackedWalletClient) with metadata for tracking
-			const hash = await walletClient.writeContract(contractRequest);
-
-			transactionHash = hash;
-			result = null;
-			error = null;
-		} catch (e: any) {
-			if (e instanceof InsufficientFundsError) {
-				// User dismissed the modal - silently cancel
-				return;
+			if (outcome.status === 'submitted') {
+				transactionHash = outcome.transactionHash;
+				result = null;
+				error = null;
 			}
+		} catch (e: any) {
 			error = e.message || 'Failed to execute transaction';
 			console.error('Error executing transaction:', e);
 		} finally {

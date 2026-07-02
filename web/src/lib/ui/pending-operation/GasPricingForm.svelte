@@ -2,14 +2,13 @@
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import {Button} from '$lib/shadcn/ui/button/index.js';
 	import {getAppContext} from '$lib';
-	import {formatGwei, parseGwei} from 'viem';
+	import {formatGwei} from 'viem';
 	import type {GasPrice} from '$lib/core/connection/gasFee';
+	import type {GasReplacementPolicy} from '$lib/core/connection/gas-replacement';
 	import {
-		bumpForReplacement,
-		isValidReplacement,
-		minReplacementFee,
-		type GasReplacementPolicy,
-	} from '$lib/core/connection/gas-replacement';
+		computeGasPricingModel,
+		type GasOption,
+	} from './gas-pricing-model';
 
 	interface Props {
 		open: boolean;
@@ -34,26 +33,12 @@
 
 	const {gasFee} = getAppContext();
 
-	type GasOption = 'slow' | 'average' | 'fast' | 'custom';
 	let selectedOption = $state<GasOption>('fast');
 	let customGasPrice = $state('');
 
 	// Get current gas prices
 	let gasFeeValue = $derived($gasFee);
 	let isLoaded = $derived(gasFeeValue.step === 'Loaded');
-
-	// A resubmit must EXCEED the previous fee (not merely equal it), or the
-	// mempool sees an identical tx and rejects it. bumpForReplacement raises a
-	// price to the minimum valid replacement; isValidReplacement validates it.
-	function enforceMinimum(price: GasPrice): GasPrice {
-		if (!minGasPrice) return price;
-		return bumpForReplacement(price, minGasPrice, replacementPolicy);
-	}
-
-	function meetsMinimum(price: GasPrice): boolean {
-		if (!minGasPrice) return true;
-		return isValidReplacement(price, minGasPrice, replacementPolicy);
-	}
 
 	// Raw gas prices from network
 	let rawGasPrices = $derived.by(() => {
@@ -65,92 +50,32 @@
 		};
 	});
 
-	// Adjusted gas prices that enforce minimum (for display and selection)
-	let gasPrices = $derived.by(() => {
-		if (!rawGasPrices) return null;
-		return {
-			slow: enforceMinimum(rawGasPrices.slow),
-			average: enforceMinimum(rawGasPrices.average),
-			fast: enforceMinimum(rawGasPrices.fast),
-		};
-	});
-
-	// On idle chains eth_feeHistory returns equal percentiles, so all three tiers
-	// collapse to the same price. Then a single "Suggested" option is clearer than
-	// three identical buttons.
-	let tiersIdentical = $derived.by(() => {
-		if (!gasPrices) return false;
-		const {slow, average, fast} = gasPrices;
-		return (
-			slow.maxFeePerGas === average.maxFeePerGas &&
-			average.maxFeePerGas === fast.maxFeePerGas &&
-			slow.maxPriorityFeePerGas === average.maxPriorityFeePerGas &&
-			average.maxPriorityFeePerGas === fast.maxPriorityFeePerGas
-		);
-	});
-
-	// Check which preset options have been adjusted (network price was below minimum)
-	let adjustedOptions = $derived.by(() => {
-		if (!rawGasPrices) return {slow: false, average: false, fast: false};
-		return {
-			slow: !meetsMinimum(rawGasPrices.slow),
-			average: !meetsMinimum(rawGasPrices.average),
-			fast: !meetsMinimum(rawGasPrices.fast),
-		};
-	});
-
-	// Get the best default gas price for custom field (fast or minimum if fast is too low)
-	let defaultCustomGasPrice = $derived.by((): string => {
-		if (gasPrices) {
-			// Use fast (which is already adjusted to minimum if needed)
-			return formatGwei(gasPrices.fast.maxFeePerGas);
-		}
-		if (minGasPrice) {
-			return formatGwei(minGasPrice.maxFeePerGas);
-		}
-		return '';
-	});
+	// All gas pricing / replacement-validation logic lives in the pure model.
+	let model = $derived(
+		computeGasPricingModel({
+			rawGasPrices,
+			minGasPrice,
+			replacementPolicy,
+			selectedOption,
+			customGasPrice,
+		}),
+	);
+	let gasPrices = $derived(model.gasPrices);
+	let tiersIdentical = $derived(model.tiersIdentical);
+	let adjustedOptions = $derived(model.adjustedOptions);
+	let selectedGasPrice = $derived(model.selectedGasPrice);
+	let isSelectedPriceValid = $derived(model.isSelectedPriceValid);
+	let minPriceError = $derived(model.minPriceError);
 
 	// Initialize custom gas price when switching to custom option
 	$effect(() => {
 		if (
 			selectedOption === 'custom' &&
 			customGasPrice === '' &&
-			defaultCustomGasPrice
+			model.defaultCustomGasPrice
 		) {
-			customGasPrice = defaultCustomGasPrice;
+			customGasPrice = model.defaultCustomGasPrice;
 		}
-	});
-
-	// Get selected gas price
-	let selectedGasPrice = $derived.by((): GasPrice | null => {
-		if (selectedOption === 'custom') {
-			try {
-				const gwei = parseGwei(customGasPrice);
-				return {maxFeePerGas: gwei, maxPriorityFeePerGas: gwei};
-			} catch {
-				return null;
-			}
-		}
-		if (!gasPrices) return null;
-		return gasPrices[selectedOption];
-	});
-
-	// Check if selected price is valid (meets minimum)
-	let isSelectedPriceValid = $derived.by((): boolean => {
-		if (!selectedGasPrice) return false;
-		return meetsMinimum(selectedGasPrice);
-	});
-
-	// Validation error message for minimum gas price
-	let minPriceError = $derived.by((): string | null => {
-		if (!selectedGasPrice || !minGasPrice) return null;
-		if (isSelectedPriceValid) return null;
-		const min = minReplacementFee(
-			minGasPrice.maxFeePerGas,
-			replacementPolicy,
-		);
-		return `Gas price must be greater than the previous transaction's (at least ${formatGwei(min)} gwei)`;
 	});
 
 	function handleSubmit() {
