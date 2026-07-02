@@ -11,10 +11,15 @@
 	import CircleQuestionMarkIcon from '@lucide/svelte/icons/circle-help';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import type {OnchainOperation} from '$lib/account/AccountData';
-	import type {TransactionIntent} from '@etherkit/tx-observer';
 	import type {Readable} from 'svelte/store';
 	import {pendingOperationModal} from '$lib/ui/pending-operation';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
+	import {
+		getOperationName,
+		getOperationStatusInfo,
+		getMainTxHash,
+		type OperationStatusKind,
+	} from '$lib/view/operation';
 
 	interface Props {
 		id: string;
@@ -23,75 +28,19 @@
 
 	let {id, operationStore}: Props = $props();
 
-	// Subscribe to the operation store
-	// let operation = $derived($operationStore);
+	// Map the semantic status kind to an icon component (presentation only).
+	const statusIcons: Record<OperationStatusKind, typeof CircleCheckIcon> = {
+		pending: ClockIcon,
+		notFound: CircleQuestionMarkIcon,
+		dropped: TriangleAlertIcon,
+		success: CircleCheckIcon,
+		failed: CircleXIcon,
+		unknown: CircleQuestionMarkIcon,
+	};
 
 	// Helper to get block explorer URL
 	function getExplorerTxUrl(hash: string): string {
 		return route(`/explorer/tx/${hash}`);
-	}
-
-	// Helper to get status info
-	function getStatusInfo(intent: TransactionIntent): {
-		label: string;
-		variant: 'default' | 'secondary' | 'destructive' | 'outline';
-		icon: typeof CircleCheckIcon;
-	} {
-		const state = intent.state;
-
-		if (!state || state.inclusion === 'InMemPool') {
-			return {label: 'Pending', variant: 'secondary', icon: ClockIcon};
-		}
-
-		if (state.inclusion === 'NotFound') {
-			return {
-				label: 'Not Found',
-				variant: 'destructive',
-				icon: CircleQuestionMarkIcon,
-			};
-		}
-
-		if (state.inclusion === 'Dropped') {
-			return {
-				label: 'Dropped',
-				variant: 'destructive',
-				icon: TriangleAlertIcon,
-			};
-		}
-
-		if (state.inclusion === 'Included') {
-			if (state.status === 'Success') {
-				return {label: 'Success', variant: 'default', icon: CircleCheckIcon};
-			} else {
-				return {label: 'Failed', variant: 'destructive', icon: CircleXIcon};
-			}
-		}
-
-		return {label: 'Unknown', variant: 'outline', icon: CircleQuestionMarkIcon};
-	}
-
-	// Get the main transaction hash
-	function getMainTxHash(intent: TransactionIntent): `0x${string}` | undefined {
-		if (intent.transactions.length === 0) return undefined;
-
-		const state = intent.state;
-		if (state?.inclusion === 'Included' && state.attemptIndex !== undefined) {
-			return intent.transactions[state.attemptIndex]?.hash;
-		}
-
-		return intent.transactions[0]?.hash;
-	}
-
-	// Get operation name from metadata
-	function getOperationName(op: OnchainOperation): string {
-		const metadata = op.metadata;
-		if (metadata.type === 'functionCall') {
-			return metadata.functionName;
-		}
-		if (metadata.type === 'unknown') {
-			return metadata.name;
-		}
-		return 'Unknown Operation';
 	}
 
 	// Format timestamp
@@ -102,8 +51,8 @@
 </script>
 
 {#if $operationStore}
-	{@const statusInfo = getStatusInfo($operationStore.transactionIntent)}
-	{@const StatusIcon = statusInfo.icon}
+	{@const statusInfo = getOperationStatusInfo($operationStore.transactionIntent)}
+	{@const StatusIcon = statusIcons[statusInfo.kind]}
 	{@const txHash = getMainTxHash($operationStore.transactionIntent)}
 	{@const state = $operationStore.transactionIntent.state}
 	{@const firstTx = $operationStore.transactionIntent.transactions[0]}

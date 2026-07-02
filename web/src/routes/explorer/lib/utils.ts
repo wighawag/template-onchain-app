@@ -1,4 +1,4 @@
-import type {Abi, Address, Log} from 'viem';
+import type {Abi, Address, Log, Transaction, TransactionReceipt} from 'viem';
 import {deployments} from '$lib/deployments-store';
 import {decodeEventLog} from 'viem';
 import {
@@ -95,6 +95,75 @@ export function decodeLogs(logs: Log[]): DecodedEvent[] {
  */
 export function formatTxStatus(status: 'success' | 'reverted'): string {
 	return status === 'success' ? 'Success' : 'Failed';
+}
+
+/** Is the value a full transaction hash (0x + 64 hex)? */
+export function isValidTxHash(value: string): boolean {
+	return /^0x[a-fA-F0-9]{64}$/.test(value.trim());
+}
+
+/** Is the value a full address (0x + 40 hex)? */
+export function isValidAddress(value: string): boolean {
+	return /^0x[a-fA-F0-9]{40}$/.test(value.trim());
+}
+
+export type SearchClassification =
+	| {kind: 'empty'}
+	| {kind: 'tx'; value: string}
+	| {kind: 'address'; value: string}
+	| {kind: 'invalid'};
+
+/**
+ * Classify an explorer search box value into where it should navigate.
+ */
+export function classifySearchInput(raw: string): SearchClassification {
+	const trimmed = raw.trim();
+	if (!trimmed) return {kind: 'empty'};
+	if (isValidTxHash(trimmed)) return {kind: 'tx', value: trimmed};
+	if (isValidAddress(trimmed)) return {kind: 'address', value: trimmed};
+	return {kind: 'invalid'};
+}
+
+export interface Eip1559FeeInfo {
+	isEIP1559: boolean;
+	maxPriorityFeePerGas: bigint | null;
+	maxFeePerGas: bigint | null;
+	effectiveGasPrice: bigint | null;
+	/** effectiveGasPrice - maxPriorityFeePerGas, when both are known. */
+	baseFeeUsed: bigint | null;
+}
+
+/**
+ * Derive EIP-1559 fee display info from a transaction and its (optional)
+ * receipt. Shared by the transaction list item and the transaction detail view
+ * so the fee math lives in one place.
+ */
+export function getEip1559FeeInfo(
+	tx: Transaction,
+	receipt: TransactionReceipt | null,
+): Eip1559FeeInfo {
+	const isEIP1559 = tx.type === 'eip1559';
+	const maxPriorityFeePerGas =
+		isEIP1559 && 'maxPriorityFeePerGas' in tx
+			? (tx.maxPriorityFeePerGas as bigint)
+			: null;
+	const maxFeePerGas =
+		isEIP1559 && 'maxFeePerGas' in tx ? (tx.maxFeePerGas as bigint) : null;
+	const effectiveGasPrice = receipt?.effectiveGasPrice ?? null;
+	// The actual priority fee paid is min(maxPriorityFeePerGas, maxFeePerGas -
+	// baseFee); this is the base fee implied by the effective price.
+	const baseFeeUsed =
+		effectiveGasPrice !== null && maxPriorityFeePerGas !== null
+			? effectiveGasPrice - maxPriorityFeePerGas
+			: null;
+
+	return {
+		isEIP1559,
+		maxPriorityFeePerGas,
+		maxFeePerGas,
+		effectiveGasPrice,
+		baseFeeUsed,
+	};
 }
 
 /**

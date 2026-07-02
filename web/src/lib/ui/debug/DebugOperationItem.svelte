@@ -6,8 +6,12 @@
 	import CircleXIcon from '@lucide/svelte/icons/circle-x';
 	import CircleQuestionMarkIcon from '@lucide/svelte/icons/circle-help';
 	import type {OnchainOperation} from '$lib/account/AccountData';
-	import type {TransactionIntent} from '@etherkit/tx-observer';
 	import type {Readable} from 'svelte/store';
+	import {
+		getOperationName,
+		getOperationStatusInfo,
+		type OperationStatusKind,
+	} from '$lib/view/operation';
 
 	interface Props {
 		operationStore: Readable<OnchainOperation | undefined>;
@@ -15,66 +19,25 @@
 
 	let {operationStore}: Props = $props();
 
-	// Helper to get status info
-	function getStatusInfo(intent: TransactionIntent): {
-		label: string;
-		variant: 'default' | 'secondary' | 'destructive' | 'outline';
-		icon: typeof CircleCheckIcon;
-	} {
-		const state = intent.state;
-
-		if (!state || state.inclusion === 'InMemPool') {
-			return {label: 'Pending', variant: 'secondary', icon: ClockIcon};
-		}
-
-		if (state.inclusion === 'NotFound') {
-			return {
-				label: 'Not Found',
-				variant: 'destructive',
-				icon: CircleQuestionMarkIcon,
-			};
-		}
-
-		if (state.inclusion === 'Dropped') {
-			return {
-				label: 'Dropped',
-				variant: 'destructive',
-				icon: TriangleAlertIcon,
-			};
-		}
-
-		if (state.inclusion === 'Included') {
-			if (state.status === 'Success') {
-				return {label: 'Success', variant: 'default', icon: CircleCheckIcon};
-			} else {
-				return {label: 'Failed', variant: 'destructive', icon: CircleXIcon};
-			}
-		}
-
-		return {label: 'Unknown', variant: 'outline', icon: CircleQuestionMarkIcon};
-	}
-
-	// Get operation name from metadata
-	function getOperationName(op: OnchainOperation): string {
-		const metadata = op.metadata;
-		if (metadata.type === 'functionCall') {
-			return metadata.functionName;
-		}
-		if (metadata.type === 'unknown') {
-			return metadata.name;
-		}
-		return 'Unknown';
-	}
+	// Map the semantic status kind to an icon component (presentation only).
+	const statusIcons: Record<OperationStatusKind, typeof CircleCheckIcon> = {
+		pending: ClockIcon,
+		notFound: CircleQuestionMarkIcon,
+		dropped: TriangleAlertIcon,
+		success: CircleCheckIcon,
+		failed: CircleXIcon,
+		unknown: CircleQuestionMarkIcon,
+	};
 </script>
 
 {#if $operationStore}
-	{@const statusInfo = getStatusInfo($operationStore.transactionIntent)}
-	{@const StatusIcon = statusInfo.icon}
+	{@const statusInfo = getOperationStatusInfo($operationStore.transactionIntent)}
+	{@const StatusIcon = statusIcons[statusInfo.kind]}
 	{@const state = $operationStore.transactionIntent.state}
 	<div class="flex items-center justify-between gap-2 px-2 py-1 text-xs">
 		<div class="flex min-w-0 items-center gap-1.5">
 			<StatusIcon class="h-3 w-3 shrink-0" />
-			<span class="truncate">{getOperationName($operationStore)}</span>
+			<span class="truncate">{getOperationName($operationStore, 'Unknown')}</span>
 		</div>
 		<div class="flex items-center gap-1">
 			{#if state?.final !== undefined}

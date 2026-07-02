@@ -4,6 +4,7 @@
 	import ChevronUpIcon from '@lucide/svelte/icons/chevron-up';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 	import DebugOperationItem from './DebugOperationItem.svelte';
+	import {sortOperationIdsDescending} from '$lib/view/operation';
 
 	const {accountData} = getAppContext();
 
@@ -11,9 +12,7 @@
 
 	let accountDataState = $derived(accountData.state$);
 	let operationIds = $derived(accountData.watchItemIds('operations'));
-	let sortedOperationIds = $derived(
-		$operationIds.sort((a, b) => (a < b ? 1 : -1)),
-	);
+	let sortedOperationIds = $derived(sortOperationIdsDescending($operationIds));
 	let operationCount = $derived($operationIds?.length || 0);
 
 	function toggleExpanded() {

@@ -4,8 +4,8 @@
 	import * as Popover from '$lib/shadcn/ui/popover';
 	import Address from './Address.svelte';
 	import type {HTMLImgAttributes} from 'svelte/elements';
-	import {untrack} from 'svelte';
 	import {useENS} from '$lib/core/capabilities';
+	import {createENSNameStore, createENSAvatarStore} from './ens';
 
 	interface EthereumAvatarProps extends HTMLImgAttributes {
 		address: `0x${string}`;
@@ -22,106 +22,35 @@
 
 	let blockieUri = $derived(Blockie.getURI(address, offset));
 
-	// Ambient ENS capability - optional, the avatar falls back to a blockie.
-	const ensService = useENS();
-
-	let ensName: string | null = $state(null);
-	let ensAvatar: string | null = $state(null);
-	let ensNameLoading = $state(false);
-	let ensAvatarLoading = $state(false);
-	let ensAttempted = false; // non-reactive flag to prevent re-triggering
-	let avatarAttempted = false; // non-reactive flag for avatar loading
 	let popoverOpen = $state(false);
+
+	// ENS avatar loads eagerly (seeded from cache); the ENS name loads lazily,
+	// only once the popover opens. Both are optional and inert without the
+	// capability, so the avatar falls back to a blockie.
+	const ensService = useENS();
+	const ensAvatarStore = createENSAvatarStore(ensService);
+	const ensNameStore = createENSNameStore(ensService, {lazy: true});
+
+	$effect(() => {
+		ensAvatarStore.setAddress(address);
+		ensNameStore.setAddress(address);
+	});
+
+	let ensAvatar = $derived($ensAvatarStore.avatar);
+	let ensAvatarLoading = $derived($ensAvatarStore.loading);
+	let ensName = $derived($ensNameStore.name);
+	let ensNameLoading = $derived($ensNameStore.loading);
 
 	// Compute the avatar URI - use ENS avatar if available, fallback to blockie
 	let avatarUri = $derived(ensAvatar || blockieUri);
 	let isBlockie = $derived(!ensAvatar);
 
-	// Initialize from cache and load ENS avatar when address changes
+	// Resolve the ENS name on demand when the popover opens.
 	$effect(() => {
-		// Track address to trigger this effect
-		const currentAddress = address;
-
-		// Reset state for new address
-		avatarAttempted = false;
-		ensAttempted = false;
-
-		if (!ensService || !currentAddress) {
-			ensAvatar = null;
-			ensName = null;
-			return;
-		}
-
-		// Check cache synchronously first - no blink for cached avatars
-		const cachedAvatarState = ensService.getENSAvatarState(currentAddress);
-		if (cachedAvatarState.avatar) {
-			ensAvatar = cachedAvatarState.avatar;
-			avatarAttempted = true;
-		} else if (!cachedAvatarState.loading) {
-			// Not cached and not loading - start fetch
-			ensAvatar = null;
-			avatarAttempted = true;
-			loadENSAvatar(currentAddress);
-		}
-
-		// Also check cached ENS name
-		const cachedNameState = ensService.getENSState(currentAddress);
-		if (cachedNameState.name) {
-			ensName = cachedNameState.name;
-			ensAttempted = true;
-		} else {
-			ensName = null;
+		if (popoverOpen && showAddressOnTap) {
+			ensNameStore.resolve();
 		}
 	});
-
-	// Load ENS name when popover opens (if not already loaded)
-	$effect(() => {
-		if (popoverOpen && showAddressOnTap && ensService) {
-			// Use untrack to prevent re-triggering when ensName/ensNameLoading change
-			untrack(() => {
-				if (!ensAttempted && address) {
-					ensAttempted = true;
-					loadENSName(address);
-				}
-			});
-		}
-	});
-
-	async function loadENSAvatar(addr: `0x${string}`) {
-		if (!ensService) {
-			return;
-		}
-		ensAvatarLoading = true;
-		try {
-			const result = await ensService.fetchENSAvatar(addr);
-			// Only update if address hasn't changed
-			if (addr === address) {
-				ensAvatar = result;
-			}
-		} finally {
-			if (addr === address) {
-				ensAvatarLoading = false;
-			}
-		}
-	}
-
-	async function loadENSName(addr: `0x${string}`) {
-		if (!ensService) {
-			return;
-		}
-		ensNameLoading = true;
-		try {
-			const result = await ensService.fetchENS(addr);
-			// Only update if address hasn't changed
-			if (addr === address) {
-				ensName = result;
-			}
-		} finally {
-			if (addr === address) {
-				ensNameLoading = false;
-			}
-		}
-	}
 
 	const blockieImageStyle =
 		'image-rendering: -moz-crisp-edges; image-rendering: -webkit-crisp-edges; image-rendering: crisp-edges; image-rendering: pixelated;';

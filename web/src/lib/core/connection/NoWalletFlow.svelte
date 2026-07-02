@@ -8,6 +8,12 @@
 	import SmartphoneIcon from '@lucide/svelte/icons/smartphone';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import CheckIcon from '@lucide/svelte/icons/check';
+	import {
+		downloadWallets,
+		mobileWallets,
+		detectMobileWalletContext,
+		type MobileWallet,
+	} from './wallet-catalog';
 
 	interface Props {
 		onCancel?: () => void;
@@ -23,95 +29,18 @@
 	let urlCopied = $state(false);
 
 	onMount(() => {
-		const ua = navigator.userAgent;
-		const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-		const isSmallScreen = window.innerWidth <= 1024;
-		const isMobileOS = /Android|iPhone|iPad|iPod/i.test(ua);
-
-		// Check if already inside a Wallet (Injected Provider)
-		const hasInjectedProvider = (window as Window & {ethereum?: unknown})
+		const hasInjectedProvider = !!(window as Window & {ethereum?: unknown})
 			.ethereum;
-
-		// Show mobile option only if on mobile/tablet AND not already in a dApp browser
-		isMobile =
-			isSmallScreen && (hasTouch || isMobileOS) && !hasInjectedProvider;
+		isMobile = detectMobileWalletContext({
+			userAgent: navigator.userAgent,
+			maxTouchPoints: navigator.maxTouchPoints,
+			hasOntouchstart: 'ontouchstart' in window,
+			innerWidth: window.innerWidth,
+			hasInjectedProvider,
+		});
 	});
 
-	const downloadWallets = $derived([
-		{
-			name: 'MetaMask',
-			description: isMobile
-				? 'Popular mobile wallet'
-				: 'Popular browser extension wallet',
-			icon: '/wallets/metamask/MetaMask-icon-fox.svg',
-			url: 'https://metamask.io/download/',
-		},
-
-		{
-			name: 'Trust Wallet',
-			description: 'Powerful Web3 experiences',
-			icon: '/wallets/trust/trust-icon.svg',
-			url: 'https://trustwallet.com/',
-		},
-
-		{
-			name: 'Rainbow',
-			description: 'Experience Crypto in Color',
-			icon: '/wallets/rainbow/rainbow-icon.svg',
-			url: 'https://rainbow.me/',
-		},
-		{
-			name: 'Rabby',
-			description: 'Your Go-to wallet for Ethereum',
-			icon: '/wallets/rabby/rabby-icon.svg',
-			url: 'https://rabby.io/',
-		},
-		{
-			name: 'Coinbase Wallet',
-			description: 'Your key to the world of crypto',
-			icon: '/wallets/coinbase/coinbase-icon.svg',
-			url: 'https://www.coinbase.com/wallet',
-		},
-	] as const);
-
-	const mobileWallets = [
-		{
-			name: 'MetaMask',
-			description: 'Open in MetaMask Browser',
-			icon: '/wallets/metamask/MetaMask-icon-fox.svg',
-			getLink: (url: string) =>
-				`metamask://dapp/${url.replace(/^https?:\/\//, '')}`,
-		},
-		{
-			name: 'Trust Wallet',
-			description: 'Open in Trust Wallet',
-			icon: '/wallets/trust/trust-icon.svg',
-			getLink: (url: string) =>
-				`https://link.trustwallet.com/open_url?url=${encodeURIComponent(url)}`,
-		},
-		{
-			name: 'Coinbase Wallet',
-			description: 'Open in Coinbase Wallet',
-			icon: '/wallets/coinbase/coinbase-icon.svg',
-			getLink: (url: string) =>
-				`https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(url)}`,
-		},
-		{
-			name: 'Rainbow',
-			description: 'Open in Rainbow',
-			icon: '/wallets/rainbow/rainbow-icon.svg',
-			getLink: (url: string) => `rainbow://dapp?url=${encodeURIComponent(url)}`,
-		},
-		{
-			name: 'Rabby',
-			description: 'Open in Rabby',
-			icon: '/wallets/rabby/rabby-icon.svg',
-			getLink: (url: string) =>
-				`rabby://dapp/${url.replace(/^https?:\/\//, '')}`,
-		},
-	];
-
-	async function handleMobileRedirect(wallet: (typeof mobileWallets)[0]) {
+	async function handleMobileRedirect(wallet: MobileWallet) {
 		const currentUrl = window.location.href;
 
 		// Copy URL to clipboard first (user already informed via modal text)
@@ -262,7 +191,11 @@
 				</div>
 				<div class="flex-1">
 					<div class="text-sm font-medium">{wallet.name}</div>
-					<div class="text-xs text-muted-foreground">{wallet.description}</div>
+					<div class="text-xs text-muted-foreground">
+						{isMobile
+							? (wallet.mobileDescription ?? wallet.description)
+							: wallet.description}
+					</div>
 				</div>
 				<ExternalLinkIcon class="h-4 w-4 opacity-30" />
 			</a>

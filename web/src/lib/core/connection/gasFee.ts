@@ -24,6 +24,14 @@ export type GasFeeStore = PollingStore<GasPriceEstimates>;
 // Helper type for when loaded
 export type LoadedGasFee = Extract<GasFeeValue, {step: 'Loaded'}>;
 
+/**
+ * Effective gas price to display: base fee plus the average priority tip.
+ * Pure helper so components don't inline the fee arithmetic.
+ */
+export function effectiveGasPrice(estimates: GasPriceEstimates): bigint {
+	return estimates.baseFeePerGas + estimates.average.maxPriorityFeePerGas;
+}
+
 function avg(arr: bigint[]) {
 	if (arr.length === 0) return 0n;
 	const sum = arr.reduce((a: bigint, v: bigint) => a + v);

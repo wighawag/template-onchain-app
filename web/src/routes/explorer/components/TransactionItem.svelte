@@ -11,15 +11,14 @@
 	import type {PublicClient, Transaction, TransactionReceipt} from 'viem';
 	import {formatGwei} from 'viem';
 	import {
-		decodeTransaction,
 		formatDecodedTransaction,
 		type DecodedTransactionData,
 	} from '../lib/services/transactionDecoder';
+	import {loadTransactionItemData} from '../lib/services/transactionItem';
 	import {
-		formatTransactionType,
 		formatTimestamp,
 		formatValue,
-		truncateTxHash,
+		getEip1559FeeInfo,
 	} from '../lib/utils';
 	import {route} from '$lib';
 
@@ -42,21 +41,13 @@
 	// Track the hash we've decoded to prevent re-decoding
 	let decodedHash = $state<string | null>(null);
 
-	// Decode transaction on mount or when tx.hash changes
-	async function decodeTransactionData(hash: `0x${string}`) {
+	// Load receipt + decode when tx.hash changes and we haven't decoded it yet.
+	async function loadItem(hash: `0x${string}`) {
 		loading = true;
 		try {
-			// Fetch receipt for status
-			let txReceipt = null;
-			try {
-				txReceipt = await publicClient.getTransactionReceipt({hash});
-				receipt = txReceipt;
-			} catch (e) {
-				// Transaction might be pending
-			}
-
-			const decoded = await decodeTransaction(tx, txReceipt, publicClient);
-			decodedData = decoded;
+			const data = await loadTransactionItemData(tx, publicClient);
+			receipt = data.receipt;
+			decodedData = data.decodedData;
 			decodedHash = hash;
 		} catch (e) {
 			console.error('Error decoding transaction:', e);
@@ -65,11 +56,10 @@
 		}
 	}
 
-	// Only decode when tx.hash changes and we haven't decoded it yet
 	$effect(() => {
 		const hash = tx.hash;
 		if (hash && hash !== decodedHash) {
-			decodeTransactionData(hash);
+			loadItem(hash);
 		}
 	});
 
@@ -84,9 +74,6 @@
 		goto(route(`/explorer/address/${address}`));
 	}
 
-	// Get transaction type icon based on type
-	let isEIP1559 = $derived(tx.type === 'eip1559');
-
 	// Check if this is a contract creation transaction
 	let isContractCreation = $derived(!tx.to);
 
@@ -97,24 +84,11 @@
 			: null,
 	);
 
-	// Format EIP-1559 fee info
-	let maxPriorityFeePerGas = $derived(
-		isEIP1559 && 'maxPriorityFeePerGas' in tx
-			? (tx.maxPriorityFeePerGas as bigint)
-			: null,
-	);
-	let maxFeePerGas = $derived(
-		isEIP1559 && 'maxFeePerGas' in tx ? (tx.maxFeePerGas as bigint) : null,
-	);
-	let effectiveGasPrice = $derived(receipt?.effectiveGasPrice ?? null);
-
-	// Calculate the actual base fee used (effectiveGasPrice - priorityFeePerGas)
-	// Note: The actual priority fee paid is min(maxPriorityFeePerGas, maxFeePerGas - baseFee)
-	let baseFeeUsed = $derived(
-		effectiveGasPrice && maxPriorityFeePerGas
-			? effectiveGasPrice - maxPriorityFeePerGas
-			: null,
-	);
+	// EIP-1559 fee display info (shared with the transaction detail view).
+	let feeInfo = $derived(getEip1559FeeInfo(tx, receipt));
+	let isEIP1559 = $derived(feeInfo.isEIP1559);
+	let maxPriorityFeePerGas = $derived(feeInfo.maxPriorityFeePerGas);
+	let baseFeeUsed = $derived(feeInfo.baseFeeUsed);
 </script>
 
 <Card.Root
@@ -171,7 +145,7 @@
 				{:else}
 					<div class="space-y-1">
 						<div class="font-mono text-sm text-muted-foreground">
-							Contract Creation d
+							Contract Creation
 						</div>
 						{#if contractAddress}
 							<div class="flex items-center gap-1 text-xs">

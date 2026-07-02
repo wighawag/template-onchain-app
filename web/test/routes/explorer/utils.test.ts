@@ -1,13 +1,18 @@
 import {describe, it, expect} from 'vitest';
 import {
+	classifySearchInput,
 	formatBytecode,
 	formatTransactionType,
 	formatTxStatus,
+	getEip1559FeeInfo,
 	getLogAddresses,
 	getTransactionTypeIcon,
 	isContract,
+	isValidAddress,
+	isValidTxHash,
 	truncateTxHash,
 } from '../../../src/routes/explorer/lib/utils';
+import type {Transaction, TransactionReceipt} from 'viem';
 
 describe('formatTxStatus', () => {
 	it('maps status to a human label', () => {
@@ -72,5 +77,63 @@ describe('getLogAddresses', () => {
 		const b = '0x2222222222222222222222222222222222222222';
 		const logs = [{address: a}, {address: b}, {address: a}] as any;
 		expect(getLogAddresses(logs)).toEqual([a, b]);
+	});
+});
+
+describe('classifySearchInput', () => {
+	const tx = '0x' + 'a'.repeat(64);
+	const addr = '0x' + '1'.repeat(40);
+
+	it('classifies empty / tx / address / invalid', () => {
+		expect(classifySearchInput('  ')).toEqual({kind: 'empty'});
+		expect(classifySearchInput(tx)).toEqual({kind: 'tx', value: tx});
+		expect(classifySearchInput(addr)).toEqual({kind: 'address', value: addr});
+		expect(classifySearchInput('nope')).toEqual({kind: 'invalid'});
+	});
+
+	it('has consistent validators', () => {
+		expect(isValidTxHash(tx)).toBe(true);
+		expect(isValidTxHash(addr)).toBe(false);
+		expect(isValidAddress(addr)).toBe(true);
+		expect(isValidAddress(tx)).toBe(false);
+	});
+});
+
+describe('getEip1559FeeInfo', () => {
+	it('returns nulls for a legacy transaction', () => {
+		const info = getEip1559FeeInfo(
+			{type: 'legacy'} as Transaction,
+			{effectiveGasPrice: 100n} as TransactionReceipt,
+		);
+		expect(info.isEIP1559).toBe(false);
+		expect(info.maxPriorityFeePerGas).toBeNull();
+		expect(info.baseFeeUsed).toBeNull();
+	});
+
+	it('derives base fee = effective - priority for EIP-1559', () => {
+		const info = getEip1559FeeInfo(
+			{
+				type: 'eip1559',
+				maxPriorityFeePerGas: 2n,
+				maxFeePerGas: 50n,
+			} as unknown as Transaction,
+			{effectiveGasPrice: 30n} as TransactionReceipt,
+		);
+		expect(info.isEIP1559).toBe(true);
+		expect(info.maxPriorityFeePerGas).toBe(2n);
+		expect(info.maxFeePerGas).toBe(50n);
+		expect(info.baseFeeUsed).toBe(28n);
+	});
+
+	it('leaves base fee null without a receipt', () => {
+		const info = getEip1559FeeInfo(
+			{
+				type: 'eip1559',
+				maxPriorityFeePerGas: 2n,
+			} as unknown as Transaction,
+			null,
+		);
+		expect(info.baseFeeUsed).toBeNull();
+		expect(info.effectiveGasPrice).toBeNull();
 	});
 });

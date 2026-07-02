@@ -5,14 +5,13 @@
 	import * as Separator from '$lib/shadcn/ui/separator';
 	import ListIcon from '@lucide/svelte/icons/list';
 	import OperationCard from './components/OperationCard.svelte';
+	import {sortOperationIdsDescending} from '$lib/view/operation';
 
 	const {accountData} = getAppContext();
 
 	let accountDataState = $derived(accountData.state$);
 	let operationIds = $derived(accountData.watchItemIds('operations'));
-	let sortedOperationIds = $derived(
-		$operationIds.sort((a, b) => Number(b) - Number(a)),
-	);
+	let sortedOperationIds = $derived(sortOperationIdsDescending($operationIds));
 </script>
 
 <DefaultHead title={'Transactions'} />

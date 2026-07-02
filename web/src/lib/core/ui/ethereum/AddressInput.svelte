@@ -57,8 +57,10 @@
 	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
 	import CheckCircleIcon from '@lucide/svelte/icons/check-circle';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-	import {useENS} from '$lib/core/capabilities';
 	import {truncateHex} from '$lib/core/utils/format';
+	import {isENSName} from './address-input';
+	import {useENS} from '$lib/core/capabilities';
+	import {createAddressResolverStore} from './address-resolver';
 	import ImgBlockie from './ImgBlockie.svelte';
 	import Address from './Address.svelte';
 
@@ -75,117 +77,23 @@
 		...restProps
 	}: AddressInputProps = $props();
 
-	// Ambient ENS capability - optional, the input works without it.
+	// ENS classification, debounce, and resolution state live in the store. It
+	// keeps our bindable `value` in sync via the onResolved callback.
 	const ensService = useENS();
-
-	let resolving = $state(false);
-	let resolvedAddress = $state<`0x${string}` | null>(null);
-	let resolveError = $state<string | null>(null);
-	let debounceTimeout: ReturnType<typeof setTimeout> | null = null;
-
-	// Check if input looks like an ENS name
-	function isENSName(input: string): boolean {
-		return /\.(eth|xyz|luxe|kred|art|club|id|test)$/i.test(input.trim());
-	}
-
-	// Check if input is a valid hex address
-	function isValidHexAddress(input: string): boolean {
-		return /^0x[a-fA-F0-9]{40}$/i.test(input.trim());
-	}
-
-	// Check if input is a partial hex address (typing in progress)
-	function isPartialHexAddress(input: string): boolean {
-		return /^0x[a-fA-F0-9]{0,40}$/i.test(input.trim());
-	}
-
-	// Handle input changes with debouncing for ENS resolution
-	async function handleInputChange(newValue: string) {
-		// Clear any pending debounce
-		if (debounceTimeout) {
-			clearTimeout(debounceTimeout);
-			debounceTimeout = null;
-		}
-
-		resolveError = null;
-
-		const trimmedValue = newValue.trim();
-
-		// Empty input
-		if (!trimmedValue) {
-			resolving = false;
-			resolvedAddress = null;
-			value = null;
-			return;
-		}
-
-		// Valid hex address - immediate validation
-		if (isValidHexAddress(trimmedValue)) {
-			resolving = false;
-			resolvedAddress = trimmedValue.toLowerCase() as `0x${string}`;
-			value = resolvedAddress;
-			return;
-		}
-
-		// Partial hex address (user still typing)
-		if (isPartialHexAddress(trimmedValue)) {
-			resolving = false;
-			resolvedAddress = null;
-			value = null;
-			return;
-		}
-
-		// ENS name - debounced resolution
-		if (isENSName(trimmedValue)) {
-			if (!ensService) {
-				resolveError = 'ENS resolution not available';
-				resolving = false;
-				resolvedAddress = null;
-				value = null;
-				return;
-			}
-
-			resolving = true;
-			resolvedAddress = null;
-			value = null;
-
-			debounceTimeout = setTimeout(async () => {
-				try {
-					const address = await ensService.resolveAddress(trimmedValue);
-					if (address) {
-						resolvedAddress = address;
-						value = address;
-						resolveError = null;
-					} else {
-						resolvedAddress = null;
-						value = null;
-						resolveError = 'ENS name not found';
-					}
-				} catch (error) {
-					resolvedAddress = null;
-					value = null;
-					resolveError =
-						error instanceof Error
-							? error.message
-							: 'Failed to resolve ENS name';
-				} finally {
-					resolving = false;
-				}
-			}, debounceMs);
-			return;
-		}
-
-		// Invalid input
-		resolving = false;
-		resolvedAddress = null;
-		value = null;
-		if (trimmedValue.length > 0) {
-			resolveError = 'Invalid address format';
-		}
-	}
+	const resolver = createAddressResolverStore(
+		ensService,
+		(address) => {
+			value = address;
+		},
+		() => debounceMs,
+	);
+	let resolving = $derived($resolver.resolving);
+	let resolvedAddress = $derived($resolver.resolvedAddress);
+	let resolveError = $derived($resolver.error);
 
 	// React to rawInput changes
 	$effect(() => {
-		handleInputChange(rawInput);
+		resolver.update(rawInput);
 	});
 
 	// Determine the status for visual feedback

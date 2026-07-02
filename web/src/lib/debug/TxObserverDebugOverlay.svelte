@@ -2,23 +2,19 @@
 	import {getAppContext} from '$lib';
 	import {onMount} from 'svelte';
 	import {slide} from 'svelte/transition';
+	import {createTxObserverDebugController} from './tx-observer-debug-controller';
 
 	const context = getAppContext();
-	const {accountData, publicClient, txObserverDebug, txObserver} = context;
+	const {txObserverDebug} = context;
 
-	// State
+	// All data, actions and lifecycle live in the controller (plain stores).
+	const controller = createTxObserverDebugController(context);
+	const accountOperations = controller.operations;
+	const eventLog = controller.eventLog;
+	onMount(() => controller.start());
+
+	// UI-only state
 	let isMinimized = $state(false);
-	let accountOperations = $state<{[id: string]: unknown}>({});
-	let eventLog = $state<Array<{timestamp: number; type: string; data: string}>>(
-		[],
-	);
-
-	function addEvent(type: string, data: unknown) {
-		eventLog = [
-			{timestamp: Date.now(), type, data: JSON.stringify(data, null, 2)},
-			...eventLog.slice(0, 19), // Keep last 20 events
-		];
-	}
 
 	function formatTimestamp(ts: number): string {
 		return new Date(ts).toLocaleTimeString();
@@ -58,117 +54,9 @@
 		}
 	}
 
-	function refreshData() {
-		const currentAccountData = accountData.get()?.get();
-		if (currentAccountData?.status === 'ready') {
-			accountOperations = structuredClone(currentAccountData.data.operations);
-		}
-	}
-
 	function copyToClipboard(text: string) {
 		navigator.clipboard.writeText(text);
 	}
-
-	function manualSyncToObserver() {
-		if (!txObserver) {
-			addEvent('sync', {error: 'txObserver not available'});
-			return;
-		}
-
-		const currentAccountData = accountData.get()?.get();
-		if (currentAccountData?.status !== 'ready') {
-			addEvent('sync', {error: 'accountData not ready'});
-			return;
-		}
-
-		const operations = currentAccountData.data.operations;
-		const intentsToAdd: {[id: string]: unknown} = {};
-
-		for (const [id, operation] of Object.entries(operations)) {
-			const op = operation as {transactionIntent: unknown};
-			intentsToAdd[id] = structuredClone(op.transactionIntent);
-		}
-
-		const count = Object.keys(intentsToAdd).length;
-		addEvent('sync', {synced: count, ids: Object.keys(intentsToAdd)});
-
-		if (count > 0) {
-			txObserver.addMultiple(
-				intentsToAdd as Parameters<typeof txObserver.addMultiple>[0],
-			);
-		}
-	}
-
-	async function manualProcess() {
-		if (!txObserver) {
-			addEvent('process', {error: 'txObserver not available'});
-			return;
-		}
-
-		addEvent('process', {triggering: true});
-		const result = txObserver.process();
-
-		if (result && typeof result === 'object' && 'then' in result) {
-			try {
-				await result;
-				addEvent('process', {completed: true});
-			} catch (e) {
-				addEvent('process', {error: String(e)});
-			}
-		}
-	}
-
-	async function checkTxStatus(hash: `0x${string}`) {
-		addEvent('check', {hash: hash.slice(0, 12) + '...'});
-		try {
-			const receipt = await publicClient.getTransactionReceipt({hash});
-			addEvent('check-result', {
-				status: 'INCLUDED',
-				block: receipt.blockNumber.toString(),
-				txStatus: receipt.status,
-			});
-		} catch {
-			try {
-				const tx = await publicClient.getTransaction({hash});
-				addEvent('check-result', {
-					status: 'IN_MEMPOOL',
-					nonce: tx.nonce,
-				});
-			} catch {
-				addEvent('check-result', {status: 'NOT_FOUND'});
-			}
-		}
-	}
-
-	onMount(() => {
-		// Hook into intent:status events
-		const unsubscribeStatus = txObserver.on('intent:status', (event) => {
-			addEvent('intent:status', {
-				id: event.id,
-				inclusion: event.intent.state?.inclusion,
-				status: event.intent.state?.status,
-				final: event.intent.state?.final,
-			});
-			refreshData();
-		});
-
-		// Initial data load
-		refreshData();
-
-		// Subscribe to accountData changes
-		const unsubscribeAccountData = accountData.subscribe(() => {
-			refreshData();
-		});
-
-		// Periodic refresh for operations data
-		const refreshInterval = setInterval(refreshData, 2000);
-
-		return () => {
-			unsubscribeStatus();
-			unsubscribeAccountData();
-			clearInterval(refreshInterval);
-		};
-	});
 </script>
 
 <div
@@ -199,20 +87,20 @@
 			<button
 				class="rounded px-2 py-1 text-[10px] hover:bg-gray-700"
 				title="Sync operations to observer"
-				onclick={() => manualSyncToObserver()}
+				onclick={() => controller.sync()}
 			>
 				⚡ Sync
 			</button>
 			<button
 				class="rounded px-2 py-1 text-[10px] hover:bg-gray-700"
 				title="Trigger observer.process()"
-				onclick={() => manualProcess()}
+				onclick={() => controller.process()}
 			>
 				▶️ Process
 			</button>
 			<button
 				class="rounded px-2 py-1 hover:bg-gray-700"
-				onclick={() => refreshData()}
+				onclick={() => controller.refresh()}
 			>
 				🔄
 			</button>
@@ -230,13 +118,13 @@
 			<!-- Account Operations Section -->
 			<div class="mb-3">
 				<h3 class="mb-2 font-bold text-blue-400">
-					📋 Operations ({Object.keys(accountOperations).length})
+					📋 Operations ({Object.keys($accountOperations).length})
 				</h3>
-				{#if Object.keys(accountOperations).length === 0}
+				{#if Object.keys($accountOperations).length === 0}
 					<p class="text-gray-500 italic">No operations</p>
 				{:else}
 					<div class="space-y-2">
-						{#each Object.entries(accountOperations) as [id, op]}
+						{#each Object.entries($accountOperations) as [id, op]}
 							{@const operation = op as {
 								metadata: {
 									functionName?: string;
@@ -299,7 +187,8 @@
 										<button
 											type="button"
 											class="rounded bg-gray-700 px-1 text-[9px] text-yellow-400 hover:bg-gray-600"
-											onclick={() => checkTxStatus(tx.hash as `0x${string}`)}
+											onclick={() =>
+												controller.checkTxStatus(tx.hash as `0x${string}`)}
 										>
 											🔎
 										</button>
@@ -317,13 +206,13 @@
 			<!-- Event Log Section -->
 			<div>
 				<h3 class="mb-2 font-bold text-orange-400">
-					📝 Events ({eventLog.length})
+					📝 Events ({$eventLog.length})
 				</h3>
-				{#if eventLog.length === 0}
+				{#if $eventLog.length === 0}
 					<p class="text-gray-500 italic">No events yet</p>
 				{:else}
 					<div class="max-h-32 space-y-1 overflow-y-auto">
-						{#each eventLog as event}
+						{#each $eventLog as event}
 							<div class="rounded border border-gray-700 bg-gray-800 p-1.5">
 								<div class="flex items-center gap-2">
 									<span class="text-[9px] text-gray-500">

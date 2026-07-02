@@ -43,7 +43,8 @@
 	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import {useRoute, useENS} from '$lib/core/capabilities';
-	import {useCopyToClipboard} from '$lib/core/ui/clipboard/copy-to-clipboard.svelte';
+	import {createENSNameStore} from './ens';
+	import {createCopyToClipboard} from '$lib/core/ui/clipboard/copy-to-clipboard';
 	import {truncateHex} from '$lib/core/utils/format';
 	import {
 		getBlockExplorerAddressUrl,
@@ -65,46 +66,19 @@
 	}: AddressProps = $props();
 
 	// Ambient capabilities. `route` always resolves (falls back to base-path
-	// resolution when unprovided), so it is safe to call directly. `ens` is
-	// optional and may be undefined, so every use of it is guarded.
+	// resolution when unprovided), so it is safe to call directly. ENS is
+	// optional; the store is inert when the capability is unprovided.
 	const route = useRoute();
 	const ensService = useENS();
-	const clipboard = useCopyToClipboard();
+	const clipboard = createCopyToClipboard();
 
-	let ensName: string | null = $state(null);
-	let loading = $state(false);
-
-	// Reactive effect to load ENS when address changes
-	// This handles component reuse by Svelte's {#each} optimization
+	// ENS name resolution (fetch + stale-guard + loading) lives in the store.
+	const ens = createENSNameStore(ensService);
 	$effect(() => {
-		const currentAddress = value;
-
-		// Reset state for new address
-		ensName = null;
-		loading = false;
-
-		if (currentAddress && ensService && resolveENS) {
-			loadENS(currentAddress);
-		}
+		ens.setAddress(resolveENS ? value : undefined);
 	});
-
-	async function loadENS(addr: `0x${string}`) {
-		if (!addr || !ensService) {
-			return;
-		}
-		loading = true;
-		try {
-			const result = await ensService.fetchENS(addr);
-			// Only update if address hasn't changed during async fetch
-			if (addr === value) {
-				ensName = result;
-			}
-		} finally {
-			if (addr === value) {
-				loading = false;
-			}
-		}
-	}
+	let ensName = $derived($ens.name);
+	let loading = $derived($ens.loading);
 
 	function formatAddress(addr: string): string {
 		if (truncate === false) return addr;
@@ -175,7 +149,7 @@
 			onclick={copyAddress}
 			aria-label="Copy address"
 		>
-			{#if clipboard.copied}
+			{#if $clipboard}
 				<CheckIcon class="size-3 text-green-500" />
 			{:else}
 				<CopyIcon class="size-3" />

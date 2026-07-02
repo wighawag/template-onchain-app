@@ -9,6 +9,7 @@
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import BasicModal from '../ui/modal/basic-modal.svelte';
 	import NoWalletFlow from './NoWalletFlow.svelte';
+	import {hasPendingWalletRequest} from './connection-flow';
 	import {dev} from '$lib';
 
 	interface Props {
@@ -20,21 +21,8 @@
 	let email: string = $state('');
 	let emailInput: HTMLInputElement | undefined = $state(undefined);
 
-	function isBurnerWalletInSelectionPhase(): boolean {
-		// TODO: replace burner-wallet-specific detection with a generic signal,
-		// e.g. an `auto` mode or a provider field like `requiresNoUserConfirmation`.
-		return (
-			$connection.step !== 'Idle' &&
-			$connection.step !== 'MechanismToChoose' &&
-			$connection.mechanism.type === 'wallet' &&
-			$connection.mechanism.name === 'Burner Wallet'
-		);
-	}
-
-	let pendingRequest = $derived(
-		($connection.wallet?.pendingRequests?.length ?? 0) > 0 &&
-			!isBurnerWalletInSelectionPhase(),
-	);
+	// Flow interpretation (burner-wallet phase + pending request) lives in the helper.
+	let pendingRequest = $derived(hasPendingWalletRequest($connection));
 </script>
 
 <Modal.Root

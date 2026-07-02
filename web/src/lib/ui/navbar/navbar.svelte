@@ -8,6 +8,8 @@
 	import Address from '../../core/ui/ethereum/Address.svelte';
 	import Badge from '$lib/shadcn/ui/badge/badge.svelte';
 	import {formatBalance} from '$lib/core/utils/format/balance';
+	import {countPendingOperations} from '$lib/view/operation';
+	import {effectiveGasPrice} from '$lib/core/connection/gasFee';
 	import {FaucetButton, hasFaucet} from '$lib/core/ui/faucet/index.js';
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
@@ -35,24 +37,9 @@
 		$connection.wallet?.accounts && $connection.wallet.accounts.length > 1,
 	);
 
-	// Watch all operations to filter and count them properly
+	// Watch all operations; the pending-badge counting rule lives in the view helper.
 	let operations = $derived(accountData.watchField('operations'));
-	// Count only operations that are NOT (successfully included but not yet final)
-	// Successful final transactions are automatically removed from the store
-	// We don't want to count successful included tx that are not yet final in the badge
-	let transactionCount = $derived.by(() => {
-		let count = 0;
-		for (const id of Object.keys($operations)) {
-			const op = $operations[id];
-			const state = op.transactionIntent.state;
-			// Skip successfully included but not yet final transactions
-			if (state?.inclusion === 'Included' && state?.status === 'Success') {
-				continue;
-			}
-			count++;
-		}
-		return count;
-	});
+	let transactionCount = $derived(countPendingOperations($operations));
 
 	// Derive formatted balance
 	let formattedBalance = $derived.by(() => {
@@ -78,13 +65,10 @@
 	// Gas fee store and status
 	const gasFeeStatus = gasFee.status;
 
-	// Format effective gas price in gwei (9 decimals)
-	// Uses baseFeePerGas + maxPriorityFeePerGas for accurate effective price
+	// Format effective gas price in gwei (9 decimals).
 	let formattedGasPrice = $derived.by(() => {
 		if ($gasFee.step === 'Loaded') {
-			const effectiveGasPrice =
-				$gasFee.baseFeePerGas + $gasFee.average.maxPriorityFeePerGas;
-			return formatBalance(effectiveGasPrice, 9, 6);
+			return formatBalance(effectiveGasPrice($gasFee), 9, 6);
 		}
 		return null;
 	});
