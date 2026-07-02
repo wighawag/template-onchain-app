@@ -226,7 +226,7 @@
 								{/if}
 							</div>
 						</Collapsible.Trigger>
-						{#if hasMultipleAccounts}
+						{#if hasMultipleAccounts && $connection.wallet}
 							<Collapsible.Content>
 								<div
 									class="mt-1 flex flex-col gap-1 rounded-md border border-input bg-muted/50 p-1"

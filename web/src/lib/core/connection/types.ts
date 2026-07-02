@@ -1,7 +1,3 @@
-import type {
-	ConnectionStore,
-	UnderlyingEthereumProvider,
-} from '@etherplay/connect';
 import type {Readable} from 'svelte/store';
 import type {
 	Account as ViemAccount,
@@ -74,11 +70,11 @@ export type TypedPublicClient = PublicClient<CustomTransport, ChainInfo>;
 // Connection Types
 // ============================================================================
 
-export type ChainConnection = ConnectionStore<
-	UnderlyingEthereumProvider,
-	'WalletConnected',
-	true
->;
+// Derived from the actual `createChainConnection` configuration in ./remote so
+// it always matches the store that is created (targetStep, walletOnly, etc.).
+// Changing the config there updates this type and all consumers automatically.
+export type {ChainConnection} from './remote';
+import type {ChainConnection} from './remote';
 
 export type EstablishedConnection = {
 	connection: ChainConnection;
