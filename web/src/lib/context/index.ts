@@ -20,6 +20,8 @@ import {
 import {createToastConnector} from '$lib/account/toastConnector.js';
 import {initBurnerWallet} from '@etherkit/burner-wallet';
 import {PUBLIC_NODE_URL, PUBLIC_USE_BURNER_WALLET} from '$env/static/public';
+import {burnerOverride} from '$lib';
+import {resolveBurnerWallet} from './burner.js';
 import type {AugmentedChainInfo} from '$lib/core/connection/types.js';
 import {createBalanceCheckStore} from '$lib/core/transaction/balance-check-store.js';
 import {resolveAppConfig} from './config.js';
@@ -32,14 +34,19 @@ export async function createContext(): Promise<{
 }> {
 	let cleanupBurnerWallet: (() => void) | undefined;
 
-	if (
-		PUBLIC_USE_BURNER_WALLET &&
-		(PUBLIC_USE_BURNER_WALLET.startsWith('http') || PUBLIC_NODE_URL)
-	) {
+	const burner = resolveBurnerWallet(
+		burnerOverride,
+		PUBLIC_USE_BURNER_WALLET,
+		PUBLIC_NODE_URL,
+	);
+	// An explicit `?burner=true` that cannot be honoured surfaces as an error
+	// (rendered by AsyncContext's catch block) rather than being silently ignored.
+	if (burner.use === false && burner.error) {
+		throw new Error(burner.error);
+	}
+	if (burner.use) {
 		const {cleanup} = initBurnerWallet({
-			nodeURL: PUBLIC_USE_BURNER_WALLET.startsWith('http')
-				? PUBLIC_USE_BURNER_WALLET
-				: PUBLIC_NODE_URL,
+			nodeURL: burner.nodeURL,
 			impersonateAddresses: [...IMPERSONATE_ADDRESSES],
 		});
 		cleanupBurnerWallet = cleanup;

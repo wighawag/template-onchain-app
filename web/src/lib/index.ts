@@ -25,6 +25,7 @@ export const {isParentRoute, isSameRoute, route, params} = createRouteHandler(
 			'debugLabel',
 			'eruda',
 			'tx-observer',
+			'burner',
 		] as const,
 		// Dynamic routes that need hash-based URLs on path-based IPFS gateways
 		dynamicRoutes: [
@@ -41,6 +42,12 @@ export const {isParentRoute, isSameRoute, route, params} = createRouteHandler(
 );
 
 export const dev = params.dev || import.meta.env.DEV;
+
+// Runtime override for the burner wallet (see context/burner.ts). Preserved
+// across navigation because `burner` is a global query param above.
+export {parseBurnerParam} from './context/burner';
+import {parseBurnerParam as _parseBurnerParam} from './context/burner';
+export const burnerOverride = _parseBurnerParam(params.burner);
 
 export const notifications = createNotificationsService();
 export const serviceWorker = createServiceWorker(notifications);
