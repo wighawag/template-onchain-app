@@ -104,6 +104,12 @@ export async function createContext(): Promise<{
 	const txObserver = createTransactionObserver({
 		finality,
 		provider: connection.provider,
+		// Injected wallets (e.g. MetaMask) can keep serving a stale pending view
+		// from eth_getTransactionByHash (blockNumber null) for an already-mined
+		// tx, while eth_getTransactionReceipt returns the real receipt. Fetch the
+		// receipt directly in that case so inclusion is detected through the
+		// user's own wallet-configured node (no dedicated/hardcoded RPC needed).
+		alwaysFetchReceipt: true,
 	});
 
 	const tabLeader = createTabLeaderService();
