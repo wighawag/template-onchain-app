@@ -128,12 +128,14 @@
 					<p class="text-base">Loading messages...</p>
 				</div>
 			{:else if $viewState.step === 'Unloaded'}
-				<!-- Unloaded fallback -->
+				<!-- Not loaded: never fetched (e.g. waiting for an RPC / wallet
+				     connection). Distinct from a completed fetch that returned zero
+				     messages, which shows the "be the first" empty state below. -->
 				<div
 					class="flex flex-col items-center justify-center py-8 text-muted-foreground"
 				>
 					<MessageSquareIcon class="mb-3 h-10 w-10" />
-					<p class="text-base">No messages yet. Be the first!</p>
+					<p class="text-base">Messages not loaded</p>
 				</div>
 			{:else}
 				<!-- Loaded - $viewState.step === 'Loaded' -->

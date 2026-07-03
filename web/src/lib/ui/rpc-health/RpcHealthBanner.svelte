@@ -3,9 +3,14 @@
 	import Button from '$lib/shadcn/ui/button/button.svelte';
 	import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
 
-	const {connection, rpcHealth, offline} = getAppContext();
+	const {connection, rpcHealth, offline, hasAppRpc} = getAppContext();
 
 	let isConnected = $derived(connection.isTargetStepReached($connection));
+
+	// No app RPC + not connected: the app has no way to read the chain yet. This
+	// is expected (connect the wallet to load data), NOT a failing RPC, so show a
+	// distinct informational banner and suppress the failing-RPC warning.
+	let noRpcYet = $derived(!hasAppRpc && !isConnected);
 
 	function errorLabel(category: string): string {
 		switch (category) {
@@ -23,7 +28,26 @@
 	}
 </script>
 
-{#if !$rpcHealth.healthy && $rpcHealth.error && !$offline.offline}
+{#if noRpcYet && !$offline.offline}
+	<div
+		class="sticky top-12 z-40 flex w-full items-center justify-between gap-3 border-b border-sky-900 bg-sky-950 px-4 py-2"
+	>
+		<div class="flex items-center gap-2">
+			<WifiOffIcon class="h-4 w-4 shrink-0 text-sky-400" />
+			<span class="text-sm text-sky-400">
+				No RPC configured — connect your wallet to load onchain data.
+			</span>
+		</div>
+		<Button
+			variant="outline"
+			size="sm"
+			class="shrink-0 border-sky-700 text-sky-400 hover:bg-sky-900"
+			onclick={() => connection.connect()}
+		>
+			Connect Wallet
+		</Button>
+	</div>
+{:else if !$rpcHealth.healthy && $rpcHealth.error && !$offline.offline}
 	<div
 		class="sticky top-12 z-40 flex w-full items-center justify-between gap-3 border-b border-amber-900 bg-amber-950 px-4 py-2"
 	>

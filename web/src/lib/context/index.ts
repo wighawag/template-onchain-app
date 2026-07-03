@@ -31,6 +31,7 @@ import {burnerOverride} from '$lib';
 import {resolveBurnerWallet} from './burner.js';
 import {resolveConnectionMode} from '$lib/core/connection/mode.js';
 import {resolveSignerRpc} from '$lib/core/connection/signer-rpc.js';
+import {hasConfiguredRpc} from '$lib/core/connection/rpc-config.js';
 import {createExecutor} from '$lib/core/connection/executor.js';
 import {createAccountCannotSendStore} from '$lib/core/transaction/account-cannot-send-store.js';
 import {createErrorDetailsStore} from '$lib/core/transaction/error-details-store.js';
@@ -118,6 +119,20 @@ export async function createContext(): Promise<{
 	}
 	const signerRpcUrl = signerRpc.rpcUrl;
 
+	// Whether the app has an RPC of its own (PUBLIC_NODE_URL or a chain rpcUrl).
+	// When it does not, the app can only reach the chain via the connected wallet,
+	// so chain-data fetching must wait until the wallet is connected (otherwise it
+	// would fail and look like a broken RPC). Exposed so the UI can explain this.
+	const hasAppRpc = hasConfiguredRpc(PUBLIC_NODE_URL, chain.rpcUrls?.default?.http);
+
+	// Gate for chain reads (onchain state, gas). With an app RPC, fetch
+	// unconditionally. Without one, only fetch once the wallet is connected (its
+	// provider then supplies the RPC), so we do not fire calls that would fail and
+	// look like a broken RPC while disconnected.
+	const chainFetchGate = hasAppRpc
+		? undefined
+		: derived(connection, ($c) => connection.isTargetStepReached($c));
+
 	// Reactive clock store that updates every second for smooth "time ago" displays
 	const clock = createClockStore();
 
@@ -184,6 +199,7 @@ export async function createContext(): Promise<{
 		publicClient,
 		deployments: deployments.get(),
 		config,
+		fetchGate: chainFetchGate,
 	});
 
 	const accountData = createAccountData({
@@ -247,6 +263,7 @@ export async function createContext(): Promise<{
 
 	const gasFee = createGasFeeStore({
 		publicClient: publicClient,
+		fetchGate: chainFetchGate,
 	});
 
 	const rpcHealth = createRpcHealthStore({balance, gasFee});
@@ -276,6 +293,7 @@ export async function createContext(): Promise<{
 		balance,
 		ownerBalance,
 		rpcHealth,
+		hasAppRpc,
 		offline,
 		connection,
 		walletClient,

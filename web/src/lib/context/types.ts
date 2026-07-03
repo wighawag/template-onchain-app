@@ -60,6 +60,13 @@ export type Context = {
 	 */
 	ownerBalance: BalanceStore;
 	rpcHealth: RpcHealthStore;
+	/**
+	 * Whether the app has an RPC of its own (PUBLIC_NODE_URL or a chain rpcUrl).
+	 * When false, the app reaches the chain only through the connected wallet, so
+	 * chain-data fetching waits for a wallet connection and the UI explains this
+	 * instead of reporting a failing RPC.
+	 */
+	hasAppRpc: boolean;
 	offline: OfflineStore;
 	connection: ChainConnection;
 	/**
