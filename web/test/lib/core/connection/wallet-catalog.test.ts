@@ -6,8 +6,7 @@ import {
 
 describe('mobileWallets deep links', () => {
 	const url = 'https://app.example.com/path?x=1';
-	const byName = (name: string) =>
-		mobileWallets.find((w) => w.name === name)!;
+	const byName = (name: string) => mobileWallets.find((w) => w.name === name)!;
 
 	it('builds metamask/rabby links by stripping the protocol', () => {
 		expect(byName('MetaMask').getLink(url)).toBe(

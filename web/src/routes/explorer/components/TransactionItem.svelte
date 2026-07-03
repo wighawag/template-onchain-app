@@ -15,11 +15,7 @@
 		type DecodedTransactionData,
 	} from '../lib/services/transactionDecoder';
 	import {loadTransactionItemData} from '../lib/services/transactionItem';
-	import {
-		formatTimestamp,
-		formatValue,
-		getEip1559FeeInfo,
-	} from '../lib/utils';
+	import {formatTimestamp, formatValue, getEip1559FeeInfo} from '../lib/utils';
 	import {route} from '$lib';
 
 	interface Props {

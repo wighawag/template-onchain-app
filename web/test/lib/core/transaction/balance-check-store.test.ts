@@ -79,12 +79,20 @@ describe('balanceCheck.ensureCanAfford', () => {
 
 		const request = await store.ensureCanAfford(
 			{
-				contract: {address: ADDR, abi: [], functionName: 'setMessage', args: ['hi'], account: ADDR},
+				contract: {
+					address: ADDR,
+					abi: [],
+					functionName: 'setMessage',
+					args: ['hi'],
+					account: ADDR,
+				},
 			},
 			{gasSpeed: 'slow'},
 		);
 
 		expect(request.maxFeePerGas).toBe(estimate.slow.maxFeePerGas);
-		expect(request.maxPriorityFeePerGas).toBe(estimate.slow.maxPriorityFeePerGas);
+		expect(request.maxPriorityFeePerGas).toBe(
+			estimate.slow.maxPriorityFeePerGas,
+		);
 	});
 });

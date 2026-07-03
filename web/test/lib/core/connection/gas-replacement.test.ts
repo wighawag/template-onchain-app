@@ -68,9 +68,9 @@ describe('isValidReplacement', () => {
 
 	it('accepts a strictly-bumped price', () => {
 		const previous = price(7n);
-		expect(isValidReplacement(bumpForReplacement(previous, previous), previous)).toBe(
-			true,
-		);
+		expect(
+			isValidReplacement(bumpForReplacement(previous, previous), previous),
+		).toBe(true);
 	});
 
 	it('requires BOTH fields to exceed the minimum', () => {

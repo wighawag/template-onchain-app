@@ -119,7 +119,11 @@
 	{/if}
 
 	{#if !(connection.targetStep == 'SignedIn' && !connection.walletOnly)}
-		<Button variant="outline" class="mt-3 w-full" onclick={() => connection.cancel()}>
+		<Button
+			variant="outline"
+			class="mt-3 w-full"
+			onclick={() => connection.cancel()}
+		>
 			Cancel
 		</Button>
 	{/if}
@@ -230,7 +234,8 @@
 	{/if}
 
 	<Modal.Footer>
-		<Button variant="outline" onclick={() => connection.cancel()}>Cancel</Button>
+		<Button variant="outline" onclick={() => connection.cancel()}>Cancel</Button
+		>
 		<Button onclick={() => signInAdoptingSwap(connection)}>Sign In</Button>
 	</Modal.Footer>
 </Modal.Root>

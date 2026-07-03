@@ -125,9 +125,9 @@ describe('hasSwappedAccount', () => {
 		).toBe(true);
 	});
 	it('is false when accountChanged is absent', () => {
-		expect(
-			hasSwappedAccount({step: 'WalletConnected', wallet: {}}),
-		).toBe(false);
+		expect(hasSwappedAccount({step: 'WalletConnected', wallet: {}})).toBe(
+			false,
+		);
 	});
 });
 

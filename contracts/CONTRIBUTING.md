@@ -97,34 +97,35 @@ import {setupFixtures} from './utils/index.js';
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IYourContract} from "./IYourContract.sol";
-import {Proxied} from "@rocketh/proxy/solc_0_8/ERC1967/Proxied.sol";
+import {IYourContract} from './IYourContract.sol';
+import {Proxied} from '@rocketh/proxy/solc_0_8/ERC1967/Proxied.sol';
 
 contract YourContract is IYourContract, Proxied {
-    event YourEvent(address indexed user, string data);
-    error YourError(string reason);
+	event YourEvent(address indexed user, string data);
+	error YourError(string reason);
 
-    // Dual initialization (constructor + proxy init)
-    constructor(string memory param) {
-        _init(param);
-    }
+	// Dual initialization (constructor + proxy init)
+	constructor(string memory param) {
+		_init(param);
+	}
 
-    function _init(string memory param) internal {
-        // initialization logic
-    }
+	function _init(string memory param) internal {
+		// initialization logic
+	}
 
-    function init(string memory param) external asProxyInitialiser {
-        _init(param);
-    }
+	function init(string memory param) external asProxyInitialiser {
+		_init(param);
+	}
 
-    // Business logic
-    function yourFunction() external {
-        // implementation
-    }
+	// Business logic
+	function yourFunction() external {
+		// implementation
+	}
 }
 ```
 
 **Key Points**:
+
 - ✅ Inherit from `Proxied` for ERC1967 proxy support
 - ✅ Separate interface in `I<Contract>.sol`
 - ✅ Use custom errors instead of require strings
@@ -138,15 +139,15 @@ contract YourContract is IYourContract, Proxied {
 pragma solidity ^0.8.28;
 
 interface IYourContract {
-    // Events
-    event YourEvent(address indexed user, string data);
+	// Events
+	event YourEvent(address indexed user, string data);
 
-    // Errors
-    error YourError(string reason);
+	// Errors
+	error YourError(string reason);
 
-    // Functions
-    function yourFunction() external;
-    function viewFunction() external view returns (string memory);
+	// Functions
+	function yourFunction() external;
+	function viewFunction() external view returns (string memory);
 }
 ```
 
@@ -156,37 +157,38 @@ interface IYourContract {
 import {deployScript, artifacts} from '../rocketh/deploy.js';
 
 export default deployScript(
-  async (env) => {
-    const {deployer, admin} = env.namedAccounts;
+	async (env) => {
+		const {deployer, admin} = env.namedAccounts;
 
-    // Deploy upgradeable contract via proxy
-    const deployment = await env.deployViaProxy(
-      'YourContract',
-      {
-        account: deployer,
-        artifact: artifacts.YourContract,
-        args: ['constructor arg'],
-      },
-      {
-        owner: admin,
-        execute: 'init',
-        linkedData: {
-          // Metadata stored with deployment
-          someConfig: 'value',
-        },
-        deterministicImplementation: true,
-      },
-    );
+		// Deploy upgradeable contract via proxy
+		const deployment = await env.deployViaProxy(
+			'YourContract',
+			{
+				account: deployer,
+				artifact: artifacts.YourContract,
+				args: ['constructor arg'],
+			},
+			{
+				owner: admin,
+				execute: 'init',
+				linkedData: {
+					// Metadata stored with deployment
+					someConfig: 'value',
+				},
+				deterministicImplementation: true,
+			},
+		);
 
-    // Interact with deployed contract
-    const contract = env.viem.getContract(deployment);
-    const result = await contract.read.yourFunction();
-  },
-  {tags: ['YourContract']},
+		// Interact with deployed contract
+		const contract = env.viem.getContract(deployment);
+		const result = await contract.read.yourFunction();
+	},
+	{tags: ['YourContract']},
 );
 ```
 
 **Key Points**:
+
 - ✅ Use `deployScript` factory function
 - ✅ Named accounts from `env.namedAccounts`
 - ✅ `deployViaProxy` for upgradeable contracts
@@ -206,44 +208,45 @@ const {provider, networkHelpers} = await network.connect();
 const {deployAll} = setupFixtures(provider);
 
 describe('YourContract', function () {
-  describe('yourFunction', function () {
-    it('should do something', async function () {
-      const {env, YourContract, unnamedAccounts} =
-        await networkHelpers.loadFixture(deployAll);
-      const user = unnamedAccounts[0];
+	describe('yourFunction', function () {
+		it('should do something', async function () {
+			const {env, YourContract, unnamedAccounts} =
+				await networkHelpers.loadFixture(deployAll);
+			const user = unnamedAccounts[0];
 
-      await env.execute(YourContract, {
-        functionName: 'yourFunction',
-        args: ['arg1'],
-        account: user,
-      });
+			await env.execute(YourContract, {
+				functionName: 'yourFunction',
+				args: ['arg1'],
+				account: user,
+			});
 
-      const result = await env.read(YourContract, {
-        functionName: 'viewFunction',
-        args: [user],
-      });
+			const result = await env.read(YourContract, {
+				functionName: 'viewFunction',
+				args: [user],
+			});
 
-      expect(result).toEqual('expected value');
-    });
+			expect(result).toEqual('expected value');
+		});
 
-    it('should revert on invalid input', async function () {
-      const {env, YourContract, unnamedAccounts} =
-        await networkHelpers.loadFixture(deployAll);
-      const user = unnamedAccounts[0];
+		it('should revert on invalid input', async function () {
+			const {env, YourContract, unnamedAccounts} =
+				await networkHelpers.loadFixture(deployAll);
+			const user = unnamedAccounts[0];
 
-      await expect(
-        env.execute(YourContract, {
-          functionName: 'yourFunction',
-          args: ['invalid'],
-          account: user,
-        }),
-      ).toBeRejectedWith(`custom error 'YourError("reason")'`);
-    });
-  });
+			await expect(
+				env.execute(YourContract, {
+					functionName: 'yourFunction',
+					args: ['invalid'],
+					account: user,
+				}),
+			).toBeRejectedWith(`custom error 'YourError("reason")'`);
+		});
+	});
 });
 ```
 
 **Key Points**:
+
 - ✅ Use `node:test` with `earl` assertions
 - ✅ Fixture pattern with `loadFixture` for test isolation
 - ✅ `env.read()` and `env.execute()` for contract interaction
@@ -291,41 +294,41 @@ contract YourContractTest is Test {
 ```typescript
 import type {HardhatUserConfig} from 'hardhat/config';
 import {
-  addForkConfiguration,
-  addNetworksFromEnv,
-  addNetworksFromKnownList,
+	addForkConfiguration,
+	addNetworksFromEnv,
+	addNetworksFromKnownList,
 } from 'hardhat-deploy/helpers';
 
 const config: HardhatUserConfig = {
-  plugins: [
-    // Add your plugins
-  ],
-  solidity: {
-    profiles: {
-      default: {version: '0.8.28'},
-      production: {
-        version: '0.8.28',
-        settings: {
-          optimizer: {enabled: true, runs: 999999},
-        },
-      },
-    },
-  },
-  networks: addForkConfiguration(
-    addNetworksFromKnownList(
-      addNetworksFromEnv({
-        // Add custom networks here
-        local: {
-          type: 'edr-simulated',
-          chainType: 'l1',
-          mining: {interval: 3000},
-        },
-      }),
-    ),
-  ),
-  generateTypedArtifacts: {
-    destinations: [{folder: './generated', mode: 'typescript'}],
-  },
+	plugins: [
+		// Add your plugins
+	],
+	solidity: {
+		profiles: {
+			default: {version: '0.8.28'},
+			production: {
+				version: '0.8.28',
+				settings: {
+					optimizer: {enabled: true, runs: 999999},
+				},
+			},
+		},
+	},
+	networks: addForkConfiguration(
+		addNetworksFromKnownList(
+			addNetworksFromEnv({
+				// Add custom networks here
+				local: {
+					type: 'edr-simulated',
+					chainType: 'l1',
+					mining: {interval: 3000},
+				},
+			}),
+		),
+	),
+	generateTypedArtifacts: {
+		destinations: [{folder: './generated', mode: 'typescript'}],
+	},
 };
 
 export default config;
@@ -338,19 +341,19 @@ import type {UserConfig} from 'rocketh/types';
 import {privateKey} from '@rocketh/signer';
 
 export const config = {
-  accounts: {
-    deployer: {default: 0},
-    admin: {default: 1},
-  },
-  environments: {
-    localhost: {
-      chain: 31337,
-      overrides: {autoMine: true},
-    },
-  },
-  signerProtocols: {
-    privateKey,
-  },
+	accounts: {
+		deployer: {default: 0},
+		admin: {default: 1},
+	},
+	environments: {
+		localhost: {
+			chain: 31337,
+			overrides: {autoMine: true},
+		},
+	},
+	signerProtocols: {
+		privateKey,
+	},
 } as const satisfies UserConfig;
 
 // Extensions
@@ -360,10 +363,10 @@ import * as deployProxyExtension from '@rocketh/proxy';
 import * as viemExtension from '@rocketh/viem';
 
 const extensions = {
-  ...deployExtension,
-  ...readExecuteExtension,
-  ...deployProxyExtension,
-  ...viemExtension,
+	...deployExtension,
+	...readExecuteExtension,
+	...deployProxyExtension,
+	...viemExtension,
 };
 export {extensions};
 ```
@@ -394,6 +397,7 @@ MNEMONIC_mainnet=SECRET
 ```
 
 Then run:
+
 ```bash
 pnpm hardhat config-variable set SECRET_ETH_NODE_URI_mainnet "https://..."
 ```
@@ -489,9 +493,9 @@ touch src/YourFeature/YourFeature.t.sol
 pragma solidity ^0.8.28;
 
 interface IYourFeature {
-    event FeatureEvent(address indexed user, bytes32 data);
-    error FeatureError(string reason);
-    function yourFunction() external;
+	event FeatureEvent(address indexed user, bytes32 data);
+	error FeatureError(string reason);
+	function yourFunction() external;
 }
 ```
 
@@ -500,23 +504,23 @@ interface IYourFeature {
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IYourFeature} from "./IYourFeature.sol";
-import {Proxied} from "@rocketh/proxy/solc_0_8/ERC1967/Proxied.sol";
+import {IYourFeature} from './IYourFeature.sol';
+import {Proxied} from '@rocketh/proxy/solc_0_8/ERC1967/Proxied.sol';
 
 contract YourFeature is IYourFeature, Proxied {
-    constructor() {
-        _init();
-    }
+	constructor() {
+		_init();
+	}
 
-    function _init() internal {}
+	function _init() internal {}
 
-    function init() external asProxyInitialiser {
-        _init();
-    }
+	function init() external asProxyInitialiser {
+		_init();
+	}
 
-    function yourFunction() external {
-        emit FeatureEvent(msg.sender, bytes32(0));
-    }
+	function yourFunction() external {
+		emit FeatureEvent(msg.sender, bytes32(0));
+	}
 }
 ```
 
@@ -559,10 +563,10 @@ const {provider, networkHelpers} = await network.connect();
 const {deployAll} = setupFixtures(provider);
 
 describe('YourFeature', function () {
-  it('should work', async function () {
-    const {env, YourFeature} = await networkHelpers.loadFixture(deployAll);
-    // test implementation
-  });
+	it('should work', async function () {
+		const {env, YourFeature} = await networkHelpers.loadFixture(deployAll);
+		// test implementation
+	});
 });
 ```
 
@@ -573,25 +577,25 @@ describe('YourFeature', function () {
 import {deployScript, artifacts} from '../rocketh/deploy.js';
 
 export default deployScript(
-  async (env) => {
-    const {deployer, admin} = env.namedAccounts;
+	async (env) => {
+		const {deployer, admin} = env.namedAccounts;
 
-    const deployment = await env.deployViaProxy(
-      'YourFeature',
-      {
-        account: deployer,
-        artifact: artifacts.YourFeature,
-        args: [],
-      },
-      {
-        owner: admin,
-        execute: 'init',
-        linkedData: {},
-        deterministicImplementation: true,
-      },
-    );
-  },
-  {tags: ['YourFeature']},
+		const deployment = await env.deployViaProxy(
+			'YourFeature',
+			{
+				account: deployer,
+				artifact: artifacts.YourFeature,
+				args: [],
+			},
+			{
+				owner: admin,
+				execute: 'init',
+				linkedData: {},
+				deterministicImplementation: true,
+			},
+		);
+	},
+	{tags: ['YourFeature']},
 );
 ```
 
@@ -620,12 +624,12 @@ import {loadEnvironmentFromHardhat} from '../rocketh/environment.js';
 import {Abi_YourContract} from '../generated/abis/YourContract.js';
 
 const env = await loadEnvironmentFromHardhat({
-  extensions: await import('../rocketh/config.js').then((m) => m.extensions),
+	extensions: await import('../rocketh/config.js').then((m) => m.extensions),
 });
 
 const contract = env.viem.getContract({
-  abi: Abi_YourContract,
-  address: env.deployments.YourContract.address,
+	abi: Abi_YourContract,
+	address: env.deployments.YourContract.address,
 });
 
 const result = await contract.read.yourFunction();
@@ -633,6 +637,7 @@ console.log(result);
 ```
 
 Run with:
+
 ```bash
 pnpm contracts:execute scripts/yourScript.ts
 ```
@@ -648,9 +653,10 @@ pnpm contracts:lint
 ```
 
 Configured in `slippy.config.js`:
+
 ```javascript
 export default {
-  ignores: ['**/*.t.sol'],
+	ignores: ['**/*.t.sol'],
 };
 ```
 
@@ -668,6 +674,7 @@ pnpm format:check  # Check formatting
 ### 1. Proxy Initialization
 
 **DO**:
+
 ```solidity
 constructor(string memory param) {
     _init(param);
@@ -679,6 +686,7 @@ function init(string memory param) external asProxyInitialiser {
 ```
 
 **DON'T**:
+
 ```solidity
 // ❌ Only constructor - won't work with proxies
 constructor(string memory param) {
@@ -689,11 +697,13 @@ constructor(string memory param) {
 ### 2. Named Accounts
 
 **DO**:
+
 ```typescript
 const {deployer, admin} = env.namedAccounts;
 ```
 
 **DON'T**:
+
 ```typescript
 // ❌ Hardcoding addresses
 const deployer = '0x...';
@@ -702,35 +712,39 @@ const deployer = '0x...';
 ### 3. Gas Limits
 
 **DO**:
+
 ```typescript
 // Let Hardhat estimate
 await env.execute(Contract, {
-  functionName: 'yourFunction',
-  args: ['arg'],
-  account: user,
+	functionName: 'yourFunction',
+	args: ['arg'],
+	account: user,
 });
 ```
 
 **DON'T**:
+
 ```typescript
 // ❌ Hardcoded gas limits
 await env.execute(Contract, {
-  functionName: 'yourFunction',
-  args: ['arg'],
-  account: user,
-  gas: 1000000n,
+	functionName: 'yourFunction',
+	args: ['arg'],
+	account: user,
+	gas: 1000000n,
 });
 ```
 
 ### 4. Environment Variables
 
 **DO**:
+
 ```bash
 # Use .env.local (gitignored)
 ETH_NODE_URI_sepolia="https://..."
 ```
 
 **DON'T**:
+
 ```bash
 # ❌ Commit sensitive data to .env
 # .env is tracked in git for template defaults

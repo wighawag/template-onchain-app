@@ -155,7 +155,7 @@ function waitForConnected(
 			() =>
 				finish(() =>
 					reject(new Error('timed out adopting the swapped account')),
-			),
+				),
 			timeoutMs,
 		);
 

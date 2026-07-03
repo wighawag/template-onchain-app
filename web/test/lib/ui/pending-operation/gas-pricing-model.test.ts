@@ -3,7 +3,10 @@ import {parseGwei} from 'viem';
 import {computeGasPricingModel} from '../../../../src/lib/ui/pending-operation/gas-pricing-model';
 import type {GasPrice} from '../../../../src/lib/core/connection/gasFee';
 
-const gp = (maxFeePerGas: bigint, maxPriorityFeePerGas = maxFeePerGas): GasPrice => ({
+const gp = (
+	maxFeePerGas: bigint,
+	maxPriorityFeePerGas = maxFeePerGas,
+): GasPrice => ({
 	maxFeePerGas,
 	maxPriorityFeePerGas,
 });

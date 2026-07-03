@@ -13,16 +13,16 @@ import type {OnchainOperation} from '../../../src/lib/account/AccountData';
 import type {TransactionIntent} from '@etherkit/tx-observer';
 
 const op = (metadata: unknown): OnchainOperation =>
-	({metadata} as unknown as OnchainOperation);
+	({metadata}) as unknown as OnchainOperation;
 
 const intent = (partial: unknown): TransactionIntent =>
 	partial as unknown as TransactionIntent;
 
 describe('getOperationName', () => {
 	it('reads functionCall / unknown names, else the fallback', () => {
-		expect(getOperationName(op({type: 'functionCall', functionName: 'mint'}))).toBe(
-			'mint',
-		);
+		expect(
+			getOperationName(op({type: 'functionCall', functionName: 'mint'})),
+		).toBe('mint');
 		expect(getOperationName(op({type: 'unknown', name: 'Resubmit'}))).toBe(
 			'Resubmit',
 		);
@@ -121,8 +121,12 @@ describe('countPendingOperations', () => {
 			b: op({}) as any,
 			c: op({}) as any,
 		};
-		ops.a.transactionIntent = {state: {inclusion: 'Included', status: 'Success'}};
-		ops.b.transactionIntent = {state: {inclusion: 'Included', status: 'Failure'}};
+		ops.a.transactionIntent = {
+			state: {inclusion: 'Included', status: 'Success'},
+		};
+		ops.b.transactionIntent = {
+			state: {inclusion: 'Included', status: 'Failure'},
+		};
 		ops.c.transactionIntent = {state: {inclusion: 'InMemPool'}};
 		expect(countPendingOperations(ops)).toBe(2);
 	});

@@ -134,9 +134,7 @@ describe('Address.svelte', () => {
 		const screen = render(Address, {
 			value: '0x1234567890abcdef1234567890abcdef12345678',
 		});
-		await expect
-			.element(screen.getByText('0x1234...5678'))
-			.toBeInTheDocument();
+		await expect.element(screen.getByText('0x1234...5678')).toBeInTheDocument();
 	});
 });
 ```

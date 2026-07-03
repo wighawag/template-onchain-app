@@ -33,7 +33,9 @@ describe('getStaleMessage', () => {
 
 	it('returns undefined while data is still fresh', () => {
 		const now = 1_000_000;
-		expect(getStaleMessage(now - (STALE_THRESHOLD_MS - 1), now)).toBeUndefined();
+		expect(
+			getStaleMessage(now - (STALE_THRESHOLD_MS - 1), now),
+		).toBeUndefined();
 	});
 
 	it('reports seconds/minutes/hours once stale', () => {
@@ -41,7 +43,9 @@ describe('getStaleMessage', () => {
 		expect(getStaleMessage(now - STALE_THRESHOLD_MS, now)).toBe(
 			'Data is 30 seconds old',
 		);
-		expect(getStaleMessage(now - 5 * MINUTE, now)).toBe('Data is 5 minutes old');
+		expect(getStaleMessage(now - 5 * MINUTE, now)).toBe(
+			'Data is 5 minutes old',
+		);
 		expect(getStaleMessage(now - 1 * MINUTE, now)).toBe('Data is 1 minute old');
 		expect(getStaleMessage(now - 2 * HOUR, now)).toBe('Data is 2 hours old');
 		expect(getStaleMessage(now - 1 * HOUR, now)).toBe('Data is 1 hour old');

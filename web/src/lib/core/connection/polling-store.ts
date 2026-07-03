@@ -4,7 +4,7 @@ import {get, writable, type Readable} from 'svelte/store';
  * The value of a polling store: either not-yet-loaded, or loaded with a payload.
  * `T` is the loaded payload shape (e.g. `{value: bigint}`).
  */
-export type PollingValue<T> = ({step: 'Unloaded'} | ({step: 'Loaded'} & T));
+export type PollingValue<T> = {step: 'Unloaded'} | ({step: 'Loaded'} & T);
 
 /** Loading / error status, tracked alongside the value. */
 export type PollingStatus = {

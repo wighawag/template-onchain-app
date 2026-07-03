@@ -140,7 +140,9 @@ export function createBalanceCheckStore({
 		return gasFeeValue[speed];
 	}
 
-	async function checkBalanceAndShowModal(estimatedCost: bigint): Promise<void> {
+	async function checkBalanceAndShowModal(
+		estimatedCost: bigint,
+	): Promise<void> {
 		const balanceValue = get(balance);
 		if (balanceValue.step !== 'Loaded') {
 			await balance.update();
@@ -167,8 +169,7 @@ export function createBalanceCheckStore({
 				onDismiss: () => {
 					close();
 					const currentBal = get(balance);
-					const balValue =
-						currentBal.step === 'Loaded' ? currentBal.value : 0n;
+					const balValue = currentBal.step === 'Loaded' ? currentBal.value : 0n;
 					reject(new InsufficientFundsError(balValue, estimatedCost));
 				},
 			});
@@ -178,7 +179,11 @@ export function createBalanceCheckStore({
 	async function ensureCanAfford<
 		const TAbi extends Abi | readonly unknown[],
 		TFunctionName extends ContractFunctionName<TAbi, 'nonpayable' | 'payable'>,
-		TArgs extends ContractFunctionArgs<TAbi, 'nonpayable' | 'payable', TFunctionName>,
+		TArgs extends ContractFunctionArgs<
+			TAbi,
+			'nonpayable' | 'payable',
+			TFunctionName
+		>,
 		TChain extends Chain | undefined,
 		TAccount extends Account | undefined,
 		TChainOverride extends Chain | undefined = undefined,
@@ -230,7 +235,10 @@ export function createBalanceCheckStore({
 		> & {chain?: TChainOverride | null}
 	>;
 
-	async function ensureCanAfford(options: any, config: EnsureCanAffordOptions = {}): Promise<any> {
+	async function ensureCanAfford(
+		options: any,
+		config: EnsureCanAffordOptions = {},
+	): Promise<any> {
 		const {gasSpeed = 'fast', forceUpdate = false} = config;
 
 		startEstimating();

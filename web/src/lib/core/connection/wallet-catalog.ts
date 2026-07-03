@@ -73,7 +73,8 @@ export const mobileWallets: readonly MobileWallet[] = [
 		name: 'Coinbase Wallet',
 		description: 'Open in Coinbase Wallet',
 		icon: '/wallets/coinbase/coinbase-icon.svg',
-		getLink: (url) => `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(url)}`,
+		getLink: (url) =>
+			`https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(url)}`,
 	},
 	{
 		name: 'Rainbow',

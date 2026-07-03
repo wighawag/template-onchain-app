@@ -96,16 +96,16 @@ src/
 
 ```typescript
 // Shared libraries
-import { createOnchainState } from '$lib/onchain/onchain-state';
-import { getUserContext } from '$lib/context';
+import {createOnchainState} from '$lib/onchain/onchain-state';
+import {getUserContext} from '$lib/context';
 
 // UI components (namespace imports for shadcn)
 import * as Card from '$lib/shadcn/ui/card';
-import { Button } from '$lib/shadcn/ui/button';
+import {Button} from '$lib/shadcn/ui/button';
 
 // App UI components
-import { Navbar } from '$lib/ui/navbar';
-import { PendingOperationBanner } from '$lib/ui/pending-operation';
+import {Navbar} from '$lib/ui/navbar';
+import {PendingOperationBanner} from '$lib/ui/pending-operation';
 
 // Route-local components
 import FeatureComponent from './components/FeatureComponent.svelte';
@@ -150,25 +150,25 @@ All stores follow a dual-store architecture:
 
 ```typescript
 // $lib/onchain/balance.ts
-import { writable } from 'svelte/store';
+import {writable} from 'svelte/store';
 
 interface BalanceStatus {
-  loading: boolean;
-  error: Error | null;
-  lastSuccessfulFetch: number | null;
+	loading: boolean;
+	error: Error | null;
+	lastSuccessfulFetch: number | null;
 }
 
 interface BalanceData {
-  value: bigint;
-  formatted: string;
-  symbol: string;
+	value: bigint;
+	formatted: string;
+	symbol: string;
 }
 
 // Status store
 export const balanceStatus = writable<BalanceStatus>({
-  loading: true,
-  error: null,
-  lastSuccessfulFetch: null,
+	loading: true,
+	error: null,
+	lastSuccessfulFetch: null,
 });
 
 // Data store
@@ -176,8 +176,8 @@ export const balance = writable<BalanceData | null>(null);
 
 // Factory function for creating stores
 export function createBalanceStore() {
-  // ... initialization logic
-  return { balance, balanceStatus };
+	// ... initialization logic
+	return {balance, balanceStatus};
 }
 ```
 
@@ -188,15 +188,15 @@ Services are initialized once and provided via context:
 ```typescript
 // $lib/context/index.ts
 export async function createContext() {
-  const connectionService = createConnectionService();
-  const transactionService = createTransactionService();
-  const notificationService = createNotificationService();
+	const connectionService = createConnectionService();
+	const transactionService = createTransactionService();
+	const notificationService = createNotificationService();
 
-  return {
-    connection: connectionService,
-    transaction: transactionService,
-    notifications: notificationService,
-  };
+	return {
+		connection: connectionService,
+		transaction: transactionService,
+		notifications: notificationService,
+	};
 }
 ```
 
@@ -232,21 +232,21 @@ export async function createContext() {
 
 ```typescript
 import * as Card from '$lib/shadcn/ui/card';
-import { Button } from '$lib/shadcn/ui/button';
+import {Button} from '$lib/shadcn/ui/button';
 ```
 
 **Domain UI components** - Direct imports:
 
 ```typescript
-import { EthereumButton } from '$lib/core/ui/ethereum';
-import { FaucetButton } from '$lib/core/ui/faucet';
+import {EthereumButton} from '$lib/core/ui/ethereum';
+import {FaucetButton} from '$lib/core/ui/faucet';
 ```
 
 **App UI components** - Named imports:
 
 ```typescript
-import { Navbar } from '$lib/ui/navbar';
-import { PendingOperationBanner } from '$lib/ui/pending-operation';
+import {Navbar} from '$lib/ui/navbar';
+import {PendingOperationBanner} from '$lib/ui/pending-operation';
 ```
 
 ### TypeScript Conventions
@@ -259,9 +259,9 @@ import { PendingOperationBanner } from '$lib/ui/pending-operation';
 ```typescript
 // $lib/core/connection/types.ts
 export interface ConnectionStatus {
-  isConnected: boolean;
-  chainId: number | null;
-  account: string | null;
+	isConnected: boolean;
+	chainId: number | null;
+	account: string | null;
 }
 
 export type ConnectionEvent = 'connect' | 'disconnect' | 'chainChanged';
@@ -298,23 +298,23 @@ touch src/routes/my-feature/+page.svelte
 
 ```typescript
 // src/routes/my-feature/lib/stores/my-feature-store.ts
-import { writable } from 'svelte/store';
+import {writable} from 'svelte/store';
 
 interface MyFeatureStatus {
-  loading: boolean;
-  error: Error | null;
+	loading: boolean;
+	error: Error | null;
 }
 
 interface MyFeatureData {
-  items: string[];
+	items: string[];
 }
 
 export const myFeatureStatus = writable<MyFeatureStatus>({
-  loading: false,
-  error: null,
+	loading: false,
+	error: null,
 });
 
-export const myFeatureData = writable<MyFeatureData>({ items: [] });
+export const myFeatureData = writable<MyFeatureData>({items: []});
 ```
 
 ---
@@ -360,13 +360,13 @@ Uses new v4 syntax with CSS variables:
 @import 'tailwindcss';
 
 @theme {
-  --color-primary: var(--color-primary);
-  --font-sans: var(--font-sans);
+	--color-primary: var(--color-primary);
+	--font-sans: var(--font-sans);
 }
 
 :root {
-  --color-primary: #000000;
-  --font-sans: Inter, system-ui, sans-serif;
+	--color-primary: #000000;
+	--font-sans: Inter, system-ui, sans-serif;
 }
 ```
 
@@ -386,9 +386,9 @@ For development convenience, the following are attached to `window`:
 
 ```typescript
 // In browser console
-window.env;        // Environment variables
-window.vite_env;   // Vite environment
-window.get;        // Svelte store get function
+window.env; // Environment variables
+window.vite_env; // Vite environment
+window.get; // Svelte store get function
 ```
 
 These are stripped in production builds.
@@ -432,7 +432,7 @@ count = count + 1; // ❌ Won't trigger updates
 
 ```typescript
 if (typeof window !== 'undefined') {
-  // Browser-only code
+	// Browser-only code
 }
 ```
 
@@ -452,7 +452,7 @@ Not everything needs to be reactive. Use plain values for static data:
 
 ```typescript
 // ✅ Fine for static data
-const STATIC_CONFIG = { maxItems: 100 };
+const STATIC_CONFIG = {maxItems: 100};
 
 // ✅ Use $state for reactive data
 let items = $state<string[]>([]);

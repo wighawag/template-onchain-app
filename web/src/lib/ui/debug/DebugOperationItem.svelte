@@ -31,13 +31,17 @@
 </script>
 
 {#if $operationStore}
-	{@const statusInfo = getOperationStatusInfo($operationStore.transactionIntent)}
+	{@const statusInfo = getOperationStatusInfo(
+		$operationStore.transactionIntent,
+	)}
 	{@const StatusIcon = statusIcons[statusInfo.kind]}
 	{@const state = $operationStore.transactionIntent.state}
 	<div class="flex items-center justify-between gap-2 px-2 py-1 text-xs">
 		<div class="flex min-w-0 items-center gap-1.5">
 			<StatusIcon class="h-3 w-3 shrink-0" />
-			<span class="truncate">{getOperationName($operationStore, 'Unknown')}</span>
+			<span class="truncate"
+				>{getOperationName($operationStore, 'Unknown')}</span
+			>
 		</div>
 		<div class="flex items-center gap-1">
 			{#if state?.final !== undefined}

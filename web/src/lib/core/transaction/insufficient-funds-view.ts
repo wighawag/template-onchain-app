@@ -42,7 +42,9 @@ export function deriveInsufficientFundsView(
 			? (currentBalance as LoadedBalance)
 			: null;
 	const displayBalance = loaded ? loaded.value : 0n;
-	const hasSufficientFunds = loaded ? loaded.value >= state.estimatedCost : false;
+	const hasSufficientFunds = loaded
+		? loaded.value >= state.estimatedCost
+		: false;
 	const shortfall =
 		state.estimatedCost > displayBalance
 			? state.estimatedCost - displayBalance

@@ -13,9 +13,7 @@ const ADDRESS = '0x1234567890abcdef1234567890abcdef12345678';
 describe('Address.svelte', () => {
 	it('truncates the address by default (0x + 4 ... 4)', async () => {
 		const screen = render(Address, {value: ADDRESS});
-		await expect
-			.element(screen.getByText('0x1234...5678'))
-			.toBeInTheDocument();
+		await expect.element(screen.getByText('0x1234...5678')).toBeInTheDocument();
 	});
 
 	it('honours a custom truncate window', async () => {
@@ -50,9 +48,7 @@ describe('Address.svelte', () => {
 	it('renders plain text (no link) when linkTo is false', async () => {
 		const screen = render(Address, {value: ADDRESS, linkTo: false});
 		// The display text lives in a span, not an anchor.
-		await expect
-			.element(screen.getByText('0x1234...5678'))
-			.toBeInTheDocument();
+		await expect.element(screen.getByText('0x1234...5678')).toBeInTheDocument();
 		await expect.element(screen.getByRole('link')).not.toBeInTheDocument();
 	});
 
@@ -62,19 +58,18 @@ describe('Address.svelte', () => {
 		await expect.element(link).toBeInTheDocument();
 		await expect
 			.element(link)
-			.toHaveAttribute('href', expect.stringContaining(`/explorer/address/${ADDRESS}`));
+			.toHaveAttribute(
+				'href',
+				expect.stringContaining(`/explorer/address/${ADDRESS}`),
+			);
 	});
 
 	it('re-truncates when the value prop changes', async () => {
 		const screen = render(Address, {value: ADDRESS});
-		await expect
-			.element(screen.getByText('0x1234...5678'))
-			.toBeInTheDocument();
+		await expect.element(screen.getByText('0x1234...5678')).toBeInTheDocument();
 
 		const other = '0xabcdef0000000000000000000000000000009999';
 		await screen.rerender({value: other});
-		await expect
-			.element(screen.getByText('0xabcd...9999'))
-			.toBeInTheDocument();
+		await expect.element(screen.getByText('0xabcd...9999')).toBeInTheDocument();
 	});
 });

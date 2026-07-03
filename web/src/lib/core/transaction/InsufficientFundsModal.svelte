@@ -21,7 +21,9 @@
 	let currentBalance = $derived(balanceStoreRef ? $balanceStoreRef : null);
 
 	// All balance math lives in the pure view-model helper.
-	let view = $derived(deriveInsufficientFundsView($balanceCheck, currentBalance));
+	let view = $derived(
+		deriveInsufficientFundsView($balanceCheck, currentBalance),
+	);
 	let hasSufficientFunds = $derived(view.hasSufficientFunds);
 	let displayBalance = $derived(view.displayBalance);
 	let isWaitingForBalanceUpdate = $derived(view.isWaitingForBalanceUpdate);

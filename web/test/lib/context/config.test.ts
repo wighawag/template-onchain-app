@@ -3,9 +3,8 @@ import {resolveAppConfig} from '$lib/context/config';
 import type {AugmentedChainInfo} from '$lib/core/connection/types';
 
 // Minimal chain stub: resolveAppConfig only reads `.properties`.
-const chainWith = (
-	properties?: Record<string, unknown>,
-): AugmentedChainInfo => ({properties}) as unknown as AugmentedChainInfo;
+const chainWith = (properties?: Record<string, unknown>): AugmentedChainInfo =>
+	({properties}) as unknown as AugmentedChainInfo;
 
 describe('resolveAppConfig', () => {
 	it('falls back to mainnet-ish defaults when the chain has no properties', () => {

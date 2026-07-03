@@ -5,10 +5,7 @@
 	import {formatGwei} from 'viem';
 	import type {GasPrice} from '$lib/core/connection/gasFee';
 	import type {GasReplacementPolicy} from '$lib/core/connection/gas-replacement';
-	import {
-		computeGasPricingModel,
-		type GasOption,
-	} from './gas-pricing-model';
+	import {computeGasPricingModel, type GasOption} from './gas-pricing-model';
 
 	interface Props {
 		open: boolean;

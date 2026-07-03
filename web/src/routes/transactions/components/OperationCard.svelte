@@ -51,7 +51,9 @@
 </script>
 
 {#if $operationStore}
-	{@const statusInfo = getOperationStatusInfo($operationStore.transactionIntent)}
+	{@const statusInfo = getOperationStatusInfo(
+		$operationStore.transactionIntent,
+	)}
 	{@const StatusIcon = statusIcons[statusInfo.kind]}
 	{@const txHash = getMainTxHash($operationStore.transactionIntent)}
 	{@const state = $operationStore.transactionIntent.state}

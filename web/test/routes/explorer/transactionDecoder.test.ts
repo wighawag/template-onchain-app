@@ -91,9 +91,9 @@ describe('formatArgValue', () => {
 	});
 
 	it('truncates addresses to head and tail', () => {
-		expect(
-			formatArgValue('0x1234567890abcdef1234567890abcdef12345678'),
-		).toBe('0x1234...5678');
+		expect(formatArgValue('0x1234567890abcdef1234567890abcdef12345678')).toBe(
+			'0x1234...5678',
+		);
 	});
 
 	it('truncates 32-byte hashes to a short head', () => {
@@ -150,9 +150,9 @@ describe('formatDecodedError', () => {
 	});
 
 	it('renders positional args', () => {
-		expect(
-			formatDecodedError({errorName: 'BadAmount', args: [1n, 2n]}),
-		).toBe('BadAmount(1n, 2n)');
+		expect(formatDecodedError({errorName: 'BadAmount', args: [1n, 2n]})).toBe(
+			'BadAmount(1n, 2n)',
+		);
 	});
 
 	it('renders named args', () => {

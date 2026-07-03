@@ -1,5 +1,9 @@
 import {describe, it, expect} from 'vitest';
-import {formatGas, formatGasPrice, formatValue} from '$lib/core/utils/format/value';
+import {
+	formatGas,
+	formatGasPrice,
+	formatValue,
+} from '$lib/core/utils/format/value';
 
 describe('formatGas', () => {
 	it('formats gas units with locale separators', () => {

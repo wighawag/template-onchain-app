@@ -35,9 +35,8 @@ export function createTransactionDetailsStore(params: {
 	publicClient: PublicClient;
 }) {
 	const {publicClient} = params;
-	const {subscribe, set, update} = writable<TransactionDetailsState>(
-		initialState,
-	);
+	const {subscribe, set, update} =
+		writable<TransactionDetailsState>(initialState);
 
 	async function fetch(txHash: `0x${string}` | null): Promise<void> {
 		if (!txHash) {

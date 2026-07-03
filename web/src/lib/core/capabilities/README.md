@@ -1,7 +1,7 @@
 # Capabilities
 
 Optional, independently-constructable enhancements provided at the app root and
-consumed by descendant components. For *why* this is a separate system from the
+consumed by descendant components. For _why_ this is a separate system from the
 app context, see `docs/adr/0001-capabilities-vs-app-context.md`.
 
 ## Use one

@@ -34,7 +34,13 @@ describe('getInputKey / getInputLabel', () => {
 describe('getContractFunctions', () => {
 	it('keeps only named function entries', () => {
 		const abi = [
-			{type: 'function', name: 'foo', inputs: [], outputs: [], stateMutability: 'view'},
+			{
+				type: 'function',
+				name: 'foo',
+				inputs: [],
+				outputs: [],
+				stateMutability: 'view',
+			},
 			{type: 'event', name: 'Bar', inputs: []},
 			{type: 'constructor', inputs: [], stateMutability: 'nonpayable'},
 			{type: 'error', name: 'Boom', inputs: []},
@@ -75,7 +81,9 @@ describe('formatFunctionSignature', () => {
 			outputs: [p('string', '')],
 			stateMutability: 'view',
 		} as unknown as AbiFunction;
-		expect(formatFunctionSignature(fn)).toBe('string messages(address account)');
+		expect(formatFunctionSignature(fn)).toBe(
+			'string messages(address account)',
+		);
 	});
 });
 
@@ -94,19 +102,26 @@ describe('convertInputValues', () => {
 	it('passes address and string through', () => {
 		const addr = '0x1234567890abcdef1234567890abcdef12345678';
 		const inputs = [p('address', 'to'), p('string', 'msg')];
-		expect(convertInputValues(inputs, {to: addr, msg: 'hi'})).toEqual([addr, 'hi']);
+		expect(convertInputValues(inputs, {to: addr, msg: 'hi'})).toEqual([
+			addr,
+			'hi',
+		]);
 	});
 
 	it('parses comma-separated dynamic arrays into typed items', () => {
 		const inputs = [p('uint256[]', 'vals')];
-		expect(convertInputValues(inputs, {vals: '1, 2, 3'})).toEqual([[1n, 2n, 3n]]);
+		expect(convertInputValues(inputs, {vals: '1, 2, 3'})).toEqual([
+			[1n, 2n, 3n],
+		]);
 	});
 
 	it('parses fixed-size arrays', () => {
 		const inputs = [p('address[2]', 'owners')];
 		const a = '0x1111111111111111111111111111111111111111';
 		const b = '0x2222222222222222222222222222222222222222';
-		expect(convertInputValues(inputs, {owners: `${a}, ${b}`})).toEqual([[a, b]]);
+		expect(convertInputValues(inputs, {owners: `${a}, ${b}`})).toEqual([
+			[a, b],
+		]);
 	});
 
 	it('drops empty items from array inputs', () => {
@@ -126,9 +141,9 @@ describe('convertInputValues', () => {
 				components: [p('uint256', 'x'), p('uint256', 'y')],
 			}),
 		];
-		expect(convertInputValues(inputs, {point: '{"x": "3", "y": "4"}'})).toEqual([
-			{x: 3n, y: 4n},
-		]);
+		expect(convertInputValues(inputs, {point: '{"x": "3", "y": "4"}'})).toEqual(
+			[{x: 3n, y: 4n}],
+		);
 	});
 
 	it('parses a tuple array from JSON', () => {
@@ -137,15 +152,13 @@ describe('convertInputValues', () => {
 				components: [p('uint256', 'x'), p('uint256', 'y')],
 			}),
 		];
-		expect(
-			convertInputValues(inputs, {points: '[{"x":"1","y":"2"}]'}),
-		).toEqual([[{x: 1n, y: 2n}]]);
+		expect(convertInputValues(inputs, {points: '[{"x":"1","y":"2"}]'})).toEqual(
+			[[{x: 1n, y: 2n}]],
+		);
 	});
 
 	it('throws a descriptive error on malformed tuple JSON', () => {
-		const inputs = [
-			p('tuple', 'point', {components: [p('uint256', 'x')]}),
-		];
+		const inputs = [p('tuple', 'point', {components: [p('uint256', 'x')]})];
 		expect(() => convertInputValues(inputs, {point: '{bad'})).toThrow(
 			/Invalid tuple format/,
 		);
@@ -193,18 +206,14 @@ describe('convertInputValues', () => {
 	});
 
 	it('throws a descriptive error on malformed tuple[] JSON', () => {
-		const inputs = [
-			p('tuple[]', 'points', {components: [p('uint256', 'x')]}),
-		];
+		const inputs = [p('tuple[]', 'points', {components: [p('uint256', 'x')]})];
 		expect(() => convertInputValues(inputs, {points: '[bad'})).toThrow(
 			/Invalid tuple array format/,
 		);
 	});
 
 	it('throws when tuple[] JSON is valid but not an array', () => {
-		const inputs = [
-			p('tuple[]', 'points', {components: [p('uint256', 'x')]}),
-		];
+		const inputs = [p('tuple[]', 'points', {components: [p('uint256', 'x')]})];
 		expect(() => convertInputValues(inputs, {points: '{"x":"1"}'})).toThrow(
 			/Expected array for tuple\[\] type/,
 		);
@@ -217,9 +226,9 @@ describe('convertInputValues', () => {
 
 	it('parses a bytes array, keeping each element as hex', () => {
 		const inputs = [p('bytes32[]', 'hashes')];
-		expect(
-			convertInputValues(inputs, {hashes: '0xdead, 0xbeef'}),
-		).toEqual([['0xdead', '0xbeef']]);
+		expect(convertInputValues(inputs, {hashes: '0xdead, 0xbeef'})).toEqual([
+			['0xdead', '0xbeef'],
+		]);
 	});
 });
 
@@ -235,7 +244,9 @@ describe('formatOutputJSON', () => {
 
 describe('validators', () => {
 	it('isValidAddress', () => {
-		expect(isValidAddress('0x1234567890abcdef1234567890abcdef12345678')).toBe(true);
+		expect(isValidAddress('0x1234567890abcdef1234567890abcdef12345678')).toBe(
+			true,
+		);
 		expect(isValidAddress('0x123')).toBe(false);
 		expect(isValidAddress('notanaddress')).toBe(false);
 	});
@@ -268,7 +279,9 @@ describe('getInputPlaceholder', () => {
 		expect(getInputPlaceholder('bool')).toBe('Select true/false');
 		expect(getInputPlaceholder('uint256')).toBe('Enter number...');
 		expect(getInputPlaceholder('bytes32')).toBe('0x...');
-		expect(getInputPlaceholder('uint256[]')).toBe('Enter comma-separated values...');
+		expect(getInputPlaceholder('uint256[]')).toBe(
+			'Enter comma-separated values...',
+		);
 	});
 });
 
@@ -279,8 +292,10 @@ describe('validateInputValue', () => {
 	it('validates addresses', () => {
 		expect(validateInputValue('address', '0x123').valid).toBe(false);
 		expect(
-			validateInputValue('address', '0x1234567890abcdef1234567890abcdef12345678')
-				.valid,
+			validateInputValue(
+				'address',
+				'0x1234567890abcdef1234567890abcdef12345678',
+			).valid,
 		).toBe(true);
 	});
 	it('validates bool', () => {
