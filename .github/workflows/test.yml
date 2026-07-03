@@ -38,7 +38,7 @@ jobs:
         run: pnpm install
 
       - name: Generate deployments
-        run: pnpm contracts:build localhost
+        run: pnpm contracts:build sepolia
 
       - name: Install Playwright browsers
         run: cd web && pnpm exec playwright install --with-deps chromium
