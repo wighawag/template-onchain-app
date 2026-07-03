@@ -83,11 +83,70 @@ export function hasSwappedAccount(state: ConnectionStateSnapshot): boolean {
 	return state.wallet?.accountChanged !== undefined;
 }
 
+/**
+ * Whether the account-choice step (`ChooseWalletAccount`) should be rendered
+ * as a combined "choose + confirm sign in" modal instead of the plain picker.
+ *
+ * When the connection targets a signature step ('SignedIn'), the plain picker
+ * would be immediately followed by the confirm-sign-in screen, asking the user
+ * to confirm the account they JUST chose. Combining the two removes that
+ * redundant step. When the target is 'WalletConnected' (wallet-only auth,
+ * no signature), picking an account IS the last step, so the plain picker
+ * stays. Mirrors the confirm modal's own `targetStep !== 'WalletConnected'`
+ * condition.
+ */
+export function combinesAccountChoiceWithSignIn(connection: {
+	targetStep: string;
+}): boolean {
+	return connection.targetStep !== 'WalletConnected';
+}
+
+/**
+ * The account the combined choose+sign-in modal should currently highlight.
+ *
+ * Follows the wallet's active account (`accounts[0]`) until the user
+ * explicitly picks a row (`userChoice`). A user choice that is no longer in
+ * the list (account disconnected in the wallet UI) falls back to the wallet's
+ * active account rather than pointing at something unselectable.
+ */
+export function effectiveAccountSelection(
+	accounts: readonly `0x${string}`[],
+	userChoice: `0x${string}` | undefined,
+): `0x${string}` | undefined {
+	if (
+		userChoice &&
+		accounts.some((a) => a.toLowerCase() === userChoice.toLowerCase())
+	) {
+		return userChoice;
+	}
+	return accounts[0];
+}
+
 /** Minimal connection-store surface the sign-in action needs. */
 type SignInConnection = Pick<
 	AnyConnectionStore<UnderlyingEthereumProvider>,
 	'subscribe' | 'connectToAddress' | 'requestSignature'
 >;
+
+/**
+ * Adopt `address` as the connected account, then request the sign-in
+ * signature, as a single user action.
+ *
+ * Used by the combined choose+sign-in modal (from `ChooseWalletAccount`) and
+ * by the swap-adoption path on the confirm screen. `connectToAddress` is
+ * fire-and-forget, so we observe the store until it settles on
+ * `WalletConnected` for `address` before requesting the signature. Rejects if
+ * the flow is cancelled or times out; the caller decides how to surface that
+ * (typically by falling back to the confirm screen).
+ */
+export async function signInToAccount(
+	connection: SignInConnection,
+	address: `0x${string}`,
+): Promise<void> {
+	connection.connectToAddress(address);
+	await waitForConnected(connection, address);
+	await connection.requestSignature();
+}
 
 /**
  * Sign in from the confirm screen with a single user action.
@@ -112,9 +171,7 @@ export async function signInAdoptingSwap(
 		return;
 	}
 
-	connection.connectToAddress(swappedTo);
-	await waitForConnected(connection, swappedTo);
-	await connection.requestSignature();
+	await signInToAccount(connection, swappedTo);
 }
 
 /** Read the current value of the connection store synchronously. */

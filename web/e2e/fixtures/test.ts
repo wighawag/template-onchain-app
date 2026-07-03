@@ -170,6 +170,14 @@ async function connectWalletDevMode(
 				.nth(accountIndex)
 				.click();
 		} else if (/confirm sign in/i.test(text)) {
+			// Under a sign-in target, the confirm dialog may be the COMBINED
+			// choose+sign-in modal (multi-account wallet): select the configured
+			// account row first (same direct-child locator as the plain picker),
+			// then sign. With no rows (single-account confirm), just sign.
+			const rows = dialog.locator('.overflow-y-auto > button');
+			if ((await rows.count()) > accountIndex) {
+				await rows.nth(accountIndex).click();
+			}
 			await page.getByRole('button', {name: /^sign in$/i}).click();
 		} else if (/insufficient funds|funds available/i.test(text)) {
 			// Funding is handled by handleInsufficientFundsModal below.

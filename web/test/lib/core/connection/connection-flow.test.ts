@@ -6,6 +6,9 @@ import {
 	resolveSignInAddress,
 	hasSwappedAccount,
 	signInAdoptingSwap,
+	signInToAccount,
+	combinesAccountChoiceWithSignIn,
+	effectiveAccountSelection,
 } from '../../../../src/lib/core/connection/connection-flow';
 
 const wallet = (name: string) => ({info: {name, icon: ''}});
@@ -128,6 +131,114 @@ describe('hasSwappedAccount', () => {
 		expect(hasSwappedAccount({step: 'WalletConnected', wallet: {}})).toBe(
 			false,
 		);
+	});
+});
+
+describe('combinesAccountChoiceWithSignIn', () => {
+	it('combines under a sign-in target', () => {
+		expect(combinesAccountChoiceWithSignIn({targetStep: 'SignedIn'})).toBe(
+			true,
+		);
+	});
+	it('keeps the plain picker for wallet-only auth', () => {
+		expect(
+			combinesAccountChoiceWithSignIn({targetStep: 'WalletConnected'}),
+		).toBe(false);
+	});
+});
+
+describe('effectiveAccountSelection', () => {
+	const accounts = [addr(1), addr(2), addr(3)];
+
+	it("follows the wallet's active account (first) when the user has not picked", () => {
+		expect(effectiveAccountSelection(accounts, undefined)).toBe(addr(1));
+	});
+
+	it('honours an explicit user choice', () => {
+		expect(effectiveAccountSelection(accounts, addr(3))).toBe(addr(3));
+	});
+
+	it('matches the user choice case-insensitively', () => {
+		const upper = addr(2).toUpperCase().replace('0X', '0x') as `0x${string}`;
+		expect(effectiveAccountSelection(accounts, upper)).toBe(upper);
+	});
+
+	it('falls back to the active account when the choice left the list', () => {
+		expect(effectiveAccountSelection([addr(1), addr(3)], addr(2))).toBe(
+			addr(1),
+		);
+	});
+
+	it('is undefined with no accounts', () => {
+		expect(effectiveAccountSelection([], undefined)).toBeUndefined();
+	});
+});
+
+describe('signInToAccount', () => {
+	function makeStore(initial: any) {
+		let value = initial;
+		const subs = new Set<(v: any) => void>();
+		const set = (v: any) => {
+			value = v;
+			for (const s of subs) s(value);
+		};
+		return {
+			set,
+			get: () => value,
+			subscribe(run: (v: any) => void) {
+				subs.add(run);
+				run(value);
+				return () => subs.delete(run);
+			},
+		};
+	}
+
+	it('adopts the account, waits for it to settle, then signs', async () => {
+		const store = makeStore({
+			step: 'ChooseWalletAccount',
+			wallet: {accounts: [addr(1), addr(2)]},
+		});
+		const calls: string[] = [];
+		const connection = {
+			subscribe: store.subscribe,
+			connectToAddress: (address: `0x${string}`) => {
+				calls.push(`connectToAddress:${address}`);
+				store.set({
+					step: 'WalletConnected',
+					mechanism: {type: 'wallet', name: 'MetaMask', address},
+					wallet: {},
+				});
+			},
+			requestSignature: async () => {
+				calls.push('requestSignature');
+			},
+		};
+
+		await signInToAccount(connection as never, addr(2));
+
+		expect(calls).toEqual([`connectToAddress:${addr(2)}`, 'requestSignature']);
+	});
+
+	it('rejects (and does not sign) if the flow is cancelled while adopting', async () => {
+		const store = makeStore({
+			step: 'ChooseWalletAccount',
+			wallet: {accounts: [addr(1), addr(2)]},
+		});
+		const calls: string[] = [];
+		const connection = {
+			subscribe: store.subscribe,
+			connectToAddress: () => {
+				store.set({step: 'Idle'});
+			},
+			requestSignature: async () => {
+				calls.push('requestSignature');
+			},
+		};
+
+		await expect(
+			signInToAccount(connection as never, addr(2)),
+		).rejects.toThrow(/cancelled/);
+		expect(calls).toEqual([]);
 	});
 });
 

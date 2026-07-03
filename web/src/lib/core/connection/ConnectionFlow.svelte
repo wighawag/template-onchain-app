@@ -15,6 +15,9 @@
 		resolveSignInAddress,
 		hasSwappedAccount,
 		signInAdoptingSwap,
+		signInToAccount,
+		combinesAccountChoiceWithSignIn,
+		effectiveAccountSelection,
 	} from './connection-flow';
 	import {dev} from '$lib';
 
@@ -41,6 +44,38 @@
 	// the user swapped their active account while on the confirm screen.
 	let signInAddress = $derived(resolveSignInAddress($connection));
 	let swappedAccount = $derived(hasSwappedAccount($connection));
+
+	// Combined choose+sign-in modal (multi-account wallet under a sign-in
+	// target): which row the user explicitly picked (undefined = follow the
+	// wallet's active account), and whether an adopt-then-sign action is in
+	// flight. The latter also suppresses the separate confirm modal during the
+	// transient WalletConnected step between adoption and signature request,
+	// which would otherwise flash mid-action.
+	let chosenAccount: `0x${string}` | undefined = $state(undefined);
+	let signingInFromChooser = $state(false);
+	let combinedChooseAndSignIn = $derived(
+		combinesAccountChoiceWithSignIn(connection),
+	);
+
+	let selectedAccount = $derived(
+		$connection.step === 'ChooseWalletAccount'
+			? effectiveAccountSelection($connection.wallet.accounts, chosenAccount)
+			: undefined,
+	);
+
+	async function chooseAndSignIn() {
+		if (!selectedAccount) return;
+		signingInFromChooser = true;
+		try {
+			await signInToAccount(connection, selectedAccount);
+		} catch {
+			// Cancelled / rejected / timed out: the store settles on its own step
+			// (e.g. WalletConnected -> the confirm screen serves as the fallback).
+		} finally {
+			signingInFromChooser = false;
+			chosenAccount = undefined;
+		}
+	}
 </script>
 
 <Modal.Root
@@ -204,7 +239,8 @@
      the wallet UI, `signInAddress` reflects it and Sign In adopts it first. -->
 <Modal.Root
 	openWhen={connection.targetStep !== 'WalletConnected' &&
-		$connection.step === 'WalletConnected'}
+		$connection.step === 'WalletConnected' &&
+		!signingInFromChooser}
 	onCancel={() => connection.cancel()}
 >
 	<Modal.Title>Confirm sign in</Modal.Title>
@@ -240,45 +276,100 @@
 	</Modal.Footer>
 </Modal.Root>
 
+<!-- Account choice (multi-account wallet). Two presentations:
+     - sign-in target: a combined "choose + confirm sign in" modal, so picking
+       an account and confirming it are ONE step instead of two back-to-back
+       modals. Rows select (highlight); the Sign In button adopts the selected
+       account and requests the signature in a single action.
+     - wallet-only target: the plain picker, where clicking a row IS the final
+       action (no signature follows). -->
 <Modal.Root
 	openWhen={$connection.step === 'ChooseWalletAccount'}
 	onCancel={() => connection.cancel()}
 >
 	{#if $connection.step == 'ChooseWalletAccount'}
 		<!-- ASSERT ChooseWalletAccount -->
-		<Modal.Title>
-			{$connection.wallet.accounts.length} account{$connection.wallet.accounts
-				.length > 1
-				? 's'
-				: ''} available, choose one
-		</Modal.Title>
-		<div class="flex flex-col gap-3 py-2">
-			<div
-				class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
-			>
-				{#each $connection.wallet.accounts as account}
-					<button
-						class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
-						onclick={() => connection.connectToAddress(account)}
-					>
-						<div
-							class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
+		{#if combinedChooseAndSignIn}
+			<Modal.Title>Confirm sign in</Modal.Title>
+			<Modal.Description>
+				Choose an account and sign a message with it to sign in. Accepting the
+				message gives this app access to the account, so only accept on
+				websites you trust.
+			</Modal.Description>
+			<div class="flex flex-col gap-3 py-2">
+				<div
+					class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
+				>
+					{#each $connection.wallet.accounts as account}
+						<button
+							class="flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground {selectedAccount ===
+							account
+								? 'border-primary bg-accent/50'
+								: 'border-transparent'}"
+							disabled={signingInFromChooser}
+							onclick={() => (chosenAccount = account)}
 						>
-							<EthereumAvatar address={account} />
-						</div>
-						<Address value={account} />
-					</button>
-				{/each}
-			</div>
+							<div
+								class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
+							>
+								<EthereumAvatar address={account} />
+							</div>
+							<Address value={account} />
+						</button>
+					{/each}
+				</div>
 
-			<Button
-				variant="outline"
-				class="w-full"
-				onclick={() => connection.cancel()}
-			>
-				Cancel
-			</Button>
-		</div>
+				<Modal.Footer>
+					<Button
+						variant="outline"
+						disabled={signingInFromChooser}
+						onclick={() => connection.cancel()}
+					>
+						Cancel
+					</Button>
+					<Button
+						disabled={!selectedAccount || signingInFromChooser}
+						onclick={chooseAndSignIn}
+					>
+						{signingInFromChooser ? 'Signing in...' : 'Sign In'}
+					</Button>
+				</Modal.Footer>
+			</div>
+		{:else}
+			<Modal.Title>
+				{$connection.wallet.accounts.length} account{$connection.wallet.accounts
+					.length > 1
+					? 's'
+					: ''} available, choose one
+			</Modal.Title>
+			<div class="flex flex-col gap-3 py-2">
+				<div
+					class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
+				>
+					{#each $connection.wallet.accounts as account}
+						<button
+							class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+							onclick={() => connection.connectToAddress(account)}
+						>
+							<div
+								class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
+							>
+								<EthereumAvatar address={account} />
+							</div>
+							<Address value={account} />
+						</button>
+					{/each}
+				</div>
+
+				<Button
+					variant="outline"
+					class="w-full"
+					onclick={() => connection.cancel()}
+				>
+					Cancel
+				</Button>
+			</div>
+		{/if}
 	{/if}
 </Modal.Root>
 
