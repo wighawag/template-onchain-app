@@ -24,7 +24,15 @@ import {getContext, setContext} from 'svelte';
 // Dev-only guard: two capabilities defined with the same label would share the
 // same global Symbol.for slot and silently collide. We warn (dev only) rather
 // than throw, so a stray duplicate never breaks production.
+//
+// The registry is reset on HMR dispose so that re-evaluating a capability
+// module during hot-reload does not spuriously report its own label as a
+// duplicate (a real duplicate is two *different* modules using the same label,
+// which still gets caught on a full load).
 const registeredLabels = new Set<string>();
+if (import.meta.env.DEV && import.meta.hot) {
+	import.meta.hot.dispose(() => registeredLabels.clear());
+}
 
 /** A capability that may be absent; `use()` returns `T | undefined`. */
 export type OptionalCapability<T> = {
