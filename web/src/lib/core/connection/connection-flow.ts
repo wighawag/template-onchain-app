@@ -43,16 +43,22 @@ type WalletInfoSnapshot = {info: {name: string; icon: string}};
  * - `none`: no injected wallets detected, show the get-a-wallet fallback.
  * - `single`: exactly one wallet, show a single button that connects to it
  *   directly (no intermediate picker).
- * - `multiple`: several wallets, show one button that opens the wallet picker.
+ * - `list`: several wallets and the wallet list is the ONLY content of the
+ *   modal (wallet-only auth): show the list directly. An intermediate
+ *   "Connect a Wallet" button would be pure indirection here.
+ * - `collapsed`: several wallets sharing the modal with other sign-in options
+ *   (e.g. the email input under hosted sign-in): show one button that opens
+ *   the wallet picker, so the list does not drown the other options.
  */
-export type WalletEntryMode = 'none' | 'single' | 'multiple';
+export type WalletEntryMode = 'none' | 'single' | 'list' | 'collapsed';
 
 export function walletEntryMode(
 	wallets: readonly WalletInfoSnapshot[],
+	hasOtherSignInOptions: boolean,
 ): WalletEntryMode {
 	if (wallets.length === 0) return 'none';
 	if (wallets.length === 1) return 'single';
-	return 'multiple';
+	return hasOtherSignInOptions ? 'collapsed' : 'list';
 }
 
 /**

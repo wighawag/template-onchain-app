@@ -157,9 +157,24 @@ async function connectWalletDevMode(
 			continue;
 		}
 
-		const text = (await dialog.first().textContent()) ?? '';
+		// The dialog may close between the isVisible check above and this read;
+		// without an explicit timeout, textContent would wait forever (Playwright's
+		// default action timeout is unlimited) and hang the fixture until the test
+		// times out. Bound it and treat a vanished dialog as "loop again".
+		const text = await dialog
+			.first()
+			.textContent({timeout: 2000})
+			.catch(() => null);
+		if (text === null) continue;
 
-		if (/accounts available, choose one/i.test(text)) {
+		if (/wallets available, choose one/i.test(text)) {
+			// Wallet list (multiple injected wallets, shown inline under wallet-only
+			// auth or via the picker): choose the burner wallet.
+			await dialog
+				.locator('.overflow-y-auto > button', {hasText: 'Burner Wallet'})
+				.first()
+				.click();
+		} else if (/accounts available, choose one/i.test(text)) {
 			// Account picker: pick the configured account in the scrollable list.
 			// Use the DIRECT children of the list: each account row button nests a
 			// "Copy address" button inside it, so a descendant selector ('div button')

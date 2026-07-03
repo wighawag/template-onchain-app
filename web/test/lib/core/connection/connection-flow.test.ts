@@ -79,15 +79,22 @@ describe('hasPendingWalletRequest', () => {
 });
 
 describe('walletEntryMode', () => {
-	it('is none with no wallets', () => {
-		expect(walletEntryMode([])).toBe('none');
+	it('is none with no wallets (regardless of other options)', () => {
+		expect(walletEntryMode([], false)).toBe('none');
+		expect(walletEntryMode([], true)).toBe('none');
 	});
-	it('is single with exactly one wallet', () => {
-		expect(walletEntryMode([wallet('MetaMask')])).toBe('single');
+	it('is single with exactly one wallet (regardless of other options)', () => {
+		expect(walletEntryMode([wallet('MetaMask')], false)).toBe('single');
+		expect(walletEntryMode([wallet('MetaMask')], true)).toBe('single');
 	});
-	it('is multiple with more than one wallet', () => {
-		expect(walletEntryMode([wallet('MetaMask'), wallet('Rabby')])).toBe(
-			'multiple',
+	it('shows the list directly when wallets are the only option', () => {
+		expect(walletEntryMode([wallet('MetaMask'), wallet('Rabby')], false)).toBe(
+			'list',
+		);
+	});
+	it('collapses behind a button when sharing the modal with other options', () => {
+		expect(walletEntryMode([wallet('MetaMask'), wallet('Rabby')], true)).toBe(
+			'collapsed',
 		);
 	});
 });

@@ -37,8 +37,21 @@
 	// Flow interpretation (burner-wallet phase + pending request) lives in the helper.
 	let pendingRequest = $derived(hasPendingWalletRequest($connection));
 
-	// How to present the wallet entry point: none / single / multiple.
-	let walletEntry = $derived(walletEntryMode($connection.wallets));
+	// Whether the connect modal offers sign-in options besides wallets (the
+	// email input under hosted sign-in). Controls the modal's layout, including
+	// whether a multi-wallet list is collapsed behind a button or shown inline.
+	// NOTE: the email/dev blocks below still use the inline
+	// `connection.targetStep == 'SignedIn' && !connection.walletOnly` check:
+	// that expression narrows the store union so `connect` accepts the
+	// email/mnemonic mechanisms; this boolean does not narrow.
+	let hasOtherSignInOptions = $derived(
+		connection.targetStep == 'SignedIn' && !connection.walletOnly,
+	);
+
+	// How to present the wallet entry point: none / single / list / collapsed.
+	let walletEntry = $derived(
+		walletEntryMode($connection.wallets, hasOtherSignInOptions),
+	);
 
 	// The account a sign-in should adopt (handles live account swaps), and whether
 	// the user swapped their active account while on the confirm screen.
@@ -137,8 +150,9 @@
 			</div>
 			<span>Connect {$connection.wallets[0].info.name}</span>
 		</Button>
-	{:else if walletEntry === 'multiple'}
-		<!-- Several wallets: one button that opens the wallet picker. -->
+	{:else if walletEntry === 'collapsed'}
+		<!-- Several wallets sharing the modal with other sign-in options: one
+		     button that opens the wallet picker. -->
 		<Button
 			variant="outline"
 			class="w-full justify-center gap-3"
@@ -146,14 +160,47 @@
 		>
 			<span>Connect a Wallet</span>
 		</Button>
+	{:else if walletEntry === 'list'}
+		<!-- Several wallets and nothing else to offer (wallet-only auth): show
+		     the list directly, no intermediate button. -->
+		<Modal.Title>
+			{$connection.wallets.length} wallets available, choose one
+		</Modal.Title>
+		<div
+			class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
+		>
+			{#each $connection.wallets as wallet}
+				<button
+					class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+					onclick={() =>
+						connection.connect({type: 'wallet', name: wallet.info.name})}
+				>
+					<div class="h-6 w-6 shrink-0 overflow-hidden rounded-full">
+						<img
+							src={wallet.info.icon}
+							alt={wallet.info.name}
+							class="h-full w-full object-contain"
+						/>
+					</div>
+					<div class="flex flex-col">
+						<span class="text-sm font-medium">{wallet.info.name}</span>
+						{#if wallet.info.name === 'Burner Wallet'}
+							<span class="text-xs text-amber-600 dark:text-amber-400">
+								⚠️ Stored in clear text. Do not use with real funds.
+							</span>
+						{/if}
+					</div>
+				</button>
+			{/each}
+		</div>
 	{:else}
 		<NoWalletFlow
 			onCancel={() => connection.cancel()}
-			secondary={connection.targetStep == 'SignedIn' && !connection.walletOnly}
+			secondary={hasOtherSignInOptions}
 		/>
 	{/if}
 
-	{#if !(connection.targetStep == 'SignedIn' && !connection.walletOnly)}
+	{#if !hasOtherSignInOptions}
 		<Button
 			variant="outline"
 			class="mt-3 w-full"
