@@ -8,22 +8,19 @@
 
 	let isConnected = $derived(connection.isTargetStepReached($connection));
 
-	// Whether the connection has settled (finished its initial auto-connect
-	// attempt). While still connecting we don't yet know if the user has a wallet,
-	// so we must not flash the "no RPC" banner. Mirrors the navbar's connect-button
-	// gating.
-	let connectionSettled = $derived(
-		!(
-			($connection.step === 'Idle' && $connection.loading) ||
-			($connection.step !== 'Idle' && !connection.isTargetStepReached($connection))
-		),
+	// The initial auto-connect phase: `Idle` and still loading. During this brief
+	// window we don't yet know whether the user has a wallet, so we must not flash
+	// the "no RPC" banner. Any other non-connected state (idle-and-done, or mid
+	// wallet-selection) is a real "not connected" state where the banner belongs.
+	let initialConnecting = $derived(
+		$connection.step === 'Idle' && $connection.loading,
 	);
 
-	// No app RPC + settled-as-disconnected: the app has no way to read the chain.
-	// This is expected (connect the wallet to load data), NOT a failing RPC, so
-	// show a distinct informational banner and suppress the failing-RPC warning.
-	// Gated on `connectionSettled` so it does not blink during initial connect.
-	let noRpcYet = $derived(!hasAppRpc && connectionSettled && !isConnected);
+	// No app RPC + not connected (and past the initial auto-connect): the app has
+	// no way to read the chain. This is expected (connect the wallet to load
+	// data), NOT a failing RPC, so show a distinct informational banner and
+	// suppress the failing-RPC warning.
+	let noRpcYet = $derived(!hasAppRpc && !initialConnecting && !isConnected);
 
 	function errorLabel(category: string): string {
 		switch (category) {
