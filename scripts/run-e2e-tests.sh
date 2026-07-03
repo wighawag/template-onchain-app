@@ -111,7 +111,12 @@ echo -e "${GREEN}✓ Contracts deployed and exported${NC}"
 # Build web app
 echo -e "\n${GREEN}🔨 Building web app...${NC}"
 cd "$WEB_DIR"
-pnpm build localhost
+# Pin the e2e build to the default wallet-mode configuration. Exported shell
+# env has the highest priority in ldenv (it beats every .env file), so a
+# developer's .env.local overrides (e.g. PUBLIC_WALLET_HOST for testing hosted
+# sign-in) cannot leak into the e2e build, while manual `pnpm dev` remains
+# free to use them.
+PUBLIC_WALLET_HOST= PUBLIC_EXECUTION_MODE= pnpm build localhost
 echo -e "${GREEN}✓ Web app built${NC}"
 
 # Run Playwright tests

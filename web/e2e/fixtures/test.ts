@@ -18,8 +18,9 @@ import {IMPERSONATE_ADDRESSES} from '../../src/lib/dev-accounts';
 // The addresses the burner wallet can impersonate come from the single source
 // of truth shared with the app wiring: src/lib/dev-accounts.ts.
 
-// Hardhat node URL
-const HARDHAT_RPC_URL = 'http://localhost:8545';
+// Hardhat node URL. Use the IPv4 literal: the node binds to 127.0.0.1, and
+// Node's fetch can resolve `localhost` to ::1 first, failing intermittently.
+const HARDHAT_RPC_URL = 'http://127.0.0.1:8545';
 
 // Base URL for the web app (matches playwright.config.ts)
 const BASE_URL = 'http://localhost:4173';
@@ -50,6 +51,20 @@ async function fundAddressViaHardhat(
 	if (!response.ok) {
 		throw new Error(`Failed to set balance: ${response.statusText}`);
 	}
+}
+
+export interface WalletOptions {
+	/**
+	 * Which burner account (index into IMPERSONATE_ADDRESSES) the connect flow
+	 * picks in the account-picker dialog.
+	 *
+	 * All e2e tests share ONE chain and the GreetingsRegistry keeps ONE message
+	 * per account, so two test files writing from the same account clobber each
+	 * other's message mid-test (files run in parallel workers). Give a file that
+	 * writes messages its own account with `test.use({walletAccountIndex: 1})`
+	 * so its writes cannot race the demo suite's (which uses the default 0).
+	 */
+	walletAccountIndex: number;
 }
 
 export interface WalletFixtures {
@@ -95,29 +110,88 @@ async function clearBrowserStorage(page: Page): Promise<void> {
 }
 
 /**
- * Connect wallet using Dev Mode (burner wallet with test mnemonic).
- * Also handles the case where wallet is already auto-connected but needs funding.
+ * Connect wallet via the burner wallet.
+ *
+ * The connect flow is a sequence of modals whose order varies with config and
+ * auto-connect state (the account picker can appear immediately on page load
+ * when a multi-account wallet auto-reconnects, without any connect button):
+ *
+ * - connect entry: "Dev Mode" (SignedIn + dev) or "Connect <wallet>" button
+ * - account picker: "N accounts available, choose one" (multi-account wallet)
+ * - sign-in confirm: "Confirm sign in" (SignedIn config)
+ *
+ * Rather than assuming an order, poll for whichever dialog is currently shown
+ * and act on it, until no connect-flow dialog remains (or timeout).
  */
-async function connectWalletDevMode(page: Page): Promise<void> {
-	// Look for Dev Mode button in the wallet selection modal
-	const devModeButton = page.getByRole('button', {name: /dev mode/i});
+async function connectWalletDevMode(
+	page: Page,
+	accountIndex = 0,
+): Promise<void> {
+	const deadline = Date.now() + 20_000;
 
-	// Wait for the button to be visible (modal might be opening)
-	try {
-		await devModeButton.waitFor({state: 'visible', timeout: 5000});
-		await devModeButton.click();
+	while (Date.now() < deadline) {
+		const dialog = page.locator('[role="dialog"]');
+		const dialogVisible = await dialog
+			.first()
+			.isVisible({timeout: 1000})
+			.catch(() => false);
 
-		// Wait for connection to complete - the modal should close
-		await page.waitForFunction(
-			() => {
-				const modal = document.querySelector('[role="dialog"]');
-				return !modal || !modal.textContent?.includes('Sign In');
-			},
-			{timeout: 10000},
-		);
-	} catch {
-		// Modal might not have appeared if already connected via auto-connect
-		console.log('Wallet may already be connected via auto-connect');
+		if (!dialogVisible) {
+			// No dialog: either connected (done) or the next modal has not opened
+			// yet (transitions can lag under parallel test load). Only conclude
+			// after the absence persists for a while.
+			let gone = true;
+			for (let i = 0; i < 6; i++) {
+				await page.waitForTimeout(500);
+				if (
+					await dialog
+						.first()
+						.isVisible({timeout: 250})
+						.catch(() => false)
+				) {
+					gone = false;
+					break;
+				}
+			}
+			if (gone) break;
+			continue;
+		}
+
+		const text = (await dialog.first().textContent()) ?? '';
+
+		if (/accounts available, choose one/i.test(text)) {
+			// Account picker: pick the configured account in the scrollable list.
+			// Use the DIRECT children of the list: each account row button nests a
+			// "Copy address" button inside it, so a descendant selector ('div button')
+			// would interleave copy buttons into the index space and .nth(1) would hit
+			// account 0's copy button instead of account 1.
+			await dialog
+				.locator('.overflow-y-auto > button')
+				.nth(accountIndex)
+				.click();
+		} else if (/confirm sign in/i.test(text)) {
+			await page.getByRole('button', {name: /^sign in$/i}).click();
+		} else if (/insufficient funds|funds available/i.test(text)) {
+			// Funding is handled by handleInsufficientFundsModal below.
+			break;
+		} else {
+			// Connect entry: dev-mode button (SignedIn + dev) or the wallet connect
+			// button (accessible name includes the icon alt text, so match loosely).
+			const entry = page
+				.getByRole('button', {name: /dev mode/i})
+				.or(page.getByRole('button', {name: /connect .*wallet/i}))
+				.first();
+			const entryVisible = await entry
+				.isVisible({timeout: 1000})
+				.catch(() => false);
+			if (entryVisible) {
+				await entry.click();
+			} else {
+				// Unknown dialog (e.g. a transient step): wait for it to change.
+				await page.waitForTimeout(500);
+			}
+		}
+		await page.waitForTimeout(250);
 	}
 
 	// Handle Insufficient Funds modal - click "Get ETH" to use the faucet API
@@ -151,12 +225,15 @@ async function handleInsufficientFundsModal(page: Page): Promise<void> {
 		// Click "Continue Transaction" to proceed with the original transaction
 		await continueButton.click();
 
-		// Wait for the modal to close
+		// Wait for the modal to close.
+		// NOTE: waitForFunction's signature is (fn, arg, options); options must be
+		// the THIRD argument or the timeout silently never applies (waits forever).
 		await page.waitForFunction(
 			() => {
 				const modal = document.querySelector('[role="dialog"]');
 				return !modal || !modal.textContent?.includes('Funds');
 			},
+			undefined,
 			{timeout: 10000},
 		);
 	} catch {
@@ -183,6 +260,7 @@ async function waitForTransactionComplete(page: Page): Promise<void> {
 				);
 				return pendingElements.length > 0 || pendingText;
 			},
+			undefined,
 			{timeout: 10000},
 		);
 	} catch {
@@ -202,6 +280,7 @@ async function waitForTransactionComplete(page: Page): Promise<void> {
 				);
 				return pendingElements.length === 0 && !pendingText;
 			},
+			undefined,
 			{timeout: 30000},
 		);
 	} catch {
@@ -212,7 +291,10 @@ async function waitForTransactionComplete(page: Page): Promise<void> {
 	await page.waitForTimeout(500);
 }
 
-export const test = base.extend<WalletFixtures>({
+export const test = base.extend<WalletFixtures & WalletOptions>({
+	// Option fixture: which burner account the connect flow selects.
+	// Override per file/describe with `test.use({walletAccountIndex: 1})`.
+	walletAccountIndex: [0, {option: true}],
 	/**
 	 * Override the default page fixture to ensure each test starts with clean storage.
 	 *
@@ -259,7 +341,7 @@ export const test = base.extend<WalletFixtures>({
 	 * Usage:
 	 *   test('my test', async ({ connectedPage }) => { ... })
 	 */
-	connectedPage: async ({page, fundWallets}, use) => {
+	connectedPage: async ({page, fundWallets, walletAccountIndex}, use) => {
 		// Fund the wallet addresses BEFORE navigating to the page
 		// This ensures the wallet has ETH when the app auto-connects
 		await fundWallets();
@@ -273,18 +355,21 @@ export const test = base.extend<WalletFixtures>({
 
 		// Check if wallet is already connected (balance shown in navbar)
 		const navbarBalance = page.locator('text=/\\d+\\.?\\d*\\s*ETH/');
-		const isConnected = await navbarBalance.first().isVisible({timeout: 5000}).catch(() => false);
+		const isConnected = await navbarBalance
+			.first()
+			.isVisible({timeout: 5000})
+			.catch(() => false);
 
 		if (!isConnected) {
 			// Fill input first to enable the button
 			await input.fill('fixture-connection-test');
-			
+
 			// Click send to trigger wallet connection - use force to avoid timing issues
 			const sendButton = page.getByRole('button', {name: /send/i});
 			await sendButton.click({force: true});
 
 			// Connect using Dev Mode (handles both connection modal and funding if needed)
-			await connectWalletDevMode(page);
+			await connectWalletDevMode(page, walletAccountIndex);
 
 			// Wait for the input to be enabled (it's disabled during submitting)
 			// This also waits for the initial transaction to complete
@@ -303,10 +388,10 @@ export const test = base.extend<WalletFixtures>({
 	/**
 	 * Provides a function to connect wallet on demand.
 	 */
-	connectWallet: async ({fundWallets}, use) => {
+	connectWallet: async ({fundWallets, walletAccountIndex}, use) => {
 		// Ensure wallets are funded before connecting
 		await fundWallets();
-		await use(connectWalletDevMode);
+		await use((page: Page) => connectWalletDevMode(page, walletAccountIndex));
 	},
 
 	/**

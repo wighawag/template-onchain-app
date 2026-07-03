@@ -39,12 +39,15 @@ describe('Demo Page - Greetings Registry', () => {
 		// Type something
 		await page.getByPlaceholder('Enter your greeting...').fill('Hello!');
 
-		// Button should now be enabled
-		await expect(sendButton).toBeEnabled();
+		// Button should now be enabled. It stays disabled while the app context
+		// is still initializing (loading state), which can take a while under
+		// parallel test load, so allow a generous timeout.
+		await expect(sendButton).toBeEnabled({timeout: 30000});
 	});
 
 	test('should connect wallet and submit when clicking send', async ({
 		connectedPage,
+		connectWallet,
 		waitForTransaction,
 	}) => {
 		const page = connectedPage;
@@ -62,6 +65,12 @@ describe('Demo Page - Greetings Registry', () => {
 
 		// Click send
 		await sendButton.click();
+
+		// Under parallel load the connection may still be re-establishing, in
+		// which case sending re-opens the connect flow (e.g. the account picker).
+		// The connect helper walks whatever dialogs appear and returns quickly
+		// when none do.
+		await connectWallet(page);
 
 		// Wait for the transaction to complete
 		await waitForTransaction(page);
@@ -136,7 +145,7 @@ describe('Demo Page - Greetings Registry', () => {
 
 		// Wait for the page to fully load (not just loading state)
 		await page.waitForLoadState('networkidle', {timeout: 30000});
-		
+
 		// Wait for either messages or the input field to be visible
 		await expect(page.getByPlaceholder('Enter your greeting...')).toBeVisible({
 			timeout: 10000,
@@ -177,14 +186,14 @@ describe('Demo Page - Greetings Registry', () => {
 	}) => {
 		const page = connectedPage;
 		const input = page.getByPlaceholder('Enter your greeting...');
-		
+
 		// Ensure input is ready
 		await expect(input).toBeVisible({timeout: 10000});
 
 		// Submit a new greeting
 		const uniqueGreeting = `Fresh message ${Date.now()}`;
 		await input.fill(uniqueGreeting);
-		
+
 		// Click send button
 		const sendButton = page.getByRole('button', {name: /send/i});
 		await expect(sendButton).toBeEnabled({timeout: 10000});
@@ -197,7 +206,9 @@ describe('Demo Page - Greetings Registry', () => {
 		await expect(page.getByText(uniqueGreeting)).toBeVisible({timeout: 30000});
 
 		// Check timestamp shows "Just now"
-		await expect(page.getByText('Just now').first()).toBeVisible({timeout: 10000});
+		await expect(page.getByText('Just now').first()).toBeVisible({
+			timeout: 10000,
+		});
 	});
 
 	test('should clear input after successful submission', async ({
@@ -206,7 +217,7 @@ describe('Demo Page - Greetings Registry', () => {
 	}) => {
 		const page = connectedPage;
 		const input = page.getByPlaceholder('Enter your greeting...');
-		
+
 		// Ensure input is ready and clear any existing value
 		await expect(input).toBeVisible({timeout: 10000});
 		await input.clear();
@@ -214,7 +225,7 @@ describe('Demo Page - Greetings Registry', () => {
 
 		const uniqueMessage = `Clear test ${Date.now()}`;
 		await input.fill(uniqueMessage);
-		
+
 		// Click send button
 		const sendButton = page.getByRole('button', {name: /send/i});
 		await expect(sendButton).toBeEnabled({timeout: 10000});
@@ -229,7 +240,7 @@ describe('Demo Page - Greetings Registry', () => {
 
 		// Wait for input to be enabled (it's disabled during submission)
 		await expect(input).toBeEnabled({timeout: 10000});
-		
+
 		// Input should be cleared after successful submission
 		// Wait longer for Svelte reactivity to update the binding
 		await expect(input).toHaveValue('', {timeout: 20000});
