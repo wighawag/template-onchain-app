@@ -31,8 +31,17 @@ jobs:
           node-version: "24"
           cache: "pnpm"
 
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
       - name: Install dependencies
         run: pnpm install
+
+      - name: Generate deployments
+        run: pnpm contracts:build localhost
+
+      - name: Install Playwright browsers
+        run: cd web && pnpm exec playwright install --with-deps chromium
 
       - name: Run unit tests
         run: pnpm --filter ./web test:unit -- --run
