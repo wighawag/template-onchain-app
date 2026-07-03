@@ -6,6 +6,7 @@ import {
 } from '@etherplay/connect';
 import {derived} from 'svelte/store';
 import {createPublicClient, createWalletClient, custom} from 'viem';
+import {createRpcFaultFlag, wrapProviderWithFault} from './rpc-fault';
 import type {
 	Account,
 	ChainInfo,
@@ -117,14 +118,23 @@ export async function establishRemoteConnection(options?: {
 		walletHost: options?.walletHost,
 	});
 
+	// Debug-only RPC fault injection: a runtime flag (exposed on the context as
+	// `forceRpcFailure`) that makes every request fail while set. Wrapping the
+	// provider means all clients below fail together, like a real outage.
+	const forceRpcFailure = createRpcFaultFlag();
+	const faultyProvider = wrapProviderWithFault(
+		connection.provider,
+		forceRpcFailure,
+	);
+
 	const walletClient = createWalletClient({
 		chain: chainInfo,
-		transport: custom(connection.provider),
+		transport: custom(faultyProvider),
 	});
 
 	const publicClient = createPublicClient({
 		chain: chainInfo,
-		transport: custom(connection.provider),
+		transport: custom(faultyProvider),
 	}) as TypedPublicClient;
 
 	const account = derived<typeof connection, Account>(
@@ -154,5 +164,6 @@ export async function establishRemoteConnection(options?: {
 		account,
 		signer,
 		deployments, // Use the imported HMR-aware store
+		forceRpcFailure,
 	};
 }

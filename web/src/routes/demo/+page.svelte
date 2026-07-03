@@ -14,7 +14,7 @@
 	import {formatRelativeTime, getStaleMessage} from './lib/staleness';
 
 	const context = getAppContext();
-	const {onchainState, viewState, clock, accountCannotSend, errorDetails} =
+	const {refreshChainData, viewState, clock, accountCannotSend, errorDetails} =
 		context;
 
 	const viewStatus = viewState.status;
@@ -100,7 +100,9 @@
 		<!-- Messages List -->
 		<div class="space-y-3">
 			{#if $viewStatus.error && $viewState.step === 'Unloaded'}
-				<!-- Error on initial load -->
+				<!-- Errored initial load. The error persists while a retry is in flight
+				     (see polling-store), so show a "Refreshing..." affordance instead of
+				     flipping away, and only offer Retry once settled. -->
 				<div
 					class="flex flex-col items-center justify-center py-8 text-destructive"
 				>
@@ -111,13 +113,21 @@
 					>
 						{$viewStatus.error.message}
 					</p>
-					<Button
-						variant="outline"
-						onclick={() => onchainState.update()}
-						class="mt-4"
-					>
-						Retry
-					</Button>
+					{#if $viewStatus.loading}
+						<span
+							class="mt-4 flex items-center gap-2 text-sm text-muted-foreground"
+						>
+							<Spinner class="h-4 w-4" /> Refreshing...
+						</span>
+					{:else}
+						<Button
+							variant="outline"
+							onclick={() => refreshChainData()}
+							class="mt-4"
+						>
+							Retry
+						</Button>
+					{/if}
 				</div>
 			{:else if $viewState.step === 'Unloaded' && $viewStatus.loading}
 				<!-- Initial loading -->
@@ -192,7 +202,7 @@
 							<Button
 								variant="outline"
 								size="sm"
-								onclick={() => onchainState.update()}
+								onclick={() => refreshChainData()}
 							>
 								Retry Now
 							</Button>

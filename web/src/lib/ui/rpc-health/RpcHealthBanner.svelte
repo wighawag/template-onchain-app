@@ -3,14 +3,27 @@
 	import Button from '$lib/shadcn/ui/button/button.svelte';
 	import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
 
-	const {connection, rpcHealth, offline, hasAppRpc} = getAppContext();
+	const {connection, rpcHealth, offline, hasAppRpc, refreshChainData} =
+		getAppContext();
 
 	let isConnected = $derived(connection.isTargetStepReached($connection));
 
-	// No app RPC + not connected: the app has no way to read the chain yet. This
-	// is expected (connect the wallet to load data), NOT a failing RPC, so show a
-	// distinct informational banner and suppress the failing-RPC warning.
-	let noRpcYet = $derived(!hasAppRpc && !isConnected);
+	// Whether the connection has settled (finished its initial auto-connect
+	// attempt). While still connecting we don't yet know if the user has a wallet,
+	// so we must not flash the "no RPC" banner. Mirrors the navbar's connect-button
+	// gating.
+	let connectionSettled = $derived(
+		!(
+			($connection.step === 'Idle' && $connection.loading) ||
+			($connection.step !== 'Idle' && !connection.isTargetStepReached($connection))
+		),
+	);
+
+	// No app RPC + settled-as-disconnected: the app has no way to read the chain.
+	// This is expected (connect the wallet to load data), NOT a failing RPC, so
+	// show a distinct informational banner and suppress the failing-RPC warning.
+	// Gated on `connectionSettled` so it does not blink during initial connect.
+	let noRpcYet = $derived(!hasAppRpc && connectionSettled && !isConnected);
 
 	function errorLabel(category: string): string {
 		switch (category) {
@@ -61,15 +74,25 @@
 				{/if}
 			</span>
 		</div>
-		{#if !isConnected}
+		<div class="flex shrink-0 items-center gap-2">
 			<Button
 				variant="outline"
 				size="sm"
-				class="shrink-0 border-amber-700 text-amber-400 hover:bg-amber-900"
-				onclick={() => connection.connect()}
+				class="border-amber-700 text-amber-400 hover:bg-amber-900"
+				onclick={() => refreshChainData()}
 			>
-				Connect Wallet
+				Retry
 			</Button>
-		{/if}
+			{#if !isConnected}
+				<Button
+					variant="outline"
+					size="sm"
+					class="border-amber-700 text-amber-400 hover:bg-amber-900"
+					onclick={() => connection.connect()}
+				>
+					Connect Wallet
+				</Button>
+			{/if}
+		</div>
 	</div>
 {/if}

@@ -60,6 +60,8 @@ export type Context = {
 	 */
 	ownerBalance: BalanceStore;
 	rpcHealth: RpcHealthStore;
+	/** Refresh every chain read (onchain state, gas, balances) at once. */
+	refreshChainData: () => void;
 	/**
 	 * Whether the app has an RPC of its own (PUBLIC_NODE_URL or a chain rpcUrl).
 	 * When false, the app reaches the chain only through the connected wallet, so
@@ -67,6 +69,12 @@ export type Context = {
 	 * instead of reporting a failing RPC.
 	 */
 	hasAppRpc: boolean;
+	/**
+	 * Debug-only runtime flag: setting it makes all RPC requests fail (and
+	 * clearing it lets them succeed again), to exercise the RPC-health / retry UI.
+	 * Reachable from the console via `context.forceRpcFailure.set(true|false)`.
+	 */
+	forceRpcFailure: import('svelte/store').Writable<boolean>;
 	offline: OfflineStore;
 	connection: ChainConnection;
 	/**

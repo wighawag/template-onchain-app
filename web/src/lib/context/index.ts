@@ -87,6 +87,7 @@ export async function createContext(): Promise<{
 		publicClient,
 		account,
 		deployments,
+		forceRpcFailure,
 	} = await establishRemoteConnection({
 		nodeURL: PUBLIC_NODE_URL,
 		walletHost,
@@ -266,7 +267,22 @@ export async function createContext(): Promise<{
 		fetchGate: chainFetchGate,
 	});
 
-	const rpcHealth = createRpcHealthStore({balance, gasFee});
+	// Health reflects whether we can read the chain right now. All inputs share
+	// one transport, so any recent success (e.g. the 5s onchain-state poll, or a
+	// user Retry) means the RPC is up and clears the banner, without waiting for
+	// the slow gas poller to retry.
+	const rpcHealth = createRpcHealthStore({
+		inputs: [balance, gasFee, onchainState],
+	});
+
+	// Refresh every chain read at once. Used by Retry actions and the health
+	// banner so a single click heals the whole health picture, not just one store.
+	const refreshChainData = () => {
+		void onchainState.update();
+		void gasFee.update();
+		void balance.update();
+		if (ownerBalance !== balance) void ownerBalance.update();
+	};
 	const offline = createOfflineStore();
 
 	const viewState = createViewState({
@@ -293,7 +309,9 @@ export async function createContext(): Promise<{
 		balance,
 		ownerBalance,
 		rpcHealth,
+		refreshChainData,
 		hasAppRpc,
+		forceRpcFailure,
 		offline,
 		connection,
 		walletClient,
