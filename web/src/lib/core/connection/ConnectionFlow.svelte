@@ -9,6 +9,17 @@
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import BasicModal from '../ui/modal/basic-modal.svelte';
 	import NoWalletFlow from './NoWalletFlow.svelte';
+	import {
+		hasPendingWalletRequest,
+		walletEntryMode,
+		resolveSignInAddress,
+		hasSwappedAccount,
+		signInAdoptingSwap,
+		signInToAccount,
+		combinesAccountChoiceWithSignIn,
+		effectiveAccountSelection,
+	} from './connection-flow';
+	import {dev} from '$lib';
 
 	interface Props {
 		connection: AnyConnectionStore<UnderlyingEthereumProvider>;
@@ -19,16 +30,65 @@
 	let email: string = $state('');
 	let emailInput: HTMLInputElement | undefined = $state(undefined);
 
-	// TODO make it a specific `auto` mode ?
-	// or maybe on provider ?
-	let pendingRequest = $derived(
-		!(
-			$connection.step !== 'Idle' &&
-			$connection.step !== 'MechanismToChoose' &&
-			$connection.mechanism.type === 'wallet' &&
-			$connection.mechanism.name === 'Burner Wallet'
-		) && ($connection.wallet?.pendingRequests?.length ?? 0) > 0,
+	// Whether the nested wallet picker (for the multi-wallet case) is open. This
+	// is UI-only state: the connection store stays in `WalletToChoose` throughout.
+	let walletPickerOpen: boolean = $state(false);
+
+	// Flow interpretation (burner-wallet phase + pending request) lives in the helper.
+	let pendingRequest = $derived(hasPendingWalletRequest($connection));
+
+	// Whether the connect modal offers sign-in options besides wallets (the
+	// email input under hosted sign-in). Controls the modal's layout, including
+	// whether a multi-wallet list is collapsed behind a button or shown inline.
+	// NOTE: the email/dev blocks below still use the inline
+	// `connection.targetStep == 'SignedIn' && !connection.walletOnly` check:
+	// that expression narrows the store union so `connect` accepts the
+	// email/mnemonic mechanisms; this boolean does not narrow.
+	let hasOtherSignInOptions = $derived(
+		connection.targetStep == 'SignedIn' && !connection.walletOnly,
 	);
+
+	// How to present the wallet entry point: none / single / list / collapsed.
+	let walletEntry = $derived(
+		walletEntryMode($connection.wallets, hasOtherSignInOptions),
+	);
+
+	// The account a sign-in should adopt (handles live account swaps), and whether
+	// the user swapped their active account while on the confirm screen.
+	let signInAddress = $derived(resolveSignInAddress($connection));
+	let swappedAccount = $derived(hasSwappedAccount($connection));
+
+	// Combined choose+sign-in modal (multi-account wallet under a sign-in
+	// target): which row the user explicitly picked (undefined = follow the
+	// wallet's active account), and whether an adopt-then-sign action is in
+	// flight. The latter also suppresses the separate confirm modal during the
+	// transient WalletConnected step between adoption and signature request,
+	// which would otherwise flash mid-action.
+	let chosenAccount: `0x${string}` | undefined = $state(undefined);
+	let signingInFromChooser = $state(false);
+	let combinedChooseAndSignIn = $derived(
+		combinesAccountChoiceWithSignIn(connection),
+	);
+
+	let selectedAccount = $derived(
+		$connection.step === 'ChooseWalletAccount'
+			? effectiveAccountSelection($connection.wallet.accounts, chosenAccount)
+			: undefined,
+	);
+
+	async function chooseAndSignIn() {
+		if (!selectedAccount) return;
+		signingInFromChooser = true;
+		try {
+			await signInToAccount(connection, selectedAccount);
+		} catch {
+			// Cancelled / rejected / timed out: the store settles on its own step
+			// (e.g. WalletConnected -> the confirm screen serves as the fallback).
+		} finally {
+			signingInFromChooser = false;
+			chosenAccount = undefined;
+		}
+	}
 </script>
 
 <Modal.Root
@@ -69,62 +129,88 @@
 		</div>
 	{/if}
 
-	<!-- Wallet options -->
-	{#if $connection.wallets.length > 0}
-		{#if !(connection.targetStep == 'SignedIn' && !connection.walletOnly)}
-			<Modal.Title>
-				{$connection.wallets.length} wallet{$connection.wallets.length > 1
-					? 's'
-					: ''} available, choose one
-			</Modal.Title>
-		{/if}
-		<div class="flex flex-col gap-3 py-2">
-			<div
-				class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
-			>
-				{#each $connection.wallets as wallet}
-					<button
-						class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
-						onclick={() =>
-							connection.connect({
-								type: 'wallet',
-								name: wallet.info.name,
-							})}
-					>
-						<div class="h-6 w-6 shrink-0 overflow-hidden rounded-full">
-							<img
-								src={wallet.info.icon}
-								alt={wallet.info.name}
-								class="h-full w-full object-contain"
-							/>
-						</div>
-						<div class="flex flex-col">
-							<span class="text-sm font-medium">{wallet.info.name}</span>
-							{#if wallet.info.name === 'Burner Wallet'}
-								<span class="text-xs text-amber-600 dark:text-amber-400">
-									⚠️ Stored in clear text. Do not use with real funds.
-								</span>
-							{/if}
-						</div>
-					</button>
-				{/each}
+	<!-- Wallet entry point -->
+	{#if walletEntry === 'single'}
+		<!-- Exactly one wallet: a single button that connects to it directly. -->
+		<Button
+			variant="outline"
+			class="w-full justify-center gap-3"
+			onclick={() =>
+				connection.connect({
+					type: 'wallet',
+					name: $connection.wallets[0].info.name,
+				})}
+		>
+			<div class="h-5 w-5 shrink-0 overflow-hidden rounded-full">
+				<img
+					src={$connection.wallets[0].info.icon}
+					alt={$connection.wallets[0].info.name}
+					class="h-full w-full object-contain"
+				/>
 			</div>
-			<Button
-				variant="outline"
-				class="w-full"
-				onclick={() => connection.cancel()}
-			>
-				Cancel
-			</Button>
+			<span>Connect {$connection.wallets[0].info.name}</span>
+		</Button>
+	{:else if walletEntry === 'collapsed'}
+		<!-- Several wallets sharing the modal with other sign-in options: one
+		     button that opens the wallet picker. -->
+		<Button
+			variant="outline"
+			class="w-full justify-center gap-3"
+			onclick={() => (walletPickerOpen = true)}
+		>
+			<span>Connect a Wallet</span>
+		</Button>
+	{:else if walletEntry === 'list'}
+		<!-- Several wallets and nothing else to offer (wallet-only auth): show
+		     the list directly, no intermediate button. -->
+		<Modal.Title>
+			{$connection.wallets.length} wallets available, choose one
+		</Modal.Title>
+		<div
+			class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
+		>
+			{#each $connection.wallets as wallet}
+				<button
+					class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+					onclick={() =>
+						connection.connect({type: 'wallet', name: wallet.info.name})}
+				>
+					<div class="h-6 w-6 shrink-0 overflow-hidden rounded-full">
+						<img
+							src={wallet.info.icon}
+							alt={wallet.info.name}
+							class="h-full w-full object-contain"
+						/>
+					</div>
+					<div class="flex flex-col">
+						<span class="text-sm font-medium">{wallet.info.name}</span>
+						{#if wallet.info.name === 'Burner Wallet'}
+							<span class="text-xs text-amber-600 dark:text-amber-400">
+								⚠️ Stored in clear text. Do not use with real funds.
+							</span>
+						{/if}
+					</div>
+				</button>
+			{/each}
 		</div>
 	{:else}
 		<NoWalletFlow
 			onCancel={() => connection.cancel()}
-			secondary={connection.targetStep == 'SignedIn' && !connection.walletOnly}
+			secondary={hasOtherSignInOptions}
 		/>
 	{/if}
 
-	{#if connection.targetStep == 'SignedIn' && !connection.walletOnly}
+	{#if !hasOtherSignInOptions}
+		<Button
+			variant="outline"
+			class="mt-3 w-full"
+			onclick={() => connection.cancel()}
+		>
+			Cancel
+		</Button>
+	{/if}
+
+	{#if dev && connection.targetStep == 'SignedIn' && !connection.walletOnly}
 		<!-- Dev option -->
 		<Button
 			variant="ghost"
@@ -142,55 +228,195 @@
 	{/if}
 </Modal.Root>
 
-<!-- TODO? not a modal -->
+<!-- Wallet picker (multi-wallet case): opened from the "Connect a Wallet" button. -->
 <Modal.Root
-	openWhen={connection.targetStep !== 'WalletConnected' &&
-		$connection.step === 'WalletConnected'}
-	onCancel={() => connection.cancel()}
+	openWhen={walletPickerOpen &&
+		($connection.step == 'WalletToChoose' ||
+			$connection.step == 'MechanismToChoose')}
+	onCancel={() => (walletPickerOpen = false)}
 >
-	<Modal.Title>Wallet Connected</Modal.Title>
-	<Button onclick={() => connection.requestSignature()}>sign-in</Button>
+	<Modal.Title>
+		{$connection.wallets.length} wallet{$connection.wallets.length > 1
+			? 's'
+			: ''} available, choose one
+	</Modal.Title>
+	<div class="flex flex-col gap-3 py-2">
+		<div
+			class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
+		>
+			{#each $connection.wallets as wallet}
+				<button
+					class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+					onclick={() => {
+						walletPickerOpen = false;
+						connection.connect({type: 'wallet', name: wallet.info.name});
+					}}
+				>
+					<div class="h-6 w-6 shrink-0 overflow-hidden rounded-full">
+						<img
+							src={wallet.info.icon}
+							alt={wallet.info.name}
+							class="h-full w-full object-contain"
+						/>
+					</div>
+					<div class="flex flex-col">
+						<span class="text-sm font-medium">{wallet.info.name}</span>
+						{#if wallet.info.name === 'Burner Wallet'}
+							<span class="text-xs text-amber-600 dark:text-amber-400">
+								⚠️ Stored in clear text. Do not use with real funds.
+							</span>
+						{/if}
+					</div>
+				</button>
+			{/each}
+		</div>
+		<Button
+			variant="outline"
+			class="w-full"
+			onclick={() => (walletPickerOpen = false)}
+		>
+			Back
+		</Button>
+	</div>
 </Modal.Root>
 
+<!-- Confirm the connected account and sign in. For a single-account wallet this
+     is the "confirm this account" step; for multi-account it follows the picker.
+     Handles a live account swap: if the user changes their active account in
+     the wallet UI, `signInAddress` reflects it and Sign In adopts it first. -->
+<Modal.Root
+	openWhen={connection.targetStep !== 'WalletConnected' &&
+		$connection.step === 'WalletConnected' &&
+		!signingInFromChooser}
+	onCancel={() => connection.cancel()}
+>
+	<Modal.Title>Confirm sign in</Modal.Title>
+	<Modal.Description>
+		Sign a message with this account to sign in. Accepting the message gives
+		this app access to the account, so only accept on websites you trust.
+	</Modal.Description>
+
+	{#if signInAddress}
+		<div
+			class="my-4 flex items-center gap-3 rounded-md border border-input bg-muted/50 px-3 py-2.5"
+		>
+			<div
+				class="h-8 w-8 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
+			>
+				<EthereumAvatar address={signInAddress} />
+			</div>
+			<div class="flex flex-col">
+				<Address value={signInAddress} />
+				{#if swappedAccount}
+					<span class="text-xs text-muted-foreground">
+						Using your currently selected account.
+					</span>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
+	<Modal.Footer>
+		<Button variant="outline" onclick={() => connection.cancel()}>Cancel</Button
+		>
+		<Button onclick={() => signInAdoptingSwap(connection)}>Sign In</Button>
+	</Modal.Footer>
+</Modal.Root>
+
+<!-- Account choice (multi-account wallet). Two presentations:
+     - sign-in target: a combined "choose + confirm sign in" modal, so picking
+       an account and confirming it are ONE step instead of two back-to-back
+       modals. Rows select (highlight); the Sign In button adopts the selected
+       account and requests the signature in a single action.
+     - wallet-only target: the plain picker, where clicking a row IS the final
+       action (no signature follows). -->
 <Modal.Root
 	openWhen={$connection.step === 'ChooseWalletAccount'}
 	onCancel={() => connection.cancel()}
 >
 	{#if $connection.step == 'ChooseWalletAccount'}
 		<!-- ASSERT ChooseWalletAccount -->
-		<Modal.Title>
-			{$connection.wallet.accounts.length} account{$connection.wallet.accounts
-				.length > 1
-				? 's'
-				: ''} available, choose one
-		</Modal.Title>
-		<div class="flex flex-col gap-3 py-2">
-			<div
-				class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
-			>
-				{#each $connection.wallet.accounts as account}
-					<button
-						class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
-						onclick={() => connection.connectToAddress(account)}
-					>
-						<div
-							class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
+		{#if combinedChooseAndSignIn}
+			<Modal.Title>Confirm sign in</Modal.Title>
+			<Modal.Description>
+				Choose an account and sign a message with it to sign in. Accepting the
+				message gives this app access to the account, so only accept on
+				websites you trust.
+			</Modal.Description>
+			<div class="flex flex-col gap-3 py-2">
+				<div
+					class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
+				>
+					{#each $connection.wallet.accounts as account}
+						<button
+							class="flex w-full items-center gap-3 rounded-md border px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground {selectedAccount ===
+							account
+								? 'border-primary bg-accent/50'
+								: 'border-transparent'}"
+							disabled={signingInFromChooser}
+							onclick={() => (chosenAccount = account)}
 						>
-							<EthereumAvatar address={account} />
-						</div>
-						<Address value={account} />
-					</button>
-				{/each}
-			</div>
+							<div
+								class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
+							>
+								<EthereumAvatar address={account} />
+							</div>
+							<Address value={account} />
+						</button>
+					{/each}
+				</div>
 
-			<Button
-				variant="outline"
-				class="w-full"
-				onclick={() => connection.cancel()}
-			>
-				Cancel
-			</Button>
-		</div>
+				<Modal.Footer>
+					<Button
+						variant="outline"
+						disabled={signingInFromChooser}
+						onclick={() => connection.cancel()}
+					>
+						Cancel
+					</Button>
+					<Button
+						disabled={!selectedAccount || signingInFromChooser}
+						onclick={chooseAndSignIn}
+					>
+						{signingInFromChooser ? 'Signing in...' : 'Sign In'}
+					</Button>
+				</Modal.Footer>
+			</div>
+		{:else}
+			<Modal.Title>
+				{$connection.wallet.accounts.length} account{$connection.wallet.accounts
+					.length > 1
+					? 's'
+					: ''} available, choose one
+			</Modal.Title>
+			<div class="flex flex-col gap-3 py-2">
+				<div
+					class="flex max-h-[50vh] flex-col gap-2 overflow-y-auto rounded-md border border-input bg-muted/50 p-2"
+				>
+					{#each $connection.wallet.accounts as account}
+						<button
+							class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+							onclick={() => connection.connectToAddress(account)}
+						>
+							<div
+								class="h-6 w-6 shrink-0 overflow-hidden rounded-full *:h-full *:w-full"
+							>
+								<EthereumAvatar address={account} />
+							</div>
+							<Address value={account} />
+						</button>
+					{/each}
+				</div>
+
+				<Button
+					variant="outline"
+					class="w-full"
+					onclick={() => connection.cancel()}
+				>
+					Cancel
+				</Button>
+			</div>
+		{/if}
 	{/if}
 </Modal.Root>
 

@@ -2,10 +2,11 @@
 pragma solidity ^0.8.4;
 
 import {IGreetingsRegistry} from "./IGreetingsRegistry.sol";
+import {Proxied} from "@rocketh/proxy/solc_0_8/ERC1967/Proxied.sol";
 
 /// @title Greetings Registry
-/// @notice let user set a greeting 1
-contract GreetingsRegistry is IGreetingsRegistry {
+/// @notice let user set a greeting
+contract GreetingsRegistry is IGreetingsRegistry, Proxied {
     /// @notice emitted whenever a user updates their greeting
     /// @param user the account whose greeting was updated
     /// @param message the new greeting
@@ -27,15 +28,24 @@ contract GreetingsRegistry is IGreetingsRegistry {
     mapping(uint256 => MessagePointer) internal _messages;
     uint256 internal _lastMessage;
 
+    // ------------------------------------------------------------------------
+    // CONSTRUCTOR / INITIALIZER
+    //  support both proxy and constructor initialization
+    //  zero overhead for constructor
+    // ------------------------------------------------------------------------
     constructor(string memory prefix) {
+        _init(prefix);
+    }
+
+    function _init(string memory prefix) internal {
         _prefix = prefix;
     }
 
-    struct Message {
-        address account;
-        string message;
-        uint256 timestamp;
+    function init(string memory prefix) external asProxyInitialiser {
+        _init(prefix);
     }
+
+    // ------------------------------------------------------------------------
 
     /// @notice the greeting for each account
     function messages(address account) external view returns (string memory) {
@@ -91,7 +101,7 @@ contract GreetingsRegistry is IGreetingsRegistry {
             // get its prior
             uint256 prior = _messages[previousMessageFromAccount].previous;
             if (prior != 0) {
-                // shift the prior message to the slot being vacated
+                // Move prior message's data into the vacated slot and update its mapping
                 address priorAccount = _messages[prior].account;
                 _messages[previousMessageFromAccount] = _messages[prior];
                 _accountToMessage[priorAccount] = previousMessageFromAccount;

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import * as Card from '$lib/shadcn/ui/card';
 	import * as Alert from '$lib/shadcn/ui/alert';
 	import * as Separator from '$lib/shadcn/ui/separator';
@@ -16,10 +16,8 @@
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
-	import type {PublicClient} from 'viem';
 	import {formatGwei} from 'viem';
 	import {
-		decodeLogs,
 		formatGas,
 		formatGasPrice,
 		formatValue,
@@ -27,17 +25,12 @@
 		findContractByAddress,
 		formatPreciseTimestamp,
 		formatTimestamp,
-		formatTransactionType,
 		getBlockExplorerTxUrl,
+		getEip1559FeeInfo,
 		hasBlockExplorer,
 	} from '../lib/utils';
-	import {route} from '$lib';
-	import {goto} from '$app/navigation';
-	import {
-		decodeTransaction,
-		formatDecodedTransaction,
-		type DecodedTransactionData,
-	} from '../lib/services/transactionDecoder';
+	import {getTransactionDetailsStore} from '../lib/stores/transactionDetails';
+	import {formatDecodedTransaction} from '../lib/services/transactionDecoder';
 
 	interface Props {
 		txHash: `0x${string}` | null;
@@ -45,93 +38,22 @@
 
 	let {txHash}: Props = $props();
 
-	let {publicClient} = getUserContext();
+	let {publicClient} = getAppContext();
 
-	let tx = $state<Awaited<ReturnType<PublicClient['getTransaction']>> | null>(
-		null,
-	);
-	let receipt = $state<Awaited<
-		ReturnType<PublicClient['getTransactionReceipt']>
-	> | null>(null);
-	let block = $state<Awaited<ReturnType<PublicClient['getBlock']>> | null>(
-		null,
-	);
-	let loading = $state(false);
-	let error = $state<string | null>(null);
-	let decodedEvents = $state<
-		Array<{
-			eventName: string;
-			signature: string;
-			args: Record<string, unknown> | unknown[];
-			address: `0x${string}`;
-			blockNumber: bigint;
-			txHash: string;
-		}>
-	>([]);
-	let decodedTxData = $state<DecodedTransactionData>({
-		isDecoded: false,
-		status: 'pending',
-	});
+	// All fetching / decoding lives in the store.
+	const details = getTransactionDetailsStore({publicClient});
+	let tx = $derived($details.tx);
+	let receipt = $derived($details.receipt);
+	let block = $derived($details.block);
+	let loading = $derived($details.loading);
+	let error = $derived($details.error);
+	let decodedEvents = $derived($details.decodedEvents);
+	let decodedTxData = $derived($details.decodedTxData);
 	let formattedTxData = $derived(formatDecodedTransaction(decodedTxData));
-
-	async function fetchTransaction() {
-		if (!publicClient || !txHash) {
-			if (!txHash) {
-				loading = false;
-			} else {
-				error = 'Public client not available';
-				loading = false;
-			}
-			return;
-		}
-
-		loading = true;
-		error = null;
-
-		try {
-			// Fetch transaction
-			const transaction = await publicClient.getTransaction({hash: txHash});
-			tx = transaction;
-
-			// Fetch receipt
-			const txReceipt = await publicClient.getTransactionReceipt({
-				hash: txHash,
-			});
-			receipt = txReceipt;
-
-			// Fetch block for timestamp
-			if (txReceipt) {
-				const txBlock = await publicClient.getBlock({
-					blockNumber: txReceipt.blockNumber,
-				});
-				block = txBlock;
-			}
-
-			// Decode transaction data
-			const decoded = await decodeTransaction(
-				transaction,
-				txReceipt,
-				publicClient,
-			);
-			decodedTxData = decoded;
-
-			// Decode events
-			if (txReceipt.logs.length > 0) {
-				decodedEvents = decodeLogs(txReceipt.logs);
-			}
-		} catch (e: any) {
-			error = e.message || 'Failed to fetch transaction';
-			console.error('Error fetching transaction:', e);
-		} finally {
-			loading = false;
-		}
-	}
 
 	// Fetch when txHash changes
 	$effect(() => {
-		if (txHash) {
-			fetchTransaction();
-		}
+		details.fetch(txHash);
 	});
 </script>
 
@@ -443,15 +365,9 @@
 							</div>
 						</div>
 						{#if tx.type === 'eip1559'}
-							{@const maxPriorityFee =
-								'maxPriorityFeePerGas' in tx
-									? (tx.maxPriorityFeePerGas as bigint)
-									: null}
-							{@const effectiveGasPrice = receipt.effectiveGasPrice}
-							{@const baseFeeUsed =
-								maxPriorityFee !== null
-									? effectiveGasPrice - maxPriorityFee
-									: null}
+							{@const feeInfo = getEip1559FeeInfo(tx, receipt)}
+							{@const maxPriorityFee = feeInfo.maxPriorityFeePerGas}
+							{@const baseFeeUsed = feeInfo.baseFeeUsed}
 							{#if baseFeeUsed !== null}
 								<div>
 									<div class="text-sm font-medium text-muted-foreground">

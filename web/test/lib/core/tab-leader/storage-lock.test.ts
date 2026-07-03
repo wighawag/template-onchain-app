@@ -1,5 +1,10 @@
 import {describe, it, expect, beforeEach, vi, afterEach} from 'vitest';
-import {acquireLock, refreshLock, releaseLock, readLock} from '$lib/core/tab-leader/storage-lock';
+import {
+	acquireLock,
+	refreshLock,
+	releaseLock,
+	readLock,
+} from '$lib/core/tab-leader/storage-lock';
 
 // Mock localStorage
 const store: Record<string, string> = {};

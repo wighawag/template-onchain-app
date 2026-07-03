@@ -27,7 +27,7 @@ export type ENSCache = Map<`0x${string}`, ENSResult>;
 export type ENSAddressCache = Map<string, ENSAddressResult>;
 export type ENSAvatarCache = Map<`0x${string}`, ENSAvatarResult>;
 
-export type ENSContext = {
+export type ENSService = {
 	fetchENS: (address: `0x${string}`) => Promise<string | null>;
 	getENSState: (address: `0x${string}`) => ENSResult;
 	resolveAddress: (name: string) => Promise<`0x${string}` | null>;
@@ -46,7 +46,7 @@ const publicClient = createPublicClient({
  * Creates an ENS service with in-memory caching.
  * Each address lookup is cached, preventing duplicate requests.
  */
-export function createENSService(): ENSContext {
+export function createENSService(): ENSService {
 	const cache: ENSCache = new Map();
 	const addressCache: ENSAddressCache = new Map();
 	const avatarCache: ENSAvatarCache = new Map();
@@ -55,7 +55,10 @@ export function createENSService(): ENSContext {
 		string,
 		Promise<`0x${string}` | null>
 	>();
-	const pendingAvatarRequests = new Map<`0x${string}`, Promise<string | null>>();
+	const pendingAvatarRequests = new Map<
+		`0x${string}`,
+		Promise<string | null>
+	>();
 
 	/**
 	 * Get the current ENS state for an address (synchronous).
@@ -202,7 +205,9 @@ export function createENSService(): ENSContext {
 	 * If a request is already in progress for this address, returns the same promise.
 	 * If the result is cached, returns it immediately.
 	 */
-	async function fetchENSAvatar(address: `0x${string}`): Promise<string | null> {
+	async function fetchENSAvatar(
+		address: `0x${string}`,
+	): Promise<string | null> {
 		// Check if we already have a cached result
 		const cached = avatarCache.get(address);
 		if (cached && !cached.loading) {

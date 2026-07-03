@@ -14,3 +14,6 @@ src/lib/deployments.ts
 
 .yalc
 yalc.lock
+# Playwright
+test-results
+playwright-report/

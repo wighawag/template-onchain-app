@@ -6,22 +6,16 @@
 	import MessageSquareIcon from '@lucide/svelte/icons/message-square';
 	import SendIcon from '@lucide/svelte/icons/send';
 	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import EthereumAvatar from '$lib/core/ui/ethereum/EthereumAvatar.svelte';
-	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
+	import {toast} from 'svelte-sonner';
+	import {setGreeting as submitGreeting} from './lib/setGreeting';
+	import {formatRelativeTime, getStaleMessage} from './lib/staleness';
 
-	const {
-		connection,
-		onchainState,
-		viewState,
-		walletClient,
-		deployments,
-		clock,
-		publicClient,
-		balance,
-		gasFee,
-	} = getUserContext();
+	const context = getAppContext();
+	const {onchainState, viewState, clock, accountCannotSend, errorDetails} =
+		context;
 
 	const viewStatus = viewState.status;
 
@@ -39,67 +33,25 @@
 
 		isSubmitting = true;
 		try {
-			const currentConnection = await connection.ensureConnected();
-
-			const contractRequest = await ensureCanAfford({
-				publicClient,
-				balance,
-				gasFee,
-				contract: {
-					...deployments.current.contracts.GreetingsRegistry,
-					functionName: 'setMessage',
-					args: [greetingInput],
-					account: currentConnection.account.address,
-				},
-			});
-
-			await walletClient.writeContract(contractRequest as any);
-			greetingInput = '';
-		} catch (error) {
-			if (error instanceof InsufficientFundsError) {
-				// User dismissed the modal - silently cancel
-				return;
+			const result = await submitGreeting(context, greetingInput);
+			if (result.status === 'submitted') {
+				greetingInput = '';
+			} else if (result.status === 'cannot-send') {
+				accountCannotSend.show();
+			} else if (result.status === 'error') {
+				toast.error('Transaction failed', {
+					description: result.message,
+					duration: 8000,
+					closeButton: true,
+					action: {
+						label: 'Details',
+						onClick: () => errorDetails.show(result.details),
+					},
+				});
 			}
-			console.error('Failed to set greeting:', error);
 		} finally {
 			isSubmitting = false;
 		}
-	}
-
-	function formatRelativeTime(timestamp: number): string {
-		const now = Date.now();
-		const diff = now - timestamp;
-
-		const seconds = Math.floor(diff / 1000);
-		const minutes = Math.floor(seconds / 60);
-		const hours = Math.floor(minutes / 60);
-		const days = Math.floor(hours / 24);
-
-		if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
-		if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-		if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
-		return 'Just now';
-	}
-
-	function getStaleMessage(
-		lastSuccessfulFetch: number | undefined,
-		now: number,
-	): string | undefined {
-		if (!lastSuccessfulFetch) return undefined;
-
-		const diff = now - lastSuccessfulFetch;
-		const seconds = Math.floor(diff / 1000);
-
-		// Only show stale message if it's been more than 30 seconds
-		if (seconds < 30) return undefined;
-
-		const minutes = Math.floor(seconds / 60);
-		const hours = Math.floor(minutes / 60);
-
-		if (hours > 0) return `Data is ${hours} hour${hours > 1 ? 's' : ''} old`;
-		if (minutes > 0)
-			return `Data is ${minutes} minute${minutes > 1 ? 's' : ''} old`;
-		return `Data is ${seconds} seconds old`;
 	}
 </script>
 
@@ -213,7 +165,7 @@
 								{#if message.pending}
 									<Spinner class="h-4 w-4" />
 								{:else}
-									{formatRelativeTime(message.timestamp)}
+									{formatRelativeTime(message.timestamp, clock.now())}
 								{/if}
 							</span>
 						</div>

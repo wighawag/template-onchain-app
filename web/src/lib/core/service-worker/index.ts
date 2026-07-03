@@ -86,6 +86,10 @@ function fromPushNotification(
 export function createServiceWorker(notifications?: NotificationsService) {
 	const store = writable<ServiceWorkerState>(undefined);
 
+	// Track registered listeners for cleanup
+	let controllerChangeHandler: (() => void) | null = null;
+	let messageHandler: ((event: MessageEvent) => void) | null = null;
+
 	function pingServideWorker(
 		state: 'installing' | 'waiting' | 'active' = 'active',
 	) {
@@ -179,30 +183,80 @@ export function createServiceWorker(notifications?: NotificationsService) {
 		});
 	}
 
+	/**
+	 * Remove all registered event listeners.
+	 * Call this when unmounting to prevent listener accumulation.
+	 */
+	function cleanup() {
+		if (
+			controllerChangeHandler &&
+			typeof navigator !== 'undefined' &&
+			'serviceWorker' in navigator
+		) {
+			navigator.serviceWorker.removeEventListener(
+				'controllerchange',
+				controllerChangeHandler,
+			);
+			controllerChangeHandler = null;
+		}
+
+		if (
+			messageHandler &&
+			typeof navigator !== 'undefined' &&
+			'serviceWorker' in navigator
+		) {
+			navigator.serviceWorker.removeEventListener('message', messageHandler);
+			messageHandler = null;
+		}
+	}
+
 	function register() {
 		if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+			// Clean up any existing listeners before registering new ones
+			cleanup();
+
 			store.set({notSupported: false, registering: true});
 
 			// ------------------------------------------------------------------------------------------------
-			// FORCE RELOAD ON CONTROLLER CHANGE
+			// FORCE RELOAD ON CONTROLLER CHANGE (update flow only)
 			// ------------------------------------------------------------------------------------------------
+			// `controllerchange` fires in two situations:
+			// 1. FIRST INSTALL: the SW's activate handler calls clients.claim(), taking
+			//    control of the already-open page. Reloading here would make every
+			//    first visit spontaneously reload seconds after load (whenever the
+			//    SW finishes installing), wiping in-flight UI state.
+			// 2. UPDATE: a new SW replaces the old one (after skipWaiting). Here a
+			//    reload is wanted so the page runs the new version's assets.
+			// Distinguish them by whether the page was already controlled: only an
+			// already-controlled page can be taken over by an UPDATED worker.
+			let wasControlled = !!navigator.serviceWorker.controller;
 			let refreshing = false;
-			navigator.serviceWorker.addEventListener('controllerchange', () => {
+			controllerChangeHandler = () => {
+				if (!wasControlled) {
+					// Initial claim on first install: do not reload.
+					wasControlled = true;
+					return;
+				}
 				if (refreshing) {
 					return;
 				}
 				refreshing = true;
 				window.location.reload();
-			});
+			};
+			navigator.serviceWorker.addEventListener(
+				'controllerchange',
+				controllerChangeHandler,
+			);
 			// ------------------------------------------------------------------------------------------------
 
 			if (notifications) {
-				//listen to messages
-				navigator.serviceWorker.onmessage = (event) => {
+				// Listen to messages
+				messageHandler = (event: MessageEvent) => {
 					if (event.data && event.data.type === 'notification') {
 						notifications.add(fromPushNotification(event.data));
 					}
 				};
+				navigator.serviceWorker.addEventListener('message', messageHandler);
 			}
 
 			const swLocation = resolve<any>(`/service-worker.js`);
@@ -260,7 +314,6 @@ export function createServiceWorker(notifications?: NotificationsService) {
 
 	return {
 		subscribe: store.subscribe,
-		set: store.set, // TODO remove and move handler logic in here
 		get registration(): ServiceWorkerRegistration | undefined {
 			const $serviceWorker = get(store);
 			if ($serviceWorker && 'registration' in $serviceWorker) {
@@ -282,6 +335,11 @@ export function createServiceWorker(notifications?: NotificationsService) {
 		sendMessage,
 		skipWaiting,
 		skip,
+		/**
+		 * Clean up registered event listeners.
+		 * Call this when unmounting to prevent listener accumulation.
+		 */
+		cleanup,
 	};
 }
 

@@ -1,10 +1,10 @@
 <script lang="ts">
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import {Button} from '$lib/shadcn/ui/button/index.js';
 	import XCircleIcon from '@lucide/svelte/icons/x-circle';
 
-	const {deployments} = getUserContext();
+	const {deployments} = getAppContext();
 
 	interface Props {
 		open: boolean;
@@ -33,8 +33,8 @@
 
 	<div class="space-y-4 py-4">
 		<p class="text-sm text-muted-foreground">
-			This will send a 0 {deployments.current.chain.nativeCurrency.symbol} transaction
-			to yourself with the same nonce but higher gas price.
+			This will send a 0 {$deployments.chain.nativeCurrency.symbol} transaction to
+			yourself with the same nonce but higher gas price.
 		</p>
 		<p class="text-sm text-muted-foreground">
 			If successful, the original transaction will be replaced and effectively

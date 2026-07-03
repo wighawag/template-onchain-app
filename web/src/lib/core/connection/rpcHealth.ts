@@ -2,7 +2,12 @@ import {writable, type Readable} from 'svelte/store';
 import type {BalanceStatus, BalanceStore} from './balance';
 import type {GasFeeStatus, GasFeeStore} from './gasFee';
 
-export type RpcErrorCategory = 'network' | 'timeout' | 'rate-limit' | 'server-error' | 'unknown';
+export type RpcErrorCategory =
+	| 'network'
+	| 'timeout'
+	| 'rate-limit'
+	| 'server-error'
+	| 'unknown';
 
 export type RpcError = {
 	category: RpcErrorCategory;
@@ -21,7 +26,10 @@ export type RpcHealthStore = Readable<RpcHealthValue>;
  * Extracts a meaningful error message from an error object,
  * looking at the cause chain if the top-level message is a wrapper.
  */
-function extractErrorMessage(error: {message: string; cause?: unknown}): string {
+function extractErrorMessage(error: {
+	message: string;
+	cause?: unknown;
+}): string {
 	// If there's a cause, try to get a more specific message from it
 	if (error.cause) {
 		const cause = error.cause as Record<string, unknown>;
@@ -53,15 +61,42 @@ function extractErrorMessage(error: {message: string; cause?: unknown}): string 
 	return error.message;
 }
 
-function categorizeError(error: {message: string; cause?: unknown}): RpcErrorCategory {
+function categorizeError(error: {
+	message: string;
+	cause?: unknown;
+}): RpcErrorCategory {
 	// Extract the actual error message, looking at cause if available
 	const errorMessage = extractErrorMessage(error);
 	const msg = errorMessage.toLowerCase();
 
-	if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('aborted')) return 'timeout';
-	if (msg.includes('429') || msg.includes('rate limit') || msg.includes('too many requests')) return 'rate-limit';
-	if (msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('504') || msg.includes('internal server error')) return 'server-error';
-	if (msg.includes('network') || msg.includes('fetch') || msg.includes('econnrefused') || msg.includes('enotfound') || msg.includes('failed to fetch')) return 'network';
+	if (
+		msg.includes('timeout') ||
+		msg.includes('timed out') ||
+		msg.includes('aborted')
+	)
+		return 'timeout';
+	if (
+		msg.includes('429') ||
+		msg.includes('rate limit') ||
+		msg.includes('too many requests')
+	)
+		return 'rate-limit';
+	if (
+		msg.includes('500') ||
+		msg.includes('502') ||
+		msg.includes('503') ||
+		msg.includes('504') ||
+		msg.includes('internal server error')
+	)
+		return 'server-error';
+	if (
+		msg.includes('network') ||
+		msg.includes('fetch') ||
+		msg.includes('econnrefused') ||
+		msg.includes('enotfound') ||
+		msg.includes('failed to fetch')
+	)
+		return 'network';
 	return 'unknown';
 }
 

@@ -12,7 +12,7 @@
 		host: string;
 		ENSName?: string | null;
 		themeColor?: string | null;
-		appleStatusBarStyle?: string | null; // TODO type
+		appleStatusBarStyle?: string | null;
 		iconExtension?: string;
 	}
 
@@ -48,7 +48,6 @@
 		{#if ENSName}
 			<meta name="Dwebsite" content={ENSName} />
 		{/if}
-		<!-- TODO get url -->
 	{/if}
 
 	{#if type}

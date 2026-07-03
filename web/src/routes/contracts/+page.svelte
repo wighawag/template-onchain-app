@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import {
 		Root as Tabs,
 		Content as TabsContent,
@@ -15,8 +15,16 @@
 	import {getContractFunctions, isViewFunction} from './lib/utils';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 
-	let {publicClient, walletClient, connection, deployments, balance, gasFee} =
-		getUserContext();
+	let {
+		publicClient,
+		executor,
+		accountCannotSend,
+		connection,
+		deployments,
+		balance,
+		gasFee,
+		balanceCheck,
+	} = getAppContext();
 
 	// Get all contract names
 	let contractNames = $derived(Object.keys($deployments.contracts));
@@ -153,9 +161,9 @@
 													contractAddress={selectedContract.address}
 													{connection}
 													{publicClient}
-													{walletClient}
-													{balance}
-													{gasFee}
+													{executor}
+													{accountCannotSend}
+													{balanceCheck}
 												/>
 											{/each}
 										</div>
@@ -184,9 +192,9 @@
 													contractAddress={selectedContract.address}
 													{connection}
 													{publicClient}
-													{walletClient}
-													{balance}
-													{gasFee}
+													{executor}
+													{accountCannotSend}
+													{balanceCheck}
 												/>
 											{/each}
 										</div>

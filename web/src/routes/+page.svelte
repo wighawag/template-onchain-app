@@ -1,11 +1,13 @@
 <script lang="ts">
 	import {route} from '$lib';
+	import {url} from '$lib/core/utils/web/path';
 	import Button from '$lib/shadcn/ui/button/button.svelte';
 	import Features from '$lib/website/Features.svelte';
 	import Footer from '$lib/website/Footer.svelte';
 	import Showcases from '$lib/website/Showcases.svelte';
 	import UseIt from '$lib/website/UseIt.svelte';
 	import DefaultHead from '../lib/metadata/DefaultHead.svelte';
+	import {name} from '../web-config.json';
 	import {onMount} from 'svelte';
 
 	const words = ['Idea', 'Game', 'App'];
@@ -20,18 +22,18 @@
 	});
 </script>
 
-<DefaultHead title={'Jolly Roger - Build and Deploy for Eternity'} />
+<DefaultHead />
 
 <div class="container mx-auto max-w-6xl px-4 py-12">
 	<!-- Hero Section -->
 	<div class="mb-16 flex flex-col items-center text-center">
 		<img
-			src="/icon.svg"
-			alt="Jolly Roger"
+			src={url('/icon.svg')}
+			alt={name}
 			class="mb-8 h-48 w-48 drop-shadow-lg"
 		/>
 		<h1 class="mb-4 text-5xl font-bold tracking-tight text-primary md:text-6xl">
-			Jolly Roger
+			{name}
 		</h1>
 		<p class="mb-6 text-xl text-muted-foreground">
 			<span

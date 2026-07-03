@@ -7,27 +7,18 @@
 	import {Button} from '$lib/shadcn/ui/button';
 	import SearchIcon from '@lucide/svelte/icons/search';
 	import TransactionList from './components/TransactionList.svelte';
+	import {classifySearchInput} from './lib/utils';
 	import {route} from '$lib';
 
 	let inputValue = $state('');
 
-	function isValidAddress(value: string): boolean {
-		return /^0x[a-fA-F0-9]{40}$/.test(value);
-	}
-
-	function isValidTxHash(value: string): boolean {
-		return /^0x[a-fA-F0-9]{64}$/.test(value);
-	}
-
 	function handleSearch() {
-		const trimmed = inputValue.trim();
-		if (!trimmed) return;
-
-		if (isValidTxHash(trimmed)) {
-			goto(route(`/explorer/tx/${trimmed}`));
-		} else if (isValidAddress(trimmed)) {
-			goto(route(`/explorer/address/${trimmed}`));
-		} else {
+		const result = classifySearchInput(inputValue);
+		if (result.kind === 'tx') {
+			goto(route(`/explorer/tx/${result.value}`));
+		} else if (result.kind === 'address') {
+			goto(route(`/explorer/address/${result.value}`));
+		} else if (result.kind === 'invalid') {
 			alert('Invalid address or transaction hash format');
 		}
 	}

@@ -4,9 +4,8 @@
 	import * as Popover from '$lib/shadcn/ui/popover';
 	import Address from './Address.svelte';
 	import type {HTMLImgAttributes} from 'svelte/elements';
-	import {getContext} from 'svelte';
-	import {untrack} from 'svelte';
-	import type {ENSContext} from '$lib/core/ens';
+	import {useENS} from '$lib/core/capabilities';
+	import {createENSNameStore, createENSAvatarStore} from './ens';
 
 	interface EthereumAvatarProps extends HTMLImgAttributes {
 		address: `0x${string}`;
@@ -23,106 +22,35 @@
 
 	let blockieUri = $derived(Blockie.getURI(address, offset));
 
-	// ENS context for resolving names and avatars
-	const ensContext = getContext<ENSContext | undefined>('ens');
-
-	let ensName: string | null = $state(null);
-	let ensAvatar: string | null = $state(null);
-	let ensNameLoading = $state(false);
-	let ensAvatarLoading = $state(false);
-	let ensAttempted = false; // non-reactive flag to prevent re-triggering
-	let avatarAttempted = false; // non-reactive flag for avatar loading
 	let popoverOpen = $state(false);
+
+	// ENS avatar loads eagerly (seeded from cache); the ENS name loads lazily,
+	// only once the popover opens. Both are optional and inert without the
+	// capability, so the avatar falls back to a blockie.
+	const ensService = useENS();
+	const ensAvatarStore = createENSAvatarStore(ensService);
+	const ensNameStore = createENSNameStore(ensService, {lazy: true});
+
+	$effect(() => {
+		ensAvatarStore.setAddress(address);
+		ensNameStore.setAddress(address);
+	});
+
+	let ensAvatar = $derived($ensAvatarStore.avatar);
+	let ensAvatarLoading = $derived($ensAvatarStore.loading);
+	let ensName = $derived($ensNameStore.name);
+	let ensNameLoading = $derived($ensNameStore.loading);
 
 	// Compute the avatar URI - use ENS avatar if available, fallback to blockie
 	let avatarUri = $derived(ensAvatar || blockieUri);
 	let isBlockie = $derived(!ensAvatar);
 
-	// Initialize from cache and load ENS avatar when address changes
+	// Resolve the ENS name on demand when the popover opens.
 	$effect(() => {
-		// Track address to trigger this effect
-		const currentAddress = address;
-
-		// Reset state for new address
-		avatarAttempted = false;
-		ensAttempted = false;
-
-		if (!ensContext || !currentAddress) {
-			ensAvatar = null;
-			ensName = null;
-			return;
-		}
-
-		// Check cache synchronously first - no blink for cached avatars
-		const cachedAvatarState = ensContext.getENSAvatarState(currentAddress);
-		if (cachedAvatarState.avatar) {
-			ensAvatar = cachedAvatarState.avatar;
-			avatarAttempted = true;
-		} else if (!cachedAvatarState.loading) {
-			// Not cached and not loading - start fetch
-			ensAvatar = null;
-			avatarAttempted = true;
-			loadENSAvatar(currentAddress);
-		}
-
-		// Also check cached ENS name
-		const cachedNameState = ensContext.getENSState(currentAddress);
-		if (cachedNameState.name) {
-			ensName = cachedNameState.name;
-			ensAttempted = true;
-		} else {
-			ensName = null;
+		if (popoverOpen && showAddressOnTap) {
+			ensNameStore.resolve();
 		}
 	});
-
-	// Load ENS name when popover opens (if not already loaded)
-	$effect(() => {
-		if (popoverOpen && showAddressOnTap && ensContext) {
-			// Use untrack to prevent re-triggering when ensName/ensNameLoading change
-			untrack(() => {
-				if (!ensAttempted && address) {
-					ensAttempted = true;
-					loadENSName(address);
-				}
-			});
-		}
-	});
-
-	async function loadENSAvatar(addr: `0x${string}`) {
-		if (!ensContext) {
-			return;
-		}
-		ensAvatarLoading = true;
-		try {
-			const result = await ensContext.fetchENSAvatar(addr);
-			// Only update if address hasn't changed
-			if (addr === address) {
-				ensAvatar = result;
-			}
-		} finally {
-			if (addr === address) {
-				ensAvatarLoading = false;
-			}
-		}
-	}
-
-	async function loadENSName(addr: `0x${string}`) {
-		if (!ensContext) {
-			return;
-		}
-		ensNameLoading = true;
-		try {
-			const result = await ensContext.fetchENS(addr);
-			// Only update if address hasn't changed
-			if (addr === address) {
-				ensName = result;
-			}
-		} finally {
-			if (addr === address) {
-				ensNameLoading = false;
-			}
-		}
-	}
 
 	const blockieImageStyle =
 		'image-rendering: -moz-crisp-edges; image-rendering: -webkit-crisp-edges; image-rendering: crisp-edges; image-rendering: pixelated;';
@@ -185,7 +113,8 @@
 					{#if ensNameLoading}
 						<div class="h-5 w-24 animate-pulse rounded bg-muted"></div>
 					{:else if ensName}
-						<span class="truncate font-semibold text-foreground">{ensName}</span>
+						<span class="truncate font-semibold text-foreground">{ensName}</span
+						>
 					{/if}
 					<Address
 						value={address}

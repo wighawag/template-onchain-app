@@ -1,4 +1,8 @@
-export {ensureCanAfford} from './balance-check';
 export {InsufficientFundsError} from './InsufficientFundsError';
-export {balanceCheckStore} from './balance-check-store';
-export type {GasSpeed, EnsureCanAffordBase} from './balance-check.types';
+export {isUserRejectionError} from './user-rejection';
+export type {
+	GasSpeed,
+	EnsureCanAffordOptions,
+	BalanceCheckStore,
+	BalanceCheckState,
+} from './balance-check-store';

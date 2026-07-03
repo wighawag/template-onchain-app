@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {getUserContext, route} from '$lib';
+	import {getAppContext, route} from '$lib';
 	import Button, {buttonVariants} from '$lib/shadcn/ui/button/button.svelte';
 	import EthereumAvatar from '../../core/ui/ethereum/EthereumAvatar.svelte';
 	import {Spinner} from '$lib/shadcn/ui/spinner/index.js';
@@ -8,7 +8,9 @@
 	import Address from '../../core/ui/ethereum/Address.svelte';
 	import Badge from '$lib/shadcn/ui/badge/badge.svelte';
 	import {formatBalance} from '$lib/core/utils/format/balance';
-	import {FaucetButton, hasFaucetLink} from '$lib/core/ui/faucet/index.js';
+	import {countPendingOperations} from '$lib/view/operation';
+	import {effectiveGasPrice} from '$lib/core/connection/gasFee';
+	import {FaucetButton, hasFaucet} from '$lib/core/ui/faucet/index.js';
 	import MenuIcon from '@lucide/svelte/icons/menu';
 	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
@@ -25,8 +27,21 @@
 		communityURL?: string;
 	} = $props();
 
-	const {connection, accountData, balance, gasFee, clock, deployments} =
-		getUserContext();
+	const {
+		connection,
+		accountData,
+		balance,
+		ownerBalance,
+		executionMode,
+		gasFee,
+		clock,
+		deployments,
+	} = getAppContext();
+
+	// In signer mode the spending balance (top bar / `balance`) is the local
+	// signer's, distinct from the authenticated account's (`ownerBalance`); show
+	// both. In wallet mode they are the same account, so show a single balance.
+	const showSignerBalances = executionMode === 'signer';
 
 	let showMenu = $state(false);
 	let accountsOpen = $state(false);
@@ -35,29 +50,23 @@
 		$connection.wallet?.accounts && $connection.wallet.accounts.length > 1,
 	);
 
-	// Watch all operations to filter and count them properly
+	// Watch all operations; the pending-badge counting rule lives in the view helper.
 	let operations = $derived(accountData.watchField('operations'));
-	// Count only operations that are NOT (successfully included but not yet final)
-	// Successful final transactions are automatically removed from the store
-	// We don't want to count successful included tx that are not yet final in the badge
-	let transactionCount = $derived.by(() => {
-		let count = 0;
-		for (const id of Object.keys($operations)) {
-			const op = $operations[id];
-			const state = op.transactionIntent.state;
-			// Skip successfully included but not yet final transactions
-			if (state?.inclusion === 'Included' && state?.status === 'Success') {
-				continue;
-			}
-			count++;
-		}
-		return count;
-	});
+	let transactionCount = $derived(countPendingOperations($operations));
 
 	// Derive formatted balance
 	let formattedBalance = $derived.by(() => {
 		if ($balance.step === 'Loaded') {
 			return formatBalance($balance.value, 18, 6);
+		}
+		return null;
+	});
+
+	// In wallet mode `ownerBalance` is the same store instance as `balance`
+	// (see lib/context), so reading it unconditionally never double-polls.
+	let formattedOwnerBalance = $derived.by(() => {
+		if ($ownerBalance.step === 'Loaded') {
+			return formatBalance($ownerBalance.value, 18, 6);
 		}
 		return null;
 	});
@@ -78,13 +87,10 @@
 	// Gas fee store and status
 	const gasFeeStatus = gasFee.status;
 
-	// Format effective gas price in gwei (9 decimals)
-	// Uses baseFeePerGas + maxPriorityFeePerGas for accurate effective price
+	// Format effective gas price in gwei (9 decimals).
 	let formattedGasPrice = $derived.by(() => {
 		if ($gasFee.step === 'Loaded') {
-			const effectiveGasPrice =
-				$gasFee.baseFeePerGas + $gasFee.average.maxPriorityFeePerGas;
-			return formatBalance(effectiveGasPrice, 9, 6);
+			return formatBalance(effectiveGasPrice($gasFee), 9, 6);
 		}
 		return null;
 	});
@@ -171,12 +177,12 @@
 					<span class="flex items-center gap-1 text-sm text-muted-foreground">
 						<AlertCircleIcon class="h-3 w-3 text-amber-500" />
 						{formattedBalance}
-						{deployments.current.chain.nativeCurrency.symbol}
+						{$deployments.chain.nativeCurrency.symbol}
 					</span>
 				{:else if formattedBalance !== null}
 					<span class="text-sm text-muted-foreground"
 						>{formattedBalance}
-						{deployments.current.chain.nativeCurrency.symbol}</span
+						{$deployments.chain.nativeCurrency.symbol}</span
 					>
 				{:else if $balanceStatus.error}
 					<span class="flex items-center gap-1 text-sm text-destructive">
@@ -250,7 +256,7 @@
 								{/if}
 							</div>
 						</Collapsible.Trigger>
-						{#if hasMultipleAccounts}
+						{#if hasMultipleAccounts && $connection.wallet}
 							<Collapsible.Content>
 								<div
 									class="mt-1 flex flex-col gap-1 rounded-md border border-input bg-muted/50 p-1"
@@ -302,13 +308,15 @@
 				<div class="mt-4 flex flex-col gap-2 border-t border-border px-4 pt-4">
 					<div class="flex flex-col gap-1 rounded-md bg-muted/50 px-3 py-2">
 						<div class="flex items-center justify-between">
-							<span class="text-sm text-muted-foreground">Balance</span>
+							<span class="text-sm text-muted-foreground"
+								>{showSignerBalances ? 'Signer balance' : 'Balance'}</span
+							>
 							{#if $balanceStatus.loading && formattedBalance === null}
 								<Spinner class="h-4 w-4" />
 							{:else if formattedBalance !== null}
 								<span class="font-medium"
 									>{formattedBalance}
-									{deployments.current.chain.nativeCurrency.symbol}</span
+									{$deployments.chain.nativeCurrency.symbol}</span
 								>
 							{:else if $balanceStatus.error}
 								<span class="text-sm text-destructive">Failed to load</span>
@@ -316,6 +324,22 @@
 								<span class="text-sm text-muted-foreground">—</span>
 							{/if}
 						</div>
+
+						{#if showSignerBalances}
+							<div class="flex items-center justify-between">
+								<span class="text-sm text-muted-foreground"
+									>Account balance</span
+								>
+								{#if formattedOwnerBalance !== null}
+									<span class="font-medium"
+										>{formattedOwnerBalance}
+										{$deployments.chain.nativeCurrency.symbol}</span
+									>
+								{:else}
+									<Spinner class="h-4 w-4" />
+								{/if}
+							</div>
+						{/if}
 
 						{#if $balanceStatus.error}
 							<div class="flex items-center justify-between">
@@ -339,7 +363,7 @@
 							</div>
 						{/if}
 
-						{#if hasFaucetLink && $balance.step === 'Loaded' && $balance.value === 0n}
+						{#if hasFaucet && $balance.step === 'Loaded' && $balance.value === 0n}
 							<FaucetButton />
 						{/if}
 					</div>

@@ -42,8 +42,10 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import {getContext, onMount} from 'svelte';
-	import {route} from '$lib';
+	import {useRoute, useENS} from '$lib/core/capabilities';
+	import {createENSNameStore} from './ens';
+	import {createCopyToClipboard} from '$lib/core/ui/clipboard/copy-to-clipboard';
+	import {truncateHex} from '$lib/core/utils/format';
 	import {
 		getBlockExplorerAddressUrl,
 		hasBlockExplorer,
@@ -63,46 +65,30 @@
 		...restProps
 	}: AddressProps = $props();
 
-	// Get ENS context if available - component works without it
-	const ensContext = getContext<
-		{fetchENS: (address: `0x${string}`) => Promise<string | null>} | undefined
-	>('ens');
+	// Ambient capabilities. `route` always resolves (falls back to base-path
+	// resolution when unprovided), so it is safe to call directly. ENS is
+	// optional; the store is inert when the capability is unprovided.
+	const route = useRoute();
+	const ensService = useENS();
+	const clipboard = createCopyToClipboard();
 
-	let ensName: string | null = $state(null);
-	let loading = $state(false);
-	let copied = $state(false);
-
-	onMount(() => {
-		if (value && ensContext && resolveENS) {
-			loadENS();
-		}
+	// ENS name resolution (fetch + stale-guard + loading) lives in the store.
+	const ens = createENSNameStore(ensService);
+	$effect(() => {
+		ens.setAddress(resolveENS ? value : undefined);
 	});
-
-	async function loadENS() {
-		if (!value || !ensContext) {
-			return;
-		}
-		loading = true;
-		ensName = null;
-		try {
-			ensName = await ensContext.fetchENS(value);
-		} finally {
-			loading = false;
-		}
-	}
+	let ensName = $derived($ens.name);
+	let loading = $derived($ens.loading);
 
 	function formatAddress(addr: string): string {
-		if (!addr) return '';
 		if (truncate === false) return addr;
-		return `${addr.slice(0, 2 + truncate.start)}...${addr.slice(-truncate.end)}`;
+		return truncateHex(addr, truncate);
 	}
 
 	async function copyAddress(event: MouseEvent) {
 		event.stopPropagation();
 		event.preventDefault();
-		await navigator.clipboard.writeText(value);
-		copied = true;
-		setTimeout(() => (copied = false), 1000);
+		await clipboard.copy(value);
 	}
 
 	const displayText = $derived(ensName || formatAddress(value));
@@ -163,7 +149,7 @@
 			onclick={copyAddress}
 			aria-label="Copy address"
 		>
-			{#if copied}
+			{#if $clipboard}
 				<CheckIcon class="size-3 text-green-500" />
 			{:else}
 				<CopyIcon class="size-3" />

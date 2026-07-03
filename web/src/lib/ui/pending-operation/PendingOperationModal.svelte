@@ -1,5 +1,5 @@
 <script lang="ts">
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import {Button} from '$lib/shadcn/ui/button/index.js';
 	import {Badge} from '$lib/shadcn/ui/badge/index.js';
@@ -10,12 +10,15 @@
 	import ConfirmDismissDialog from './ConfirmDismissDialog.svelte';
 	import ConfirmCancelDialog from './ConfirmCancelDialog.svelte';
 	import type {GasPrice} from '$lib/core/connection/gasFee';
-	import type {ExtendedTransactionMetadata} from '$lib/account/AccountData';
-	import deployments from '$lib/deployments';
-	import {ensureCanAfford, InsufficientFundsError} from '$lib/core/transaction';
+	import {
+		deriveMinGasPrice,
+		resubmitOperation,
+		cancelOperation,
+		dismissOperation,
+		wrongAccountMessage,
+	} from './operation-actions';
 
-	const {walletClient, accountData, gasFee, publicClient, balance} =
-		getUserContext();
+	const context = getAppContext();
 
 	// Modal state
 	let showDismissConfirm = $state(false);
@@ -41,24 +44,8 @@
 	// Transaction is final when included or dropped - no confirmation needed for dismiss
 	let isFinal = $derived(status === 'Included' || status === 'Dropped');
 
-	// Get minimum gas price from operation's tracked transaction metadata (for resubmit validation)
-	let minGasPrice = $derived.by(() => {
-		if (!operation) return undefined;
-		const tx = operation.metadata.tx;
-		// gasParameters is nested in the tracked transaction
-		const gasParams = tx.gasParameters as {
-			maxFeePerGas?: bigint;
-			maxPriorityFeePerGas?: bigint;
-			gasPrice?: bigint;
-		};
-		const maxFeePerGas = gasParams?.maxFeePerGas ?? gasParams?.gasPrice;
-		const maxPriorityFeePerGas =
-			gasParams?.maxPriorityFeePerGas ?? gasParams?.gasPrice;
-
-		if (maxFeePerGas === undefined || maxPriorityFeePerGas === undefined)
-			return undefined;
-		return {maxFeePerGas, maxPriorityFeePerGas};
-	});
+	// Minimum gas price for resubmit validation (previous tx's fee).
+	let minGasPrice = $derived(deriveMinGasPrice(operation));
 
 	function handleClose() {
 		pendingOperationModal.close();
@@ -85,10 +72,7 @@
 
 	async function handleDismiss() {
 		if (operationKey) {
-			const currentAccountData = accountData.get();
-			currentAccountData?.removeItem('operations', operationKey, {
-				ignoreMissing: true,
-			});
+			dismissOperation(context, operationKey);
 			handleClose();
 		}
 	}
@@ -100,53 +84,18 @@
 			isSubmitting = true;
 			resubmitError = null;
 
-			const originalTx = operation.metadata.tx;
-
-			// Check balance before resubmitting
-			const txRequest = await ensureCanAfford({
-				publicClient,
-				balance,
-				gasFee,
-				transaction: {
-					account: originalTx.from,
-					to: originalTx.to as `0x${string}`,
-					data: originalTx.data,
-					value: originalTx.value,
-				},
+			const result = await resubmitOperation(context, {
+				operation,
+				operationKey,
+				gasPrice,
 			});
-
-			// Create metadata with operationId to link this resubmit to the existing operation
-			const resubmitMetadata: ExtendedTransactionMetadata = {
-				type: 'unknown',
-				name: 'Resubmit Transaction',
-				data: [],
-				operationId: operationKey,
-			};
-			await walletClient.sendTransaction({
-				...txRequest,
-				chain: deployments.chain, // TODO? tx.chain ?
-				nonce: originalTx.nonce,
-				maxFeePerGas: gasPrice.maxFeePerGas,
-				maxPriorityFeePerGas: gasPrice.maxPriorityFeePerGas,
-				metadata: resubmitMetadata,
-			});
-
-			handleClose();
-		} catch (err: unknown) {
-			if (err instanceof InsufficientFundsError) {
-				// User dismissed the modal - silently cancel
-				return;
+			if (result.status === 'submitted') {
+				handleClose();
+			} else if (result.status === 'wrong-account') {
+				resubmitError = wrongAccountMessage(result.expected);
+			} else if (result.status === 'error') {
+				resubmitError = result.message;
 			}
-			const error = err as {code?: number; message?: string};
-			if (error.code === 4001) {
-				resubmitError = 'Transaction rejected by user';
-			} else if (error.message?.includes('nonce')) {
-				resubmitError =
-					'Nonce conflict - transaction may have already been processed';
-			} else {
-				resubmitError = error.message || 'Failed to resubmit transaction';
-			}
-			console.error(resubmitError);
 		} finally {
 			isSubmitting = false;
 		}
@@ -159,62 +108,13 @@
 			isSubmitting = true;
 			cancelError = null;
 
-			// Get the original gas price from the stored transaction
-			const originalTx = operation.metadata.tx;
-			const gasParams = originalTx.gasParameters as {
-				maxFeePerGas?: bigint;
-				gasPrice?: bigint;
-			};
-			const originalGasPrice =
-				gasParams?.maxFeePerGas ?? gasParams?.gasPrice ?? 0n;
-
-			const gasFeeValue = $gasFee;
-			const fastPrice =
-				gasFeeValue.step === 'Loaded' ? gasFeeValue.fast.maxFeePerGas : 0n;
-
-			// Use higher of fast price or original + 1
-			const cancelGasPrice =
-				originalGasPrice >= fastPrice ? originalGasPrice + 1n : fastPrice;
-
-			// Check balance before cancelling
-			const txRequest = await ensureCanAfford({
-				publicClient,
-				balance,
-				gasFee,
-				transaction: {
-					account: originalTx.from,
-					to: originalTx.from,
-					value: 0n,
-				},
-			});
-
-			await walletClient.sendTransaction({
-				...txRequest,
-				chain: deployments.chain,
-				nonce: originalTx.nonce,
-				maxFeePerGas: cancelGasPrice,
-				maxPriorityFeePerGas: cancelGasPrice,
-				metadata: {
-					type: 'unknown',
-					name: 'Cancel Transaction',
-					data: [],
-				},
-			});
-
-			handleClose();
-		} catch (err: unknown) {
-			if (err instanceof InsufficientFundsError) {
-				// User dismissed the modal - silently cancel
-				return;
-			}
-			const error = err as {code?: number; message?: string};
-			if (error.code === 4001) {
-				cancelError = 'Transaction rejected by user';
-			} else if (error.message?.includes('nonce')) {
-				cancelError =
-					'Nonce conflict - transaction may have already been processed';
-			} else {
-				cancelError = error.message || 'Failed to cancel transaction';
+			const result = await cancelOperation(context, {operation});
+			if (result.status === 'submitted') {
+				handleClose();
+			} else if (result.status === 'wrong-account') {
+				cancelError = wrongAccountMessage(result.expected);
+			} else if (result.status === 'error') {
+				cancelError = result.message;
 			}
 		} finally {
 			isSubmitting = false;

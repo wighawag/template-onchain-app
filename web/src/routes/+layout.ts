@@ -1,7 +1,8 @@
 import {get} from 'svelte/store';
 import {onDocumentLoaded} from '$lib/core/utils/web/hooks.js';
 import {dev, version} from '$app/environment';
-import {serviceWorker, params} from '$lib';
+import {PUBLIC_ENABLE_SW_IN_DEV} from '$env/static/public';
+import {serviceWorker} from '$lib';
 
 import {logs} from 'named-logs';
 
@@ -15,14 +16,23 @@ export const ssr = true;
 
 console.log(`VERSION: ${version}`);
 
-if (!dev) {
-	// TODO add option to enable it in dev
+// The service worker is registered in production. In dev it is skipped by
+// default so HMR/reloads are not intercepted by the SW cache; set
+// PUBLIC_ENABLE_SW_IN_DEV=true to opt in when developing the SW itself
+// (push notifications, update flow, offline).
+const enableSwInDev = PUBLIC_ENABLE_SW_IN_DEV === 'true';
+if (!dev || enableSwInDev) {
+	if (dev) {
+		console.warn(
+			`registering service-worker in dev mode (PUBLIC_ENABLE_SW_IN_DEV=true); HMR and reloads may be intercepted by the SW cache`,
+		);
+	}
 	onDocumentLoaded(serviceWorker.register);
 } else {
 	console.warn(
-		`skipping service-worker registration in dev mode, see src/routes/+layout.ts`,
+		`skipping service-worker registration in dev mode, see src/routes/+layout.ts (set PUBLIC_ENABLE_SW_IN_DEV=true to enable)`,
 	);
 }
 
-// add global method to get current state of a svelte store
+// Dev/debug: attaching svelte store get() for console access
 (globalThis as any).get = get;

@@ -7,6 +7,7 @@ import {toast} from 'svelte-sonner';
 import type {TransactionIntent} from '@etherkit/tx-observer';
 import {subscribeToAccountDataMap} from '$lib/core/utils/data/account-data-subscription';
 import {pendingOperationModal} from '$lib/ui/pending-operation';
+import {createConnector} from './connector';
 
 /**
  * Gets a human-readable name for an operation from its metadata
@@ -82,22 +83,29 @@ function getStatusMessage(intent: TransactionIntent): string {
  * Creates a connector that shows toast notifications for operations
  * being added and updated in the account data store.
  */
+interface OperationToastState {
+	toastId: string | number;
+	status: 'pending' | 'success' | 'error';
+	inclusion: string;
+	final: boolean;
+	version: number;
+}
+
 export function createToastConnector(params: {
 	accountData: MultiAccountDataStore;
 }) {
 	const {accountData} = params;
 
-	// Map to track active toast IDs for each operation
-	const operationToasts = new Map<string, string | number>();
-	// Map to track last status type for each operation to prevent duplicate toasts
-	const operationLastStatus = new Map<
-		string,
-		'pending' | 'success' | 'error'
-	>();
-	// Map to track last inclusion state to detect transitions within same status type (e.g. NotFound→Dropped)
-	const operationLastInclusion = new Map<string, string>();
-	// Map to track last final state to detect when Dropped becomes final (Inspect → Dismiss button)
-	const operationLastFinal = new Map<string, boolean>();
+	const operationToastStates = new Map<string, OperationToastState>();
+
+	/**
+	 * Get the next version number for an operation, ensuring unique toast IDs
+	 */
+	function getNextVersion(key: string): number {
+		const state = operationToastStates.get(key);
+		return (state?.version ?? 0) + 1;
+	}
+
 	function deleteOperation(key: string) {
 		const currentAccountData = accountData.get();
 		if (currentAccountData) {
@@ -117,22 +125,17 @@ export function createToastConnector(params: {
 		pendingOperationModal.open(key, operation);
 	}
 
-	// Show an error toast (extracted for reuse)
-	// Note: Previous toast dismissal is handled by showToast before calling this
-	function showErrorToast(key: string, operation: OnchainOperation) {
+	function renderErrorToast(
+		key: string,
+		operation: OnchainOperation,
+		toastId: string,
+	) {
 		const operationName = getOperationName(operation);
 		const state = operation.transactionIntent.state;
 		const inclusion = state?.inclusion ?? 'Unknown';
 		const isFinal = !!state?.final;
 		const message = getStatusMessage(operation.transactionIntent);
 
-		// Use a unique toast ID per inclusion state and final flag to ensure proper updates
-		// Include final flag so button changes from Inspect to Dismiss when Dropped becomes final
-		const toastId = `${key}-${inclusion}-${isFinal ? 'final' : 'pending'}`;
-
-		// For dropped AND final transactions, directly delete without modal
-		// For dropped but NOT final, show modal with Dismiss button
-		// For other error states (NotFound), show Inspect to open modal with more options
 		if (inclusion === 'Dropped' && isFinal) {
 			toast.error(operationName, {
 				description: message,
@@ -154,7 +157,6 @@ export function createToastConnector(params: {
 				},
 			});
 		}
-		operationToasts.set(key, toastId);
 	}
 
 	function showToast(key: string, operation: OnchainOperation) {
@@ -164,89 +166,82 @@ export function createToastConnector(params: {
 		const currentInclusion = operation.transactionIntent.state?.inclusion ?? '';
 		const currentFinal = !!operation.transactionIntent.state?.final;
 
+		const existing = operationToastStates.get(key);
+
 		// Skip if status AND inclusion AND final haven't changed
 		// (prevents duplicate toasts but allows NotFound→Dropped transitions and Dropped non-final→final)
-		const lastStatus = operationLastStatus.get(key);
-		const lastInclusion = operationLastInclusion.get(key);
-		const lastFinal = operationLastFinal.get(key);
-
 		if (
-			lastStatus === statusType &&
-			lastInclusion === currentInclusion &&
-			lastFinal === currentFinal
+			existing?.status === statusType &&
+			existing?.inclusion === currentInclusion &&
+			existing?.final === currentFinal
 		) {
 			return;
 		}
 
-		operationLastStatus.set(key, statusType);
-		operationLastInclusion.set(key, currentInclusion);
-		operationLastFinal.set(key, currentFinal);
+		// Get version to ensure unique toast IDs under rapid state changes
+		const version = getNextVersion(key);
 
-		// Create unique toast ID based on current state
-		// For error states, include inclusion and final flag to ensure proper updates
+		// Create unique toast ID based on current state and version
+		// Version ensures uniqueness even when status/inclusion cycle back to same values
 		const toastId =
 			statusType === 'error'
-				? `${key}-${currentInclusion}-${currentFinal ? 'final' : 'pending'}`
-				: `${key}-${statusType}`;
+				? `${key}-v${version}-${currentInclusion}-${currentFinal ? 'final' : 'pending'}`
+				: `${key}-v${version}-${statusType}`;
 
 		// Dismiss previous toast if ID changed
-		const previousToastId = operationToasts.get(key);
+		const previousToastId = existing?.toastId;
 		if (previousToastId && previousToastId !== toastId) {
 			toast.dismiss(previousToastId);
 		}
+
+		const toastState: OperationToastState = {
+			toastId,
+			status: statusType,
+			inclusion: currentInclusion,
+			final: currentFinal,
+			version,
+		};
 
 		if (statusType === 'pending') {
 			toast.loading(operationName, {
 				description: message,
 				id: toastId,
 			});
-			operationToasts.set(key, toastId);
+			operationToastStates.set(key, toastState);
 		} else if (statusType === 'success') {
 			toast.success(operationName, {
 				description: message,
 				id: toastId,
 			});
-			operationToasts.set(key, toastId);
+			operationToastStates.set(key, toastState);
 		} else if (statusType === 'error') {
-			// Use shared error toast function which handles its own toast ID
-			showErrorToast(key, operation);
+			renderErrorToast(key, operation, toastId);
+			operationToastStates.set(key, toastState);
 		} else {
 			toast.warning(operationName, {
 				description: message,
 				id: toastId,
 			});
-			operationToasts.set(key, toastId);
+			operationToastStates.set(key, toastState);
 		}
 	}
 
 	function handleOperationRemoved(key: string) {
-		const toastId = operationToasts.get(key);
-		if (toastId) {
-			toast.dismiss(toastId);
-			operationToasts.delete(key);
+		const state = operationToastStates.get(key);
+		if (state) {
+			toast.dismiss(state.toastId);
 		}
-		operationLastStatus.delete(key);
-		operationLastInclusion.delete(key);
-		operationLastFinal.delete(key);
+		operationToastStates.delete(key);
 	}
 
 	function clearAllToasts() {
-		for (const toastId of operationToasts.values()) {
-			toast.dismiss(toastId);
+		for (const state of operationToastStates.values()) {
+			toast.dismiss(state.toastId);
 		}
-		operationToasts.clear();
-		operationLastStatus.clear();
-		operationLastInclusion.clear();
-		operationLastFinal.clear();
+		operationToastStates.clear();
 	}
 
-	let stopConnection: (() => void) | undefined;
-
-	function connect() {
-		// Clean up any existing connection
-		stopConnection?.();
-		stopConnection = undefined;
-
+	return createConnector(() => {
 		const unsubscribe = subscribeToAccountDataMap<Schema, 'operations'>({
 			accountData,
 			mapKey: 'operations',
@@ -267,7 +262,7 @@ export function createToastConnector(params: {
 					for (const [key, operation] of Object.entries(operations)) {
 						const statusType = getStatusType(operation.transactionIntent);
 						// Only show toasts for pending operations on initial load
-						if (statusType !== 'success' && !operationToasts.has(key)) {
+						if (statusType !== 'success' && !operationToastStates.has(key)) {
 							showToast(key, operation);
 						}
 					}
@@ -279,15 +274,5 @@ export function createToastConnector(params: {
 			unsubscribe();
 			clearAllToasts();
 		};
-	}
-
-	return {
-		connect: () => {
-			stopConnection = connect();
-		},
-		disconnect: () => {
-			stopConnection?.();
-			stopConnection = undefined;
-		},
-	};
+	});
 }

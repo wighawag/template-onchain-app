@@ -1,6 +1,6 @@
 <script lang="ts">
 	import DefaultHead from '$lib/metadata/DefaultHead.svelte';
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import * as Card from '$lib/shadcn/ui/card';
 	import * as Alert from '$lib/shadcn/ui/alert';
 	import * as Separator from '$lib/shadcn/ui/separator';
@@ -21,18 +21,14 @@
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 	import ContractFunction from '../../contracts/components/ContractFunction.svelte';
+	import {isViewFunction} from '../../contracts/lib/utils';
 	import {
-		getContractFunctions,
-		isViewFunction,
-	} from '../../contracts/lib/utils';
-	import type {AbiFunction} from 'viem';
-	import {
-		findContractByAddress,
 		isContract,
 		formatBytecode,
 		getBlockExplorerAddressUrl,
 		hasBlockExplorer,
 	} from '../lib/utils';
+	import {getAddressDataStore} from '../lib/stores/addressData';
 	import {formatEther} from 'viem';
 
 	interface Props {
@@ -43,22 +39,23 @@
 
 	let {
 		publicClient,
-		walletClient,
+		executor,
+		accountCannotSend,
 		connection,
-		balance: balanceStore,
-		gasFee,
 		deployments,
-	} = getUserContext();
+		balanceCheck,
+	} = getAppContext();
 
-	let balance = $state<bigint>(0n);
-	let nonce = $state<number>(0);
-	let code = $state<`0x${string}`>('0x');
-	let loading = $state(false);
-	let error = $state<string | null>(null);
+	// All fetching / contract resolution lives in the store.
+	const addressData = getAddressDataStore({publicClient});
+	let balance = $derived($addressData.balance);
+	let nonce = $derived($addressData.nonce);
+	let code = $derived($addressData.code);
+	let loading = $derived($addressData.loading);
+	let error = $derived($addressData.error);
+	let contractInfo = $derived($addressData.contractInfo);
+	let contractFunctions = $derived($addressData.contractFunctions);
 
-	// Contract info if found in deployments
-	let contractInfo = $state<ReturnType<typeof findContractByAddress>>(null);
-	let contractFunctions = $state<AbiFunction[]>([]);
 	let viewFunctions = $derived(
 		contractFunctions.filter((f) => isViewFunction(f.stateMutability)),
 	);
@@ -66,58 +63,13 @@
 		contractFunctions.filter((f) => !isViewFunction(f.stateMutability)),
 	);
 
-	// Bytecode expansion
+	// Bytecode expansion (UI-only)
 	let bytecodeExpanded = $state(false);
-
-	async function fetchAddressData() {
-		if (!publicClient || !address) {
-			if (!address) {
-				loading = false;
-			} else {
-				error = 'Public client not available';
-				loading = false;
-			}
-			return;
-		}
-
-		loading = true;
-		error = null;
-
-		try {
-			// Fetch balance
-			balance = await publicClient.getBalance({address});
-
-			// Fetch nonce
-			nonce = await publicClient.getTransactionCount({address});
-
-			// Fetch code
-			code = (await publicClient.getCode({address})) ?? '0x';
-
-			// Check if contract in deployments
-			if (isContract(code)) {
-				contractInfo = findContractByAddress(address);
-				if (contractInfo) {
-					contractFunctions = getContractFunctions(contractInfo.abi);
-				}
-			}
-		} catch (e: any) {
-			error = e.message || 'Failed to fetch address data';
-			console.error('Error fetching address:', e);
-		} finally {
-			loading = false;
-		}
-	}
 
 	// Fetch when address changes
 	$effect(() => {
-		if (address) {
-			fetchAddressData();
-		}
+		addressData.fetch(address);
 	});
-
-	function copyToClipboard(text: string) {
-		navigator.clipboard.writeText(text);
-	}
 </script>
 
 <DefaultHead title={'Address Explorer'} />
@@ -222,7 +174,7 @@
 							</div>
 							<div class="font-mono text-lg">
 								{formatEther(balance)}
-								{deployments.current.chain.nativeCurrency.symbol}
+								{$deployments.chain.nativeCurrency.symbol}
 							</div>
 						</div>
 						<div>
@@ -300,9 +252,9 @@
 												contractAddress={address}
 												{connection}
 												{publicClient}
-												{walletClient}
-												balance={balanceStore}
-												{gasFee}
+												{executor}
+												{accountCannotSend}
+												{balanceCheck}
 											/>
 										{/each}
 									</div>
@@ -331,9 +283,9 @@
 												contractAddress={address}
 												{connection}
 												{publicClient}
-												{walletClient}
-												balance={balanceStore}
-												{gasFee}
+												{executor}
+												{accountCannotSend}
+												{balanceCheck}
 											/>
 										{/each}
 									</div>

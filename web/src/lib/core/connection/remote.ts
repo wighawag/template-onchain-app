@@ -1,47 +1,117 @@
-import deploymentsFromFiles from '$lib/deployments';
-import {createConnection} from '@etherplay/connect';
-import {derived, writable} from 'svelte/store';
+import {deployments} from '$lib/deployments-store';
 import {
-	createPublicClient,
-	createWalletClient,
-	custom,
-	type Chain,
-	type PublicClient,
-	type Transport,
-} from 'viem';
+	createConnection,
+	type ConnectionStore,
+	type UnderlyingEthereumProvider,
+} from '@etherplay/connect';
+import {derived} from 'svelte/store';
+import {createPublicClient, createWalletClient, custom} from 'viem';
 import type {
 	Account,
-	DeploymentsStore,
+	ChainInfo,
 	EstablishedConnection,
 	OptionalSigner,
-	TypedDeployments,
+	TypedPublicClient,
 } from './types';
 
-// TODO allow to specify the expected DeploymentStore type
-export async function establishRemoteConnection(options?: {
+/**
+ * Options controlling how the connection authenticates.
+ *
+ * `walletHost` presence selects the auth target: set => hosted sign-in
+ * ('SignedIn', enabling email/social + a local signer); empty =>
+ * wallet-only ('WalletConnected'). Both cases are unified under the same
+ * store type below so consumers do not branch on it.
+ */
+export type ChainConnectionOptions = {
 	nodeURL?: string;
-	chainInfoNodeURL?: string;
-}): Promise<EstablishedConnection> {
-	const chainInfo = options?.chainInfoNodeURL
-		? {
-				...deploymentsFromFiles.chain,
-				rpcUrls: {
-					...deploymentsFromFiles.chain.rpcUrls,
-					default: {
-						...deploymentsFromFiles.chain.rpcUrls.default,
-						http: [options.chainInfoNodeURL],
-					},
-				},
-			}
-		: deploymentsFromFiles.chain;
+	walletHost?: string;
+};
 
-	const connection = createConnection({
+/**
+ * The connection store: a discriminated union of the two configurations this
+ * app can create (discriminants: `targetStep` / `walletOnly`).
+ *
+ * - `'SignedIn'`: hosted sign-in enabled (walletHost set): email/social login
+ *   plus a local signer.
+ * - `'WalletConnected'`: wallet-only authentication (no walletHost).
+ *
+ * Both variants share the same store VALUE type (`Connection`), so `$connection`
+ * reads are uniform; only methods like `ensureConnected`/`isTargetStepReached`
+ * differ in how far they promise to take the user. Code needing the SignedIn
+ * surface narrows first, e.g. `connection.targetStep === 'SignedIn'`.
+ */
+export type ChainConnection =
+	| ConnectionStore<UnderlyingEthereumProvider, 'SignedIn', false>
+	| ConnectionStore<UnderlyingEthereumProvider, 'WalletConnected', true>;
+
+/**
+ * Create the app's connection store.
+ *
+ * This is the single place the connection is configured. Its return type is
+ * re-exported as `ChainConnection` (see ./types): the union of the two
+ * possible configurations, so enabling hosted sign-in via `walletHost` never
+ * requires touching type definitions elsewhere. `walletHost` is env-derived
+ * (see core/connection/mode).
+ */
+export function createChainConnection(
+	chainInfo: ChainInfo,
+	options?: ChainConnectionOptions,
+): ChainConnection {
+	const {nodeURL, walletHost} = options ?? {};
+
+	// Note: `useCurrentAccount` is intentionally omitted. Setting it would make
+	// the connection auto-pick an account and skip `ChooseWalletAccount`, so a
+	// wallet exposing several accounts would never let the user choose. Omitting
+	// it routes multi-account wallets to the account picker; single-account
+	// wallets still go straight to `WalletConnected` (the confirm step).
+	if (walletHost) {
+		return createConnection({
+			targetStep: 'SignedIn',
+			walletHost,
+			nodeURL,
+			chainInfo,
+			prioritizeWalletProvider: true,
+			autoConnect: true,
+		});
+	}
+
+	// Wallet-only auth: the store targets (and never advances past)
+	// 'WalletConnected'.
+	return createConnection({
 		targetStep: 'WalletConnected',
-		useCurrentAccount: 'whenSingle',
-		nodeURL: options?.nodeURL,
+		nodeURL,
 		chainInfo,
 		prioritizeWalletProvider: true,
 		autoConnect: true,
+	});
+}
+
+export async function establishRemoteConnection(options?: {
+	nodeURL?: string;
+	chainInfoNodeURL?: string;
+	walletHost?: string;
+}): Promise<EstablishedConnection> {
+	// Use deployments.get() for synchronous access
+	const currentDeployments = deployments.get();
+
+	// Cast to ChainInfo to preserve the literal type even when modifying rpcUrls
+	// The structure is the same, just the RPC URL may change
+	const chainInfo: ChainInfo = options?.chainInfoNodeURL
+		? ({
+				...currentDeployments.chain,
+				rpcUrls: {
+					...currentDeployments.chain.rpcUrls,
+					default: {
+						...currentDeployments.chain.rpcUrls.default,
+						http: [options.chainInfoNodeURL],
+					},
+				},
+			} as ChainInfo)
+		: currentDeployments.chain;
+
+	const connection = createChainConnection(chainInfo, {
+		nodeURL: options?.nodeURL,
+		walletHost: options?.walletHost,
 	});
 
 	const walletClient = createWalletClient({
@@ -52,7 +122,7 @@ export async function establishRemoteConnection(options?: {
 	const publicClient = createPublicClient({
 		chain: chainInfo,
 		transport: custom(connection.provider),
-	}) as unknown as PublicClient<Transport, Chain, undefined>; // TODO anyway to reconciliate?
+	}) as TypedPublicClient;
 
 	const account = derived<typeof connection, Account>(
 		connection,
@@ -74,31 +144,12 @@ export async function establishRemoteConnection(options?: {
 		},
 	);
 
-	let lastDeployments: TypedDeployments = deploymentsFromFiles;
-
-	// TODO
-	// we can specify LinkedData type for each contracts
-	const deploymentsStore = writable<TypedDeployments>(
-		lastDeployments,
-		(set) => {
-			// TODO handle redeployment
-			// lastDeployments =
-		},
-	);
-
-	const deployments: DeploymentsStore = {
-		subscribe: deploymentsStore.subscribe,
-		get current() {
-			return lastDeployments;
-		},
-	};
-
 	return {
 		connection,
 		walletClient,
 		publicClient,
 		account,
 		signer,
-		deployments,
+		deployments, // Use the imported HMR-aware store
 	};
 }

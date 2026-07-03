@@ -4,33 +4,22 @@
 	import LoaderIcon from '@lucide/svelte/icons/loader';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import CircleXIcon from '@lucide/svelte/icons/circle-x';
-	import {getUserContext} from '$lib';
-	import {claimFund} from 'faucet-client';
-	import {PUBLIC_FAUCET_LINK} from '$env/static/public';
+	import {getAppContext} from '$lib';
+	import {claimFaucet} from './faucet-actions';
+	import {PUBLIC_FAUCET_LINK, PUBLIC_FAUCET_API} from '$env/static/public';
 
-	const {account, deployments} = getUserContext();
+	const context = getAppContext();
+	const {deployments} = context;
 
 	let status = $state<'idle' | 'pending' | 'success' | 'error'>('idle');
 
 	async function openFaucet() {
-		const address = $account;
-		if (!address) {
-			throw new Error(`no account for faucet`);
-		}
-
 		status = 'pending';
 		try {
-			await claimFund(
-				{
-					faucetUrl: PUBLIC_FAUCET_LINK,
-					chainId: deployments.current.chain.id,
-					address,
-				},
-				{
-					width: 600,
-					height: 700,
-				},
-			);
+			await claimFaucet(context, {
+				faucetApi: PUBLIC_FAUCET_API,
+				faucetLink: PUBLIC_FAUCET_LINK,
+			});
 			status = 'success';
 		} catch {
 			status = 'error';
@@ -56,5 +45,5 @@
 	{:else}
 		<ExternalLinkIcon class="h-4 w-4" />
 	{/if}
-	Get {deployments.current.chain.nativeCurrency.symbol}
+	Get {$deployments.chain.nativeCurrency.symbol}
 </Button>

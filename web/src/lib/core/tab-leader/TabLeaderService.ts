@@ -1,7 +1,12 @@
 import {writable, type Readable} from 'svelte/store';
 import type {TabMessage, TabLeaderService} from './types';
 import {acquireLock, refreshLock, releaseLock} from './storage-lock';
-import {CHANNEL_NAME, HEARTBEAT_INTERVAL, LEADER_TIMEOUT, ELECTION_DEBOUNCE} from './constants';
+import {
+	CHANNEL_NAME,
+	HEARTBEAT_INTERVAL,
+	LEADER_TIMEOUT,
+	ELECTION_DEBOUNCE,
+} from './constants';
 
 export function createTabLeaderService(): TabLeaderService {
 	const tabId = crypto.randomUUID();

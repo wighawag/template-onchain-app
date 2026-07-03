@@ -1,5 +1,5 @@
 import type {PublicClient, Transaction} from 'viem';
-import deploymentsFromFiles from '$lib/deployments';
+import {deployments} from '$lib/deployments-store';
 
 /**
  * Transaction summary structure for the transaction list
@@ -37,7 +37,7 @@ export interface BlockIndexSummary {
  * Get chain ID from deployments
  */
 function getChainId(): number {
-	return deploymentsFromFiles.chain.id;
+	return deployments.get().chain.id;
 }
 
 /**
@@ -268,7 +268,7 @@ function pruneBlockIndex(maxAge: number = 24 * 60 * 60 * 1000): void {
  * Calculate which blocks to fetch based on stored index
  * Only returns blocks known to have transactions
  */
-function calculateBlocksToFetch(
+export function calculateBlocksToFetch(
 	index: Map<number, BlockIndexEntry>,
 	latestBlock: number,
 	targetTxs: number,
@@ -302,7 +302,7 @@ function calculateBlocksToFetch(
 /**
  * Convert a block's transactions to TransactionSummary format
  */
-function blockToTransactionSummaries(block: {
+export function blockToTransactionSummaries(block: {
 	number: bigint;
 	timestamp: bigint | number;
 	transactions: Transaction[];

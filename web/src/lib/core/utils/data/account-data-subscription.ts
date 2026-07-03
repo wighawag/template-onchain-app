@@ -99,6 +99,7 @@ export function subscribeToAccountDataMap<
 					const updatedEvent = `${String(mapKey)}:updated`;
 					const removedEvent = `${String(mapKey)}:removed`;
 
+					// Dynamic event name from generic map key - synqable types don't expose dynamic event subscriptions
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					const unsubFromAdded = (currentAccountData.on as any)(
 						addedEvent,
@@ -110,6 +111,7 @@ export function subscribeToAccountDataMap<
 					// Only subscribe to updated events if handler is provided
 					let unsubFromUpdated: (() => void) | undefined;
 					if (handlers.onUpdated) {
+						// Dynamic event name from generic map key - synqable types don't expose dynamic event subscriptions
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
 						unsubFromUpdated = (currentAccountData.on as any)(
 							updatedEvent,
@@ -119,6 +121,7 @@ export function subscribeToAccountDataMap<
 						);
 					}
 
+					// Dynamic event name from generic map key - synqable types don't expose dynamic event subscriptions
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					const unsubFromRemoved = (currentAccountData.on as any)(
 						removedEvent,

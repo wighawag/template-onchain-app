@@ -25,6 +25,7 @@ export default defineConfig(({mode}) => ({
 	],
 	build: {emptyOutDir: true, minify: false, sourcemap: true},
 	server: {
+		host: '127.0.0.1',
 		// Allow all hosts in dev mode so tunnels work instantly
 		allowedHosts: mode === 'development' ? true : [],
 	},

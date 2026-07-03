@@ -1,4 +1,4 @@
-import type {PublicClient} from 'viem';
+import type {Account, CustomTransport} from 'viem';
 import type {Readable} from 'svelte/store';
 import type {BalanceStore} from '$lib/core/connection/balance';
 import type {GasFeeStore} from '$lib/core/connection/gasFee';
@@ -7,8 +7,12 @@ import type {OfflineStore} from '$lib/core/connection/offline';
 import type {
 	AccountStore,
 	ChainConnection,
+	ChainInfo,
 	DeploymentsStore,
+	TypedPublicClient,
 } from '$lib/core/connection/types';
+import type {ExecutorStore} from '$lib/core/connection/executor';
+import type {ExecutionMode} from '$lib/core/connection/mode';
 import type {TrackedWalletClientAutoPopulate} from '@etherkit/viem-tx-tracker';
 import type {
 	MultiAccountDataStore,
@@ -18,8 +22,21 @@ import type {OnchainStateStore} from '$lib/onchain/state';
 import type {ViewStateStore} from '$lib/view';
 import type {ClockStore} from '$lib/core/clock';
 import type {TransactionObserver} from '@etherkit/tx-observer';
+import type {BalanceCheckStore} from '$lib/core/transaction/balance-check-store';
+import type {AccountCannotSendStore} from '$lib/core/transaction/account-cannot-send-store';
+import type {ErrorDetailsStore} from '$lib/core/transaction/error-details-store';
 
-export type WalletClient = TrackedWalletClientAutoPopulate<TransactionMetadata>;
+/**
+ * TrackedWalletClient with chain info from deployments.
+ * This allows writeContract calls to have optional `chain` parameter
+ * since the client already has a chain associated.
+ */
+export type WalletClient = TrackedWalletClientAutoPopulate<
+	TransactionMetadata,
+	CustomTransport,
+	ChainInfo,
+	Account | undefined
+>;
 
 export type Clock = ClockStore;
 
@@ -33,7 +50,15 @@ export type TxObserverDebugStore = Readable<TxObserverDebugState>;
 
 export type Context = {
 	gasFee: GasFeeStore;
+	/** Balance of the spending address (executor: wallet/owner or local signer). */
 	balance: BalanceStore;
+	/**
+	 * Balance of the authenticated account (wallet/owner). In wallet mode owner
+	 * and spender are the same account, so this is the SAME store instance as
+	 * `balance` (subscribing to both never polls twice); in signer mode it is a
+	 * separate poller for the owner (while `balance` follows the signer).
+	 */
+	ownerBalance: BalanceStore;
 	rpcHealth: RpcHealthStore;
 	offline: OfflineStore;
 	connection: ChainConnection;
@@ -42,7 +67,20 @@ export type Context = {
 	 * Supports optional `metadata` field on writeContract/sendTransaction for tracking.
 	 */
 	walletClient: WalletClient;
-	publicClient: PublicClient;
+	/**
+	 * Mode-agnostic transaction executor (wallet account vs local signer).
+	 * Prefer this over `walletClient` for sending transactions: it resolves the
+	 * correct `from` address and client, and reports when the connected account
+	 * cannot send under the configured execution mode.
+	 */
+	executor: ExecutorStore;
+	/** Configured execution mode ('wallet' or 'signer'). */
+	executionMode: ExecutionMode;
+	/** Notice shown when the connected account cannot send in the current mode. */
+	accountCannotSend: AccountCannotSendStore;
+	/** Full transaction-error text shown on demand (the toast shows a summary). */
+	errorDetails: ErrorDetailsStore;
+	publicClient: TypedPublicClient;
 	account: AccountStore;
 	deployments: DeploymentsStore;
 	accountData: MultiAccountDataStore;
@@ -51,4 +89,5 @@ export type Context = {
 	clock: Clock;
 	txObserver: TransactionObserver;
 	txObserverDebug: TxObserverDebugStore;
+	balanceCheck: BalanceCheckStore;
 };

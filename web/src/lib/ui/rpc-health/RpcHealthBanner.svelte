@@ -1,9 +1,9 @@
 <script lang="ts">
-	import {getUserContext} from '$lib';
+	import {getAppContext} from '$lib';
 	import Button from '$lib/shadcn/ui/button/button.svelte';
 	import WifiOffIcon from '@lucide/svelte/icons/wifi-off';
 
-	const {connection, rpcHealth, offline} = getUserContext();
+	const {connection, rpcHealth, offline} = getAppContext();
 
 	let isConnected = $derived(connection.isTargetStepReached($connection));
 

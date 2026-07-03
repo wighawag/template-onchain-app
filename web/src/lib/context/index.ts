@@ -1,8 +1,10 @@
 import type {Context, TxObserverDebugState} from './types.js';
-import {writable} from 'svelte/store';
+import {writable, derived} from 'svelte/store';
+import {createWalletClient, custom, http} from 'viem';
+import {privateKeyToAccount} from 'viem/accounts';
 import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
-import {createBalanceStore} from '$lib/core/connection/balance.js';
+import {createBalanceStore} from '$lib/core/connection/balance';
 import {createGasFeeStore} from '$lib/core/connection/gasFee';
 import {createRpcHealthStore} from '$lib/core/connection/rpcHealth';
 import {createOfflineStore} from '$lib/core/connection/offline';
@@ -19,35 +21,59 @@ import {
 } from '$lib/account/connectors.js';
 import {createToastConnector} from '$lib/account/toastConnector.js';
 import {initBurnerWallet} from '@etherkit/burner-wallet';
-import {PUBLIC_NODE_URL, PUBLIC_USE_BURNER_WALLET} from '$env/static/public';
-
-/** How often the tx-observer processes pending transactions when this tab is leader */
-const TX_OBSERVER_PROCESS_INTERVAL = 2000;
+import {
+	PUBLIC_NODE_URL,
+	PUBLIC_USE_BURNER_WALLET,
+	PUBLIC_WALLET_HOST,
+	PUBLIC_EXECUTION_MODE,
+} from '$env/static/public';
+import {burnerOverride} from '$lib';
+import {resolveBurnerWallet} from './burner.js';
+import {resolveConnectionMode} from '$lib/core/connection/mode.js';
+import {createExecutor} from '$lib/core/connection/executor.js';
+import {createAccountCannotSendStore} from '$lib/core/transaction/account-cannot-send-store.js';
+import {createErrorDetailsStore} from '$lib/core/transaction/error-details-store.js';
+import type {AugmentedChainInfo} from '$lib/core/connection/types.js';
+import {createBalanceCheckStore} from '$lib/core/transaction/balance-check-store.js';
+import {resolveAppConfig} from './config.js';
+import {startTxObserverLoop} from '$lib/core/tx-observer';
+import {IMPERSONATE_ADDRESSES} from '$lib/dev-accounts.js';
 
 export async function createContext(): Promise<{
 	context: Context;
 	start: () => () => void;
 }> {
-	const window = globalThis as any;
-
 	let cleanupBurnerWallet: (() => void) | undefined;
 
-	// TODO use chainInfo if no piblicNodeUrl ?
-	if (
-		PUBLIC_USE_BURNER_WALLET &&
-		(PUBLIC_USE_BURNER_WALLET.startsWith('http') || PUBLIC_NODE_URL)
-	) {
+	const burner = resolveBurnerWallet(
+		burnerOverride,
+		PUBLIC_USE_BURNER_WALLET,
+		PUBLIC_NODE_URL,
+	);
+	// An explicit `?burner=true` that cannot be honoured surfaces as an error
+	// (rendered by AsyncContext's catch block) rather than being silently ignored.
+	if (burner.use === false && burner.error) {
+		throw new Error(burner.error);
+	}
+	if (burner.use) {
 		const {cleanup} = initBurnerWallet({
-			nodeURL: PUBLIC_USE_BURNER_WALLET.startsWith('http')
-				? PUBLIC_USE_BURNER_WALLET
-				: PUBLIC_NODE_URL,
-			impersonateAddresses: [
-				'0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
-				'0xF78cD306b23031dE9E739A5BcDE61764e82AD5eF',
-			],
+			nodeURL: burner.nodeURL,
+			impersonateAddresses: [...IMPERSONATE_ADDRESSES],
 		});
 		cleanupBurnerWallet = cleanup;
 	}
+
+	// Resolve the connection + execution mode from env. The one illegal
+	// combination (signer execution without hosted sign-in) fails fast here and
+	// is surfaced by AsyncContext's error screen.
+	const modeResolution = resolveConnectionMode(
+		PUBLIC_WALLET_HOST,
+		PUBLIC_EXECUTION_MODE,
+	);
+	if (!modeResolution.ok) {
+		throw new Error(modeResolution.error);
+	}
+	const {walletHost, executionMode} = modeResolution.mode;
 
 	// ----------------------------------------------------------------------------
 	// CONNECTION
@@ -61,16 +87,22 @@ export async function createContext(): Promise<{
 		deployments,
 	} = await establishRemoteConnection({
 		nodeURL: PUBLIC_NODE_URL,
+		walletHost,
 		// chainInfoNodeURL
 	});
 
-	window.connection = connection;
-	window.publicClient = publicClient;
-	window.deployments = deployments;
+	// ----------------------------------------------------------------------------
+	// CHAIN CONFIGURATION
+	// ----------------------------------------------------------------------------
+
+	// Resolve chain-specific configuration (finality, block time, intervals)
+	// from the chain's optional properties + defaults.
+	const chain = deployments.get().chain as AugmentedChainInfo;
+	const {finality, txObserverProcessInterval, maxMessages} =
+		resolveAppConfig(chain);
 
 	// Reactive clock store that updates every second for smooth "time ago" displays
 	const clock = createClockStore();
-	window.clock = clock;
 
 	// ----------------------------------------------------------------------------
 	// TRACKED WALLET CLIENT
@@ -79,43 +111,84 @@ export async function createContext(): Promise<{
 	// Wrap the raw wallet client with tracking capabilities
 	// This is exposed as `walletClient` for drop-in compatibility
 	// Use `walletClient.walletClient` to access the underlying viem WalletClient if needed
-	const walletClient = createTrackedWalletClient({
+	const trackerBuilder = createTrackedWalletClient({
 		populateMetadata: true,
 		clock: () => clock.now(),
-	}).using(rawWalletClient, publicClient);
-	window.walletClient = walletClient;
+	});
+	const walletClient = trackerBuilder.using(rawWalletClient, publicClient);
+
+	// ----------------------------------------------------------------------------
+	// TRANSACTION EXECUTOR
+	// ----------------------------------------------------------------------------
+	// Mode-agnostic front for sending transactions (wallet account vs local
+	// signer). Call sites use this instead of the wallet client + account address.
+	//
+	// The signer-mode client is built HERE (not inside the executor) because this
+	// is where its concrete pieces live: the chain from deployments, the node RPC
+	// URL, and the same tracker config as `walletClient` (so signer-mode
+	// transactions get identical metadata/observation wiring). The executor only
+	// sees the finished tracked client, keeping it free of construction concerns.
+	const executor = createExecutor({
+		connection,
+		walletClient,
+		executionMode,
+		buildSignerClient: (privateKey) => {
+			const account = privateKeyToAccount(privateKey);
+			const raw = createWalletClient({
+				account,
+				chain: deployments.get().chain,
+				// Broadcast over the node RPC when configured (a local signer does not
+				// need the wallet provider); fall back to the connection provider.
+				transport: PUBLIC_NODE_URL
+					? http(PUBLIC_NODE_URL)
+					: custom(connection.provider),
+			});
+			return {client: trackerBuilder.using(raw, publicClient), account};
+		},
+	});
+
+	const accountCannotSend = createAccountCannotSendStore();
+	const errorDetails = createErrorDetailsStore();
+
+	// The address that actually pays for transactions: the wallet/owner in wallet
+	// mode, the local signer in signer mode. Balance checks and the top-bar
+	// balance follow this (so the shown/gating balance matches the sender).
+	const executorAddress = derived(executor, ($executor) =>
+		$executor.status === 'ready' ? $executor.address : undefined,
+	);
 
 	// ----------------------------------------------------------------------------
 
-	const config = {
-		maxMessages: 10,
-	};
+	const config = {maxMessages};
 
 	const onchainState = createOnchainState({
 		publicClient,
-		deployments: deployments.current,
+		deployments: deployments.get(),
 		config,
 	});
-	window.onchainState = onchainState;
 
 	const accountData = createAccountData({
 		accountStore: account,
-		deployments: deployments.current,
+		deployments: deployments.get(),
 		clock,
 	});
-	window.accountData = accountData;
 
 	const txObserver = createTransactionObserver({
-		finality: 12, //TODO
+		finality,
 		provider: connection.provider,
+		// Injected wallets (e.g. MetaMask) can keep serving a stale pending view
+		// from eth_getTransactionByHash (blockNumber null) for an already-mined
+		// tx, while eth_getTransactionReceipt returns the real receipt. Fetch the
+		// receipt directly in that case so inclusion is detected through the
+		// user's own wallet-configured node (no dedicated/hardcoded RPC needed).
+		alwaysFetchReceipt: true,
 	});
-	window.txObserver = txObserver;
 
 	const tabLeader = createTabLeaderService();
-	window.tabLeader = tabLeader;
 
 	const trackedWalletConnector = createTrackedWalletConnector({
 		walletClient,
+		executor,
 		accountData,
 	});
 
@@ -137,30 +210,40 @@ export async function createContext(): Promise<{
 	// BALANCE AND COSTS
 	// ----------------------------------------------------------------------------
 
-	const balance = createBalanceStore({publicClient, account});
-	window.balance = balance;
+	// Spending balance: the address that pays for transactions (executor).
+	const balance = createBalanceStore({
+		publicClient,
+		account: executorAddress,
+	});
 
-	// ----------------------------------------------------------------------------
+	// Owner balance: the authenticated account (wallet/owner). In signer mode it
+	// is a distinct account (whose funds can top up the signer), so it gets its
+	// own poller. In wallet mode owner and spender are the same account, so it IS
+	// the same store instance: consumers can subscribe to both without causing a
+	// second poll for the same address.
+	const ownerBalance =
+		executionMode === 'signer'
+			? createBalanceStore({publicClient, account})
+			: balance;
 
-	// TODO use deployment store ?
 	const gasFee = createGasFeeStore({
 		publicClient: publicClient,
-		deployments: deployments.current,
 	});
-	window.gasFee = gasFee;
 
 	const rpcHealth = createRpcHealthStore({balance, gasFee});
-	window.rpcHealth = rpcHealth;
 	const offline = createOfflineStore();
-	window.offline = offline;
-	// ----------------------------------------------------------------------------
 
 	const viewState = createViewState({
 		onchainState,
 		operations: accountData.watchField('operations'),
 		config,
 	});
-	window.viewState = viewState;
+
+	const balanceCheck = createBalanceCheckStore({
+		publicClient,
+		balance,
+		gasFee,
+	});
 
 	// Debug store for tx-observer processing stats
 	const txObserverDebug = writable<TxObserverDebugState>({
@@ -169,24 +252,37 @@ export async function createContext(): Promise<{
 		isLeader: false,
 	});
 
+	const context: Context = {
+		gasFee,
+		balance,
+		ownerBalance,
+		rpcHealth,
+		offline,
+		connection,
+		walletClient,
+		executor,
+		executionMode,
+		accountCannotSend,
+		errorDetails,
+		publicClient,
+		account,
+		deployments,
+		accountData,
+		onchainState,
+		viewState,
+		clock,
+		txObserver,
+		txObserverDebug: {subscribe: txObserverDebug.subscribe},
+		balanceCheck,
+	};
+
+	// Dev/debug: expose the whole context on globalThis for console access
+	// (e.g. `context.balance`). Self-maintaining: new context members appear
+	// automatically. Delete this line if you don't want it.
+	(globalThis as any).context = context;
+
 	return {
-		context: {
-			gasFee,
-			balance,
-			rpcHealth,
-			offline,
-			connection,
-			walletClient,
-			publicClient,
-			account,
-			deployments,
-			accountData,
-			onchainState,
-			viewState,
-			clock,
-			txObserver,
-			txObserverDebug: {subscribe: txObserverDebug.subscribe},
-		},
+		context,
 		start: () => {
 			// we trigger it so it is always availabe
 			const unsubscribeFromBalance = balance.subscribe(() => {});
@@ -195,34 +291,20 @@ export async function createContext(): Promise<{
 
 			tabLeader.start();
 
-			let txObserverInterval: ReturnType<typeof setInterval> | undefined;
-
-			const unsubscribeFromLeader = tabLeader.isLeader.subscribe((isLeader) => {
-				if (isLeader) {
-					// Became leader: start processing immediately
+			const stopTxObserverLoop = startTxObserverLoop({
+				tabLeader,
+				txObserver,
+				intervalMs: txObserverProcessInterval,
+				// App concern: record debug stats. The core loop stays free of any
+				// app-specific state shape.
+				onProcess: () =>
 					txObserverDebug.update((state) => ({
 						...state,
-						isLeader: true,
 						processCount: state.processCount + 1,
 						lastProcessTime: Date.now(),
-					}));
-					txObserver.process();
-					txObserverInterval = setInterval(() => {
-						txObserverDebug.update((state) => ({
-							...state,
-							processCount: state.processCount + 1,
-							lastProcessTime: Date.now(),
-						}));
-						txObserver.process();
-					}, TX_OBSERVER_PROCESS_INTERVAL);
-				} else {
-					// Lost leadership: stop processing
-					txObserverDebug.update((state) => ({...state, isLeader: false}));
-					if (txObserverInterval !== undefined) {
-						clearInterval(txObserverInterval);
-						txObserverInterval = undefined;
-					}
-				}
+					})),
+				onLeadershipChange: (isLeader) =>
+					txObserverDebug.update((state) => ({...state, isLeader})),
 			});
 
 			trackedWalletConnector.connect();
@@ -236,10 +318,7 @@ export async function createContext(): Promise<{
 				txObserverConnector.disconnect();
 				toastConnector.disconnect();
 				onchainStateRefreshConnector.disconnect();
-				unsubscribeFromLeader();
-				if (txObserverInterval !== undefined) {
-					clearInterval(txObserverInterval);
-				}
+				stopTxObserverLoop();
 				tabLeader.stop();
 				unsubscribeFromBalance();
 				unsubscribeFromGasFee();

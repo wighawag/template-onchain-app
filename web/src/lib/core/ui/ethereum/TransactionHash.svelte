@@ -40,7 +40,9 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import ExternalLinkIcon from '@lucide/svelte/icons/external-link';
-	import {route} from '$lib';
+	import {useRoute} from '$lib/core/capabilities';
+	import {createCopyToClipboard} from '$lib/core/ui/clipboard/copy-to-clipboard';
+	import {truncateHex} from '$lib/core/utils/format';
 	import {
 		getBlockExplorerTxUrl,
 		hasBlockExplorer,
@@ -59,20 +61,19 @@
 		...restProps
 	}: TransactionHashProps = $props();
 
-	let copied = $state(false);
+	// Ambient route resolver - falls back to base-path resolution when unprovided.
+	const route = useRoute();
+	const clipboard = createCopyToClipboard();
 
 	function formatHash(hash: string): string {
-		if (!hash) return '';
 		if (truncate === false) return hash;
-		return `${hash.slice(0, 2 + truncate.start)}...${hash.slice(-truncate.end)}`;
+		return truncateHex(hash, truncate);
 	}
 
 	async function copyHash(event: MouseEvent) {
 		event.stopPropagation();
 		event.preventDefault();
-		await navigator.clipboard.writeText(value);
-		copied = true;
-		setTimeout(() => (copied = false), 1000);
+		await clipboard.copy(value);
 	}
 
 	const displayText = $derived(formatHash(value));
@@ -129,7 +130,7 @@
 			onclick={copyHash}
 			aria-label="Copy transaction hash"
 		>
-			{#if copied}
+			{#if $clipboard}
 				<CheckIcon class="size-3 text-green-500" />
 			{:else}
 				<CopyIcon class="size-3" />
