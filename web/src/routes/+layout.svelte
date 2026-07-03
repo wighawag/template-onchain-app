@@ -33,7 +33,7 @@
 	<AcrossPages />
 </AsyncContext>
 
-<Toaster position="bottom-right" richColors />
+<Toaster position="bottom-right" richColors closeButton />
 
 <VersionAndInstallNotfications
 	{serviceWorker}

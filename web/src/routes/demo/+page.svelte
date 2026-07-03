@@ -14,7 +14,8 @@
 	import {formatRelativeTime, getStaleMessage} from './lib/staleness';
 
 	const context = getAppContext();
-	const {onchainState, viewState, clock} = context;
+	const {onchainState, viewState, clock, accountCannotSend, errorDetails} =
+		context;
 
 	const viewStatus = viewState.status;
 
@@ -35,8 +36,18 @@
 			const result = await submitGreeting(context, greetingInput);
 			if (result.status === 'submitted') {
 				greetingInput = '';
+			} else if (result.status === 'cannot-send') {
+				accountCannotSend.show();
 			} else if (result.status === 'error') {
-				toast.error('Transaction failed', {description: result.message});
+				toast.error('Transaction failed', {
+					description: result.message,
+					duration: 8000,
+					closeButton: true,
+					action: {
+						label: 'Details',
+						onClick: () => errorDetails.show(result.details),
+					},
+				});
 			}
 		} finally {
 			isSubmitting = false;

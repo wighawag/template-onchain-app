@@ -3,8 +3,9 @@ import type {
 	AnyConnectionStore,
 	UnderlyingEthereumProvider,
 } from '@etherplay/connect';
-import type {WalletClient} from '$lib/context/types';
+import {get} from 'svelte/store';
 import type {BalanceCheckStore} from '$lib/core/transaction/balance-check-store';
+import type {ExecutorStore} from '$lib/core/connection/executor';
 import {InsufficientFundsError} from '$lib/core/transaction';
 import {convertInputValues} from './utils';
 
@@ -39,17 +40,20 @@ export async function readContractValue(params: {
 
 export type ExecuteContractWriteResult =
 	| {status: 'submitted'; transactionHash: `0x${string}`}
-	| {status: 'cancelled'};
+	| {status: 'cancelled'}
+	| {status: 'cannot-send'};
 
 /**
  * Execute a state-changing function on an arbitrary contract.
  *
  * Owns the connect + balance-check + write flow. Returns `cancelled` when the
- * user dismisses the insufficient-funds modal; throws on any other failure.
+ * user dismisses the insufficient-funds modal, `cannot-send` when the connected
+ * account cannot send under the configured execution mode; throws on any other
+ * failure.
  */
 export async function executeContractWrite(params: {
 	connection: AnyConnectionStore<UnderlyingEthereumProvider>;
-	walletClient: WalletClient;
+	executor: ExecutorStore;
 	balanceCheck: BalanceCheckStore;
 	abiItem: AbiFunction;
 	contractAddress: string;
@@ -57,7 +61,7 @@ export async function executeContractWrite(params: {
 }): Promise<ExecuteContractWriteResult> {
 	const {
 		connection,
-		walletClient,
+		executor,
 		balanceCheck,
 		abiItem,
 		contractAddress,
@@ -66,7 +70,11 @@ export async function executeContractWrite(params: {
 
 	const args = convertInputValues(abiItem.inputs, inputValues);
 
-	const currentConnection = await connection.ensureConnected();
+	await connection.ensureConnected();
+
+	const $executor = get(executor);
+	if ($executor.status === 'cannot-send') return {status: 'cannot-send'};
+	if ($executor.status !== 'ready') return {status: 'cancelled'};
 
 	try {
 		const contractRequest = await balanceCheck.ensureCanAfford({
@@ -75,11 +83,11 @@ export async function executeContractWrite(params: {
 				abi: [abiItem],
 				functionName: abiItem.name,
 				args: args as any,
-				account: currentConnection.account.address,
+				account: $executor.account,
 			},
 		});
 
-		const hash = await walletClient.writeContract(contractRequest);
+		const hash = await $executor.client.writeContract(contractRequest);
 		return {status: 'submitted', transactionHash: hash};
 	} catch (e) {
 		if (e instanceof InsufficientFundsError) {

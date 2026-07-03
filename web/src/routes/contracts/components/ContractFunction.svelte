@@ -20,7 +20,8 @@
 		UnderlyingEthereumProvider,
 	} from '@etherplay/connect';
 	import {route} from '$lib';
-	import type {WalletClient} from '$lib/context/types';
+	import type {ExecutorStore} from '$lib/core/connection/executor';
+	import type {AccountCannotSendStore} from '$lib/core/transaction/account-cannot-send-store';
 	import TransactionHash from '$lib/core/ui/ethereum/TransactionHash.svelte';
 	import type {BalanceCheckStore} from '$lib/core/transaction/balance-check-store';
 
@@ -30,7 +31,8 @@
 		contractAddress: string;
 		connection: AnyConnectionStore<UnderlyingEthereumProvider>;
 		publicClient: PublicClient;
-		walletClient: WalletClient;
+		executor: ExecutorStore;
+		accountCannotSend: AccountCannotSendStore;
 		balanceCheck: BalanceCheckStore;
 	}
 
@@ -40,7 +42,8 @@
 		contractAddress,
 		connection,
 		publicClient,
-		walletClient,
+		executor,
+		accountCannotSend,
 		balanceCheck,
 	}: Props = $props();
 
@@ -92,7 +95,7 @@
 		try {
 			const outcome = await executeContractWrite({
 				connection,
-				walletClient,
+				executor,
 				balanceCheck,
 				abiItem,
 				contractAddress,
@@ -102,6 +105,8 @@
 				transactionHash = outcome.transactionHash;
 				result = null;
 				error = null;
+			} else if (outcome.status === 'cannot-send') {
+				accountCannotSend.show();
 			}
 		} catch (e: any) {
 			error = e.message || 'Failed to execute transaction';

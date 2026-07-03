@@ -3,16 +3,21 @@ import {
 	InsufficientFundsError,
 	isUserRejectionError,
 } from '$lib/core/transaction';
+import {
+	txErrorDetails,
+	txErrorSummary,
+} from '$lib/core/transaction/tx-error-summary';
 import type {Context} from '$lib/context/types';
 
 export type SetGreetingResult =
 	| {status: 'submitted'}
 	| {status: 'cancelled'}
-	| {status: 'error'; message: string};
+	| {status: 'cannot-send'}
+	| {status: 'error'; message: string; details: string};
 
 export type SetGreetingDeps = Pick<
 	Context,
-	'connection' | 'walletClient' | 'deployments' | 'balanceCheck'
+	'connection' | 'executor' | 'deployments' | 'balanceCheck'
 >;
 
 /**
@@ -23,20 +28,26 @@ export type SetGreetingDeps = Pick<
  * - `submitted`: the tx was sent.
  * - `cancelled`: the user dismissed the funds modal or rejected in-wallet
  *   (no error should be shown).
+ * - `cannot-send`: the connected account cannot send under the configured
+ *   execution mode (e.g. an email/social account in wallet execution mode).
  * - `error`: a real failure, with a user-facing message.
  */
 export async function setGreeting(
 	deps: SetGreetingDeps,
 	message: string,
 ): Promise<SetGreetingResult> {
-	const {connection, walletClient, deployments, balanceCheck} = deps;
+	const {connection, executor, deployments, balanceCheck} = deps;
 
 	const trimmed = message.trim();
 	if (!trimmed) return {status: 'cancelled'};
 
 	try {
-		const currentConnection = await connection.ensureConnected();
+		await connection.ensureConnected();
 		const $deployments = get(deployments);
+
+		const $executor = get(executor);
+		if ($executor.status === 'cannot-send') return {status: 'cannot-send'};
+		if ($executor.status !== 'ready') return {status: 'cancelled'};
 
 		const contractRequest = await balanceCheck.ensureCanAfford({
 			contract: {
@@ -44,21 +55,25 @@ export async function setGreeting(
 				abi: $deployments.contracts.GreetingsRegistry.abi,
 				functionName: 'setMessage',
 				args: [trimmed],
-				account: currentConnection.account.address,
+				account: $executor.account,
 			},
 		});
 
-		await walletClient.writeContract(contractRequest);
+		await $executor.client.writeContract(contractRequest);
 		return {status: 'submitted'};
 	} catch (error) {
-		if (error instanceof InsufficientFundsError || isUserRejectionError(error)) {
+		if (
+			error instanceof InsufficientFundsError ||
+			isUserRejectionError(error)
+		) {
 			// User dismissed the funds modal or rejected in their wallet.
 			return {status: 'cancelled'};
 		}
 		console.error('Failed to set greeting:', error);
 		return {
 			status: 'error',
-			message: error instanceof Error ? error.message : 'Unknown error',
+			message: txErrorSummary(error),
+			details: txErrorDetails(error),
 		};
 	}
 }

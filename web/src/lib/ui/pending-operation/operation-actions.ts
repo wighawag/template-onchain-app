@@ -6,6 +6,7 @@ import type {
 } from '$lib/account/AccountData';
 import {InsufficientFundsError} from '$lib/core/transaction';
 import type {Context} from '$lib/context/types';
+import type {ExecutorState} from '$lib/core/connection/executor';
 
 type GasParameters = {
 	maxFeePerGas?: bigint;
@@ -75,12 +76,59 @@ export function toReplacementErrorMessage(
 export type ReplacementResult =
 	| {status: 'submitted'}
 	| {status: 'cancelled'}
+	/**
+	 * The current executor account differs from the account that sent the
+	 * original tx. Replacements reuse the original nonce, and nonces are
+	 * per-account, so sending from another account would not replace anything.
+	 */
+	| {status: 'wrong-account'; expected: `0x${string}`}
 	| {status: 'error'; message: string};
 
-type ResubmitDeps = Pick<
-	Context,
-	'walletClient' | 'deployments' | 'balanceCheck'
->;
+/** User-facing explanation for the `wrong-account` replacement result. */
+export function wrongAccountMessage(expected: `0x${string}`): string {
+	return (
+		'This transaction was sent from a different account ' +
+		`(${expected.slice(0, 6)}…${expected.slice(-4)}). ` +
+		'Reconnect with that account to replace or cancel it.'
+	);
+}
+
+/**
+ * A replacement (resubmit/cancel) must be sent from the same account as the
+ * original tx. Returns the ready executor when it matches, or a
+ * ReplacementResult to bail out with.
+ *
+ * A not-ready executor is reported as an `error` (not `cancelled`): the user
+ * explicitly clicked resubmit/cancel, so silently doing nothing would look
+ * like a dead button. `cancelled` stays reserved for deliberate dismissal.
+ */
+function requireSameAccountExecutor(
+	executor: Context['executor'],
+	originalFrom: `0x${string}`,
+):
+	| {ok: true; executor: Extract<ExecutorState, {status: 'ready'}>}
+	| {ok: false; result: ReplacementResult} {
+	const $executor = get(executor);
+	if ($executor.status !== 'ready') {
+		return {
+			ok: false,
+			result: {
+				status: 'error',
+				message:
+					'No account is ready to send transactions. Reconnect your wallet and try again.',
+			},
+		};
+	}
+	if ($executor.address.toLowerCase() !== originalFrom.toLowerCase()) {
+		return {
+			ok: false,
+			result: {status: 'wrong-account', expected: originalFrom},
+		};
+	}
+	return {ok: true, executor: $executor};
+}
+
+type ResubmitDeps = Pick<Context, 'executor' | 'deployments' | 'balanceCheck'>;
 
 /**
  * Resubmit a stuck operation with a new gas price, reusing the original nonce
@@ -94,15 +142,19 @@ export async function resubmitOperation(
 		gasPrice: GasPrice;
 	},
 ): Promise<ReplacementResult> {
-	const {walletClient, deployments, balanceCheck} = deps;
+	const {executor, deployments, balanceCheck} = deps;
 	const {operation, operationKey, gasPrice} = params;
 	const $deployments = get(deployments);
 	const originalTx = operation.metadata.tx;
 
+	const guarded = requireSameAccountExecutor(executor, originalTx.from);
+	if (!guarded.ok) return guarded.result;
+	const $executor = guarded.executor;
+
 	try {
 		const txRequest = await balanceCheck.ensureCanAfford({
 			transaction: {
-				account: originalTx.from,
+				account: $executor.account,
 				to: originalTx.to as `0x${string}`,
 				data: originalTx.data,
 				value: originalTx.value,
@@ -123,7 +175,7 @@ export async function resubmitOperation(
 			);
 		}
 
-		await walletClient.sendTransaction({
+		await $executor.client.sendTransaction({
 			...txRequest,
 			chain: $deployments.chain,
 			nonce: originalTx.nonce,
@@ -146,7 +198,7 @@ export async function resubmitOperation(
 
 type CancelDeps = Pick<
 	Context,
-	'walletClient' | 'deployments' | 'balanceCheck' | 'gasFee'
+	'executor' | 'deployments' | 'balanceCheck' | 'gasFee'
 >;
 
 /**
@@ -157,10 +209,14 @@ export async function cancelOperation(
 	deps: CancelDeps,
 	params: {operation: OnchainOperation},
 ): Promise<ReplacementResult> {
-	const {walletClient, deployments, balanceCheck, gasFee} = deps;
+	const {executor, deployments, balanceCheck, gasFee} = deps;
 	const {operation} = params;
 	const $deployments = get(deployments);
 	const originalTx = operation.metadata.tx;
+
+	const guarded = requireSameAccountExecutor(executor, originalTx.from);
+	if (!guarded.ok) return guarded.result;
+	const $executor = guarded.executor;
 
 	try {
 		const gasFeeValue = get(gasFee);
@@ -173,7 +229,7 @@ export async function cancelOperation(
 
 		const txRequest = await balanceCheck.ensureCanAfford({
 			transaction: {
-				account: originalTx.from,
+				account: $executor.account,
 				to: originalTx.from,
 				value: 0n,
 			},
@@ -185,7 +241,7 @@ export async function cancelOperation(
 			);
 		}
 
-		await walletClient.sendTransaction({
+		await $executor.client.sendTransaction({
 			...txRequest,
 			chain: $deployments.chain,
 			nonce: originalTx.nonce,

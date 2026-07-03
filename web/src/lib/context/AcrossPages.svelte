@@ -6,6 +6,8 @@
 	import TxObserverDebugOverlay from '$lib/debug/TxObserverDebugOverlay.svelte';
 
 	import InsufficientFundsModal from '$lib/core/transaction/InsufficientFundsModal.svelte';
+	import AccountCannotSendModal from '$lib/core/transaction/AccountCannotSendModal.svelte';
+	import ErrorDetailsModal from '$lib/core/transaction/ErrorDetailsModal.svelte';
 
 	const {connection} = getAppContext();
 </script>
@@ -22,3 +24,5 @@
 <PendingOperationModal />
 
 <InsufficientFundsModal />
+<AccountCannotSendModal />
+<ErrorDetailsModal />

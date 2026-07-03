@@ -1,5 +1,7 @@
 import type {Context, TxObserverDebugState} from './types.js';
-import {writable} from 'svelte/store';
+import {writable, derived} from 'svelte/store';
+import {createWalletClient, custom, http} from 'viem';
+import {privateKeyToAccount} from 'viem/accounts';
 import {createAccountData} from '$lib/account/AccountData.js';
 import {establishRemoteConnection} from '$lib/core/connection';
 import {createBalanceStore} from '$lib/core/connection/balance';
@@ -19,9 +21,18 @@ import {
 } from '$lib/account/connectors.js';
 import {createToastConnector} from '$lib/account/toastConnector.js';
 import {initBurnerWallet} from '@etherkit/burner-wallet';
-import {PUBLIC_NODE_URL, PUBLIC_USE_BURNER_WALLET} from '$env/static/public';
+import {
+	PUBLIC_NODE_URL,
+	PUBLIC_USE_BURNER_WALLET,
+	PUBLIC_WALLET_HOST,
+	PUBLIC_EXECUTION_MODE,
+} from '$env/static/public';
 import {burnerOverride} from '$lib';
 import {resolveBurnerWallet} from './burner.js';
+import {resolveConnectionMode} from '$lib/core/connection/mode.js';
+import {createExecutor} from '$lib/core/connection/executor.js';
+import {createAccountCannotSendStore} from '$lib/core/transaction/account-cannot-send-store.js';
+import {createErrorDetailsStore} from '$lib/core/transaction/error-details-store.js';
 import type {AugmentedChainInfo} from '$lib/core/connection/types.js';
 import {createBalanceCheckStore} from '$lib/core/transaction/balance-check-store.js';
 import {resolveAppConfig} from './config.js';
@@ -52,6 +63,18 @@ export async function createContext(): Promise<{
 		cleanupBurnerWallet = cleanup;
 	}
 
+	// Resolve the connection + execution mode from env. The one illegal
+	// combination (signer execution without hosted sign-in) fails fast here and
+	// is surfaced by AsyncContext's error screen.
+	const modeResolution = resolveConnectionMode(
+		PUBLIC_WALLET_HOST,
+		PUBLIC_EXECUTION_MODE,
+	);
+	if (!modeResolution.ok) {
+		throw new Error(modeResolution.error);
+	}
+	const {walletHost, executionMode} = modeResolution.mode;
+
 	// ----------------------------------------------------------------------------
 	// CONNECTION
 	// ----------------------------------------------------------------------------
@@ -64,6 +87,7 @@ export async function createContext(): Promise<{
 		deployments,
 	} = await establishRemoteConnection({
 		nodeURL: PUBLIC_NODE_URL,
+		walletHost,
 		// chainInfoNodeURL
 	});
 
@@ -87,10 +111,51 @@ export async function createContext(): Promise<{
 	// Wrap the raw wallet client with tracking capabilities
 	// This is exposed as `walletClient` for drop-in compatibility
 	// Use `walletClient.walletClient` to access the underlying viem WalletClient if needed
-	const walletClient = createTrackedWalletClient({
+	const trackerBuilder = createTrackedWalletClient({
 		populateMetadata: true,
 		clock: () => clock.now(),
-	}).using(rawWalletClient, publicClient);
+	});
+	const walletClient = trackerBuilder.using(rawWalletClient, publicClient);
+
+	// ----------------------------------------------------------------------------
+	// TRANSACTION EXECUTOR
+	// ----------------------------------------------------------------------------
+	// Mode-agnostic front for sending transactions (wallet account vs local
+	// signer). Call sites use this instead of the wallet client + account address.
+	//
+	// The signer-mode client is built HERE (not inside the executor) because this
+	// is where its concrete pieces live: the chain from deployments, the node RPC
+	// URL, and the same tracker config as `walletClient` (so signer-mode
+	// transactions get identical metadata/observation wiring). The executor only
+	// sees the finished tracked client, keeping it free of construction concerns.
+	const executor = createExecutor({
+		connection,
+		walletClient,
+		executionMode,
+		buildSignerClient: (privateKey) => {
+			const account = privateKeyToAccount(privateKey);
+			const raw = createWalletClient({
+				account,
+				chain: deployments.get().chain,
+				// Broadcast over the node RPC when configured (a local signer does not
+				// need the wallet provider); fall back to the connection provider.
+				transport: PUBLIC_NODE_URL
+					? http(PUBLIC_NODE_URL)
+					: custom(connection.provider),
+			});
+			return {client: trackerBuilder.using(raw, publicClient), account};
+		},
+	});
+
+	const accountCannotSend = createAccountCannotSendStore();
+	const errorDetails = createErrorDetailsStore();
+
+	// The address that actually pays for transactions: the wallet/owner in wallet
+	// mode, the local signer in signer mode. Balance checks and the top-bar
+	// balance follow this (so the shown/gating balance matches the sender).
+	const executorAddress = derived(executor, ($executor) =>
+		$executor.status === 'ready' ? $executor.address : undefined,
+	);
 
 	// ----------------------------------------------------------------------------
 
@@ -123,6 +188,7 @@ export async function createContext(): Promise<{
 
 	const trackedWalletConnector = createTrackedWalletConnector({
 		walletClient,
+		executor,
 		accountData,
 	});
 
@@ -144,7 +210,21 @@ export async function createContext(): Promise<{
 	// BALANCE AND COSTS
 	// ----------------------------------------------------------------------------
 
-	const balance = createBalanceStore({publicClient, account});
+	// Spending balance: the address that pays for transactions (executor).
+	const balance = createBalanceStore({
+		publicClient,
+		account: executorAddress,
+	});
+
+	// Owner balance: the authenticated account (wallet/owner). In signer mode it
+	// is a distinct account (whose funds can top up the signer), so it gets its
+	// own poller. In wallet mode owner and spender are the same account, so it IS
+	// the same store instance: consumers can subscribe to both without causing a
+	// second poll for the same address.
+	const ownerBalance =
+		executionMode === 'signer'
+			? createBalanceStore({publicClient, account})
+			: balance;
 
 	const gasFee = createGasFeeStore({
 		publicClient: publicClient,
@@ -175,10 +255,15 @@ export async function createContext(): Promise<{
 	const context: Context = {
 		gasFee,
 		balance,
+		ownerBalance,
 		rpcHealth,
 		offline,
 		connection,
 		walletClient,
+		executor,
+		executionMode,
+		accountCannotSend,
+		errorDetails,
 		publicClient,
 		account,
 		deployments,

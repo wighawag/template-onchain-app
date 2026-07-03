@@ -57,21 +57,25 @@ export async function claimViaApi(params: {
 
 export type FaucetClaimDeps = Pick<
 	Context,
-	'account' | 'balance' | 'deployments' | 'publicClient' | 'balanceCheck'
+	'executor' | 'balance' | 'deployments' | 'publicClient' | 'balanceCheck'
 >;
 
 /**
  * Full faucet claim flow: claim (via API when configured, otherwise the popup
  * flow), then refresh balance and notify the balance-check store so it can poll
  * for the balance change. Throws on failure.
+ *
+ * Funds the address that actually pays for transactions (the executor address):
+ * the wallet/owner in wallet mode, the local signer in signer mode.
  */
 export async function claimFaucet(
 	deps: FaucetClaimDeps,
 	config: {faucetApi?: string; faucetLink: string},
 ): Promise<void> {
-	const {account, balance, deployments, publicClient, balanceCheck} = deps;
+	const {executor, balance, deployments, publicClient, balanceCheck} = deps;
 
-	const address = get(account);
+	const $executor = get(executor);
+	const address = $executor.status === 'ready' ? $executor.address : undefined;
 	if (!address) {
 		throw new Error(`no account for faucet`);
 	}

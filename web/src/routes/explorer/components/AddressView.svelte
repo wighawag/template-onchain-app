@@ -37,8 +37,14 @@
 
 	let {address}: Props = $props();
 
-	let {publicClient, walletClient, connection, deployments, balanceCheck} =
-		getAppContext();
+	let {
+		publicClient,
+		executor,
+		accountCannotSend,
+		connection,
+		deployments,
+		balanceCheck,
+	} = getAppContext();
 
 	// All fetching / contract resolution lives in the store.
 	const addressData = getAddressDataStore({publicClient});
@@ -246,7 +252,8 @@
 												contractAddress={address}
 												{connection}
 												{publicClient}
-												{walletClient}
+												{executor}
+												{accountCannotSend}
 												{balanceCheck}
 											/>
 										{/each}
@@ -276,7 +283,8 @@
 												contractAddress={address}
 												{connection}
 												{publicClient}
-												{walletClient}
+												{executor}
+												{accountCannotSend}
 												{balanceCheck}
 											/>
 										{/each}

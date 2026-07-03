@@ -15,8 +15,16 @@
 	import {getContractFunctions, isViewFunction} from './lib/utils';
 	import Address from '$lib/core/ui/ethereum/Address.svelte';
 
-	let {publicClient, walletClient, connection, deployments, balance, gasFee, balanceCheck} =
-		getAppContext();
+	let {
+		publicClient,
+		executor,
+		accountCannotSend,
+		connection,
+		deployments,
+		balance,
+		gasFee,
+		balanceCheck,
+	} = getAppContext();
 
 	// Get all contract names
 	let contractNames = $derived(Object.keys($deployments.contracts));
@@ -153,7 +161,8 @@
 													contractAddress={selectedContract.address}
 													{connection}
 													{publicClient}
-													{walletClient}
+													{executor}
+													{accountCannotSend}
 													{balanceCheck}
 												/>
 											{/each}
@@ -183,7 +192,8 @@
 													contractAddress={selectedContract.address}
 													{connection}
 													{publicClient}
-													{walletClient}
+													{executor}
+													{accountCannotSend}
 													{balanceCheck}
 												/>
 											{/each}

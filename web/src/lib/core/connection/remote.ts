@@ -1,5 +1,9 @@
 import {deployments} from '$lib/deployments-store';
-import {createConnection} from '@etherplay/connect';
+import {
+	createConnection,
+	type ConnectionStore,
+	type UnderlyingEthereumProvider,
+} from '@etherplay/connect';
 import {derived} from 'svelte/store';
 import {createPublicClient, createWalletClient, custom} from 'viem';
 import type {
@@ -11,27 +15,70 @@ import type {
 } from './types';
 
 /**
+ * Options controlling how the connection authenticates.
+ *
+ * `walletHost` presence selects the auth target: set => hosted sign-in
+ * ('SignedIn', enabling email/social + a local signer); empty =>
+ * wallet-only ('WalletConnected'). Both cases are unified under the same
+ * store type below so consumers do not branch on it.
+ */
+export type ChainConnectionOptions = {
+	nodeURL?: string;
+	walletHost?: string;
+};
+
+/**
+ * The connection store: a discriminated union of the two configurations this
+ * app can create (discriminants: `targetStep` / `walletOnly`).
+ *
+ * - `'SignedIn'`: hosted sign-in enabled (walletHost set): email/social login
+ *   plus a local signer.
+ * - `'WalletConnected'`: wallet-only authentication (no walletHost).
+ *
+ * Both variants share the same store VALUE type (`Connection`), so `$connection`
+ * reads are uniform; only methods like `ensureConnected`/`isTargetStepReached`
+ * differ in how far they promise to take the user. Code needing the SignedIn
+ * surface narrows first, e.g. `connection.targetStep === 'SignedIn'`.
+ */
+export type ChainConnection =
+	| ConnectionStore<UnderlyingEthereumProvider, 'SignedIn', false>
+	| ConnectionStore<UnderlyingEthereumProvider, 'WalletConnected', true>;
+
+/**
  * Create the app's connection store.
  *
- * This is the single place the connection is configured. Its inferred return
- * type is re-exported as `ChainConnection` (see ./types), so switching the
- * settings below (e.g. from `targetStep: 'WalletConnected'` to `'SignedIn'` plus
- * a `walletHost` to enable hosted email sign-in) automatically updates every
- * consumer's types without touching type definitions elsewhere.
- *
- * To enable hosted sign-in (email), replace the `targetStep: 'WalletConnected'`
- * line with `targetStep: 'SignedIn'` and add a `walletHost` pointing at your
- * hosted sign-in service. The Sign In UI (email input) then activates
- * automatically.
+ * This is the single place the connection is configured. Its return type is
+ * re-exported as `ChainConnection` (see ./types): the union of the two
+ * possible configurations, so enabling hosted sign-in via `walletHost` never
+ * requires touching type definitions elsewhere. `walletHost` is env-derived
+ * (see core/connection/mode).
  */
-export function createChainConnection(chainInfo: ChainInfo, nodeURL?: string) {
+export function createChainConnection(
+	chainInfo: ChainInfo,
+	options?: ChainConnectionOptions,
+): ChainConnection {
+	const {nodeURL, walletHost} = options ?? {};
+
+	// Note: `useCurrentAccount` is intentionally omitted. Setting it would make
+	// the connection auto-pick an account and skip `ChooseWalletAccount`, so a
+	// wallet exposing several accounts would never let the user choose. Omitting
+	// it routes multi-account wallets to the account picker; single-account
+	// wallets still go straight to `WalletConnected` (the confirm step).
+	if (walletHost) {
+		return createConnection({
+			targetStep: 'SignedIn',
+			walletHost,
+			nodeURL,
+			chainInfo,
+			prioritizeWalletProvider: true,
+			autoConnect: true,
+		});
+	}
+
+	// Wallet-only auth: the store targets (and never advances past)
+	// 'WalletConnected'.
 	return createConnection({
 		targetStep: 'WalletConnected',
-		// Note: `useCurrentAccount` is intentionally omitted. Setting it would make
-		// the connection auto-pick an account and skip `ChooseWalletAccount`, so a
-		// wallet exposing several accounts would never let the user choose. Omitting
-		// it routes multi-account wallets to the account picker; single-account
-		// wallets still go straight to `WalletConnected` (the confirm step).
 		nodeURL,
 		chainInfo,
 		prioritizeWalletProvider: true,
@@ -39,12 +86,10 @@ export function createChainConnection(chainInfo: ChainInfo, nodeURL?: string) {
 	});
 }
 
-/** The connection store type, derived from the actual configuration above. */
-export type ChainConnection = ReturnType<typeof createChainConnection>;
-
 export async function establishRemoteConnection(options?: {
 	nodeURL?: string;
 	chainInfoNodeURL?: string;
+	walletHost?: string;
 }): Promise<EstablishedConnection> {
 	// Use deployments.get() for synchronous access
 	const currentDeployments = deployments.get();
@@ -64,7 +109,10 @@ export async function establishRemoteConnection(options?: {
 			} as ChainInfo)
 		: currentDeployments.chain;
 
-	const connection = createChainConnection(chainInfo, options?.nodeURL);
+	const connection = createChainConnection(chainInfo, {
+		nodeURL: options?.nodeURL,
+		walletHost: options?.walletHost,
+	});
 
 	const walletClient = createWalletClient({
 		chain: chainInfo,

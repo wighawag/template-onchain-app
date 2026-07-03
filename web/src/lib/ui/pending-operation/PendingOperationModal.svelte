@@ -15,6 +15,7 @@
 		resubmitOperation,
 		cancelOperation,
 		dismissOperation,
+		wrongAccountMessage,
 	} from './operation-actions';
 
 	const context = getAppContext();
@@ -90,6 +91,8 @@
 			});
 			if (result.status === 'submitted') {
 				handleClose();
+			} else if (result.status === 'wrong-account') {
+				resubmitError = wrongAccountMessage(result.expected);
 			} else if (result.status === 'error') {
 				resubmitError = result.message;
 			}
@@ -108,6 +111,8 @@
 			const result = await cancelOperation(context, {operation});
 			if (result.status === 'submitted') {
 				handleClose();
+			} else if (result.status === 'wrong-account') {
+				cancelError = wrongAccountMessage(result.expected);
 			} else if (result.status === 'error') {
 				cancelError = result.message;
 			}
