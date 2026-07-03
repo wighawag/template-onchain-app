@@ -1,4 +1,5 @@
 import type {GetFeeHistoryReturnType, PublicClient} from 'viem';
+import type {Readable} from 'svelte/store';
 import {
 	createPollingStore,
 	type PollingStore,
@@ -39,7 +40,16 @@ function avg(arr: bigint[]) {
 }
 
 export function createGasFeeStore(
-	params: {publicClient: PublicClient},
+	params: {
+		publicClient: PublicClient;
+		/**
+		 * Optional gate: gas fetching only runs while this source is truthy. Used
+		 * to avoid polling (and surfacing RPC errors) when the app has no RPC of
+		 * its own and the wallet is not connected yet. When omitted, gas is
+		 * fetched unconditionally (an app RPC is available).
+		 */
+		fetchGate?: Readable<boolean>;
+	},
 	options?: {fetchInterval?: number; expectedWorstGasPrice?: bigint},
 ): GasFeeStore {
 	let feeHistorySupport: 'unknown' | 'supported' | 'unsupported' = 'unknown';
@@ -171,6 +181,7 @@ export function createGasFeeStore(
 		{
 			// default: 10 minutes
 			fetchInterval: options?.fetchInterval ?? 10 * 60 * 1000,
+			...(params.fetchGate ? {source: {store: params.fetchGate}} : {}),
 		},
 	);
 }
