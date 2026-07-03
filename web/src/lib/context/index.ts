@@ -126,13 +126,20 @@ export async function createContext(): Promise<{
 	// would fail and look like a broken RPC). Exposed so the UI can explain this.
 	const hasAppRpc = hasConfiguredRpc(PUBLIC_NODE_URL, chain.rpcUrls?.default?.http);
 
+	// Whether the app can read the chain right now: it has its own RPC, or the
+	// wallet is connected (and supplies one). Always a boolean, so UI can gate
+	// fetches and show a "connect to load" state instead of firing calls that
+	// would fail and look like a broken RPC. See also chainFetchGate below.
+	const canReadChain = derived(
+		connection,
+		($c) => hasAppRpc || connection.isTargetStepReached($c),
+	);
+
 	// Gate for chain reads (onchain state, gas). With an app RPC, fetch
 	// unconditionally. Without one, only fetch once the wallet is connected (its
 	// provider then supplies the RPC), so we do not fire calls that would fail and
 	// look like a broken RPC while disconnected.
-	const chainFetchGate = hasAppRpc
-		? undefined
-		: derived(connection, ($c) => connection.isTargetStepReached($c));
+	const chainFetchGate = hasAppRpc ? undefined : canReadChain;
 
 	// Reactive clock store that updates every second for smooth "time ago" displays
 	const clock = createClockStore();
@@ -311,6 +318,7 @@ export async function createContext(): Promise<{
 		rpcHealth,
 		refreshChainData,
 		hasAppRpc,
+		canReadChain,
 		forceRpcFailure,
 		offline,
 		connection,

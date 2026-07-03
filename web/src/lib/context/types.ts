@@ -70,6 +70,12 @@ export type Context = {
 	 */
 	hasAppRpc: boolean;
 	/**
+	 * Whether the app can read the chain right now (has its own RPC, or the
+	 * wallet is connected and supplies one). UI gates onchain fetches on this and
+	 * shows a "connect to load" state instead of firing calls that would fail.
+	 */
+	canReadChain: Readable<boolean>;
+	/**
 	 * Debug-only runtime flag: setting it makes all RPC requests fail (and
 	 * clearing it lets them succeed again), to exercise the RPC-health / retry UI.
 	 * Reachable from the console via `context.forceRpcFailure.set(true|false)`.

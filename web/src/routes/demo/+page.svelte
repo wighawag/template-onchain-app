@@ -14,10 +14,21 @@
 	import {formatRelativeTime, getStaleMessage} from './lib/staleness';
 
 	const context = getAppContext();
-	const {refreshChainData, viewState, clock, accountCannotSend, errorDetails} =
-		context;
+	const {
+		refreshChainData,
+		canReadChain,
+		connection,
+		viewState,
+		clock,
+		accountCannotSend,
+		errorDetails,
+	} = context;
 
 	const viewStatus = viewState.status;
+
+	// Whether the app can read the chain yet (app RPC, or a connected wallet).
+	// When it cannot, the not-loaded state prompts the user to connect.
+	let canRead = $derived($canReadChain);
 
 	// Derive stale message so it updates when status store updates
 	// Note: clock will become a store that updates every second in the future
@@ -138,14 +149,25 @@
 					<p class="text-base">Loading messages...</p>
 				</div>
 			{:else if $viewState.step === 'Unloaded'}
-				<!-- Not loaded: never fetched (e.g. waiting for an RPC / wallet
-				     connection). Distinct from a completed fetch that returned zero
-				     messages, which shows the "be the first" empty state below. -->
+				<!-- Not loaded: never fetched. If we cannot read the chain yet (no app
+				     RPC and no wallet), prompt the user to connect; otherwise it is just
+				     a transient not-loaded state. Distinct from a completed fetch that
+				     returned zero messages (the "be the first" empty state below). -->
 				<div
 					class="flex flex-col items-center justify-center py-8 text-muted-foreground"
 				>
 					<MessageSquareIcon class="mb-3 h-10 w-10" />
-					<p class="text-base">Messages not loaded</p>
+					{#if !canRead}
+						<p class="text-base">Connect to load messages</p>
+						<p class="mt-1 text-sm">
+							Connect your wallet to fetch greetings from the network.
+						</p>
+						<Button class="mt-4" onclick={() => connection.connect()}>
+							Connect Wallet
+						</Button>
+					{:else}
+						<p class="text-base">Messages not loaded</p>
+					{/if}
 				</div>
 			{:else}
 				<!-- Loaded - $viewState.step === 'Loaded' -->
