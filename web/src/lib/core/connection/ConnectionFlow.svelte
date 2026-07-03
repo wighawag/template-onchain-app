@@ -9,6 +9,8 @@
 	import * as Modal from '$lib/core/ui/modal/index.js';
 	import BasicModal from '../ui/modal/basic-modal.svelte';
 	import NoWalletFlow from './NoWalletFlow.svelte';
+	import GoogleIcon from '$lib/core/ui/oauth/GoogleIcon.svelte';
+	import FacebookIcon from '$lib/core/ui/oauth/FacebookIcon.svelte';
 	import {
 		hasPendingWalletRequest,
 		walletEntryMode,
@@ -125,6 +127,36 @@
 					})}
 			>
 				Sign in with Email
+			</Button>
+		</div>
+
+		<!-- Social login options -->
+		<div class="mb-4 flex flex-col gap-3">
+			<Button
+				variant="outline"
+				class="w-full justify-center gap-3"
+				onclick={() =>
+					connection.connect({
+						type: 'oauth',
+						provider: {id: 'google'},
+						usePopup: false,
+					})}
+			>
+				<GoogleIcon class="h-5 w-5" />
+				<span>Continue with Google</span>
+			</Button>
+			<Button
+				variant="outline"
+				class="w-full justify-center gap-3"
+				onclick={() =>
+					connection.connect({
+						type: 'oauth',
+						provider: {id: 'facebook'},
+						usePopup: false,
+					})}
+			>
+				<FacebookIcon class="h-5 w-5" />
+				<span>Continue with Facebook</span>
 			</Button>
 		</div>
 	{/if}
