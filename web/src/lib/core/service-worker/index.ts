@@ -218,10 +218,25 @@ export function createServiceWorker(notifications?: NotificationsService) {
 			store.set({notSupported: false, registering: true});
 
 			// ------------------------------------------------------------------------------------------------
-			// FORCE RELOAD ON CONTROLLER CHANGE
+			// FORCE RELOAD ON CONTROLLER CHANGE (update flow only)
 			// ------------------------------------------------------------------------------------------------
+			// `controllerchange` fires in two situations:
+			// 1. FIRST INSTALL: the SW's activate handler calls clients.claim(), taking
+			//    control of the already-open page. Reloading here would make every
+			//    first visit spontaneously reload seconds after load (whenever the
+			//    SW finishes installing), wiping in-flight UI state.
+			// 2. UPDATE: a new SW replaces the old one (after skipWaiting). Here a
+			//    reload is wanted so the page runs the new version's assets.
+			// Distinguish them by whether the page was already controlled: only an
+			// already-controlled page can be taken over by an UPDATED worker.
+			let wasControlled = !!navigator.serviceWorker.controller;
 			let refreshing = false;
 			controllerChangeHandler = () => {
+				if (!wasControlled) {
+					// Initial claim on first install: do not reload.
+					wasControlled = true;
+					return;
+				}
 				if (refreshing) {
 					return;
 				}

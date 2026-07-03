@@ -22,6 +22,11 @@ export function handleAutomaticUpdate(
 }
 
 // taken from: https://stackoverflow.com/a/50535316
+// with one adjustment: an install only counts as an available UPDATE when the
+// page is already controlled by a previous worker. On the very first visit the
+// first worker also passes through the 'installed' state, but that is an
+// initial install, not an update; reporting it would show a spurious
+// "Update Available" notice on every first load.
 export function listenForWaitingServiceWorker(
 	registration: ServiceWorkerRegistration,
 	callback: (reg: ServiceWorkerRegistration) => void,
@@ -29,7 +34,8 @@ export function listenForWaitingServiceWorker(
 	function awaitStateChange() {
 		if (registration.installing) {
 			registration.installing.addEventListener('statechange', function () {
-				if (this.state === 'installed') callback(registration);
+				if (this.state === 'installed' && navigator.serviceWorker.controller)
+					callback(registration);
 			});
 		}
 	}
