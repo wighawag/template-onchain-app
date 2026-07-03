@@ -94,8 +94,11 @@ export async function establishRemoteConnection(options?: {
 	// Use deployments.get() for synchronous access
 	const currentDeployments = deployments.get();
 
-	// Cast to ChainInfo to preserve the literal type even when modifying rpcUrls
-	// The structure is the same, just the RPC URL may change
+	// Cast to ChainInfo to preserve the literal type even when modifying rpcUrls.
+	// The structure is the same, just the RPC URL may change. An empty
+	// `rpcUrls.default.http` is a valid, supported state: when no RPC is baked in
+	// (and no PUBLIC_NODE_URL is set) the connection falls back to the user's
+	// wallet provider (prioritizeWalletProvider), so this is never an error.
 	const chainInfo: ChainInfo = options?.chainInfoNodeURL
 		? ({
 				...currentDeployments.chain,

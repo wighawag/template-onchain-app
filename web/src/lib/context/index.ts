@@ -30,6 +30,7 @@ import {
 import {burnerOverride} from '$lib';
 import {resolveBurnerWallet} from './burner.js';
 import {resolveConnectionMode} from '$lib/core/connection/mode.js';
+import {resolveSignerRpc} from '$lib/core/connection/signer-rpc.js';
 import {createExecutor} from '$lib/core/connection/executor.js';
 import {createAccountCannotSendStore} from '$lib/core/transaction/account-cannot-send-store.js';
 import {createErrorDetailsStore} from '$lib/core/transaction/error-details-store.js';
@@ -101,6 +102,22 @@ export async function createContext(): Promise<{
 	const {finality, txObserverProcessInterval, maxMessages} =
 		resolveAppConfig(chain);
 
+	// Signer mode broadcasts from a local signer and so needs a real node RPC
+	// (PUBLIC_NODE_URL or an rpcUrl configured on the chain). Wallet mode does
+	// not (the wallet provides the RPC). Fail fast for signer-mode with no RPC,
+	// surfaced by AsyncContext's error screen; the resolved url also drives the
+	// signer client's transport below.
+	const signerRpc = resolveSignerRpc(
+		executionMode,
+		PUBLIC_NODE_URL,
+		chain.rpcUrls?.default?.http,
+		import.meta.env.DEV,
+	);
+	if (!signerRpc.ok) {
+		throw new Error(signerRpc.error);
+	}
+	const signerRpcUrl = signerRpc.rpcUrl;
+
 	// Reactive clock store that updates every second for smooth "time ago" displays
 	const clock = createClockStore();
 
@@ -137,10 +154,12 @@ export async function createContext(): Promise<{
 			const raw = createWalletClient({
 				account,
 				chain: deployments.get().chain,
-				// Broadcast over the node RPC when configured (a local signer does not
-				// need the wallet provider); fall back to the connection provider.
-				transport: PUBLIC_NODE_URL
-					? http(PUBLIC_NODE_URL)
+				// Broadcast over the resolved node RPC (PUBLIC_NODE_URL or a chain
+				// rpcUrl). Signer mode guarantees one exists (see resolveSignerRpc
+				// above); the connection-provider fallback only applies to non-signer
+				// use where a signer client would not actually be built.
+				transport: signerRpcUrl
+					? http(signerRpcUrl)
 					: custom(connection.provider),
 			});
 			return {client: trackerBuilder.using(raw, publicClient), account};
