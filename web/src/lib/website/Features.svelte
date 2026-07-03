@@ -5,7 +5,7 @@
 	import GlobeIcon from '@lucide/svelte/icons/globe';
 	import CodeIcon from '@lucide/svelte/icons/code';
 	import SplitIcon from '@lucide/svelte/icons/split';
-	import MonitorIcon from '@lucide/svelte/icons/monitor';
+	import PackageCheckIcon from '@lucide/svelte/icons/package-check';
 	import TerminalIcon from '@lucide/svelte/icons/terminal';
 	import ZapIcon from '@lucide/svelte/icons/zap';
 
@@ -53,10 +53,10 @@
 			icon: SplitIcon,
 		},
 		{
-			title: 'VSCode Setup',
+			title: 'Works Out of the Box',
 			description:
-				'The repo is setup as a vscode workspace with recommended plugins. Execute tests from the editor. Auto format, etc...',
-			icon: MonitorIcon,
+				'No editor-specific setup required. Clone, install, and everything runs: contracts, indexer and frontend, with tests, formatting and hot reload ready to go.',
+			icon: PackageCheckIcon,
 		},
 		{
 			title: 'One command deploy',
