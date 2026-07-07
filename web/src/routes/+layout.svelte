@@ -11,6 +11,7 @@
 	import AsyncContext from '$lib/context/AsyncContext.svelte';
 	import Navbar from '$lib/ui/navbar/navbar.svelte';
 	import RpcHealthBanner from '$lib/ui/rpc-health/RpcHealthBanner.svelte';
+	import NonceCacheBanner from '$lib/ui/nonce-cache/NonceCacheBanner.svelte';
 	import OfflineBanner from '$lib/ui/offline/OfflineBanner.svelte';
 	import {createENSService} from '$lib/core/ens';
 	import {Toaster} from '$lib/shadcn/ui/sonner';
@@ -32,6 +33,7 @@
 <AsyncContext getContext={createContext}>
 	<Navbar />
 	<OfflineBanner />
+	<NonceCacheBanner />
 	{#if showRpcBanner}
 		<RpcHealthBanner />
 	{/if}
